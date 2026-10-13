@@ -538,7 +538,7 @@
 </x-dc>
 <script type="text/x-dc" data-dc-script>
 class Component extends DCLogic {
-  defS() { return { anos: '3', margen: '50', tarifa: '600', tarifaFija: true, iva: '12', pct: '8', meses: '6', r1: '425', r2: '500', r3: '600',
+  defS() { return { usarPdf: true, anos: '3', margen: '50', tarifa: '600', tarifaFija: true, iva: '12', pct: '8', meses: '6', r1: '425', r2: '500', r3: '600',
     kits: 'RADIADOR = Refrigerante; Abrazaderas; Wipe\nTUBERIA AC = Gas freón; Aceite para compresor\nCOMPRESOR AC = Gas freón; Aceite para compresor\nBOMBA DE AGUA = Refrigerante; Wipe\nTERMOSTATO = Refrigerante\nFRENOS = Líquido de frenos\nCARGADORES = Materiales auxiliares' }; }
   sample() {
     return 'Lube N Save Zona 10\nReporte de inspección vehicular\nOrden: 5431\nCliente: Cliente de ejemplo\nTel: 55551234\nHyundai Tucson 2019  Placa P-123ABC  Km 85,000\n\nREQUIERE ATENCIÓN INMEDIATA\nFrenos delanteros  Urgente  Pastillas al 2 mm\nFrenos traseros  Urgente\n\nSUGERIDO\nFiltro de aire acondicionado  Recomendado\nChorritos y plumillas  Recomendado\nLuces de freno  Recomendado\nSoporte de motor  Recomendado\n\nOK\nNivel de aceite  OK\nEstado de llantas  OK';
@@ -718,6 +718,7 @@ class Component extends DCLogic {
           for (const it of its) {
             const x = it.transform[4], c = x < 160 ? 'A' : x < 250 ? 'C' : 'N';
             const gapAll = lastAll ? x - lastAll : 0; r.full += (r.full && gapAll > 1.5 ? ' ' : '') + it.str; lastAll = x + it.width;
+            if (c === 'N' && !it.str.trim()) continue; // espacios largos entre columnas no deben unir cifras
             const gap = last && last.c === c ? x - (last.x + last.w) : 99;
             if (c === 'N') { if (gap <= 1.5 && r.N.length) r.N[r.N.length - 1][1] += it.str; else r.N.push([x, it.str]); }
             else r[c] += (r[c] && gap > 1.5 ? ' ' : '') + it.str;
@@ -785,7 +786,8 @@ class Component extends DCLogic {
       if (priced.length) {
         const it = this.makeItem(vk, p.name, p.urg, p.com); it.name = this.cap(p.name); it.src = { pdf: true }; it.parts = []; it.ops = [];
         priced.forEach(s => { const q = this.num(s.n['CANT.']) || 1, pu = this.num(s.n['PRECIO U.']), hr = this.num(s.n['HRS.']);
-          if (pu) it.parts.push({ desc: this.cap(s.desc), rep: String(this.r2(pu * q * this.F())) });
+          // Renglón con horas = mano de obra (va a Mano de obra, no a Repuestos); su PRECIO U. es insumo aparte.
+          if (pu) it.parts.push({ desc: hr ? 'Insumos: ' + this.cap(s.desc) : this.cap(s.desc), rep: String(this.r2(pu * q * this.F())) });
           if (hr) it.ops.push({ desc: this.cap(s.desc), hrs: String(hr) }); });
         return it;
       }
