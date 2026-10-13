@@ -1,0 +1,1179 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="_ds/modernist-32da6ac4-a138-43b9-a1d6-92120778f901/styles.css">
+  <script src="_ds/modernist-32da6ac4-a138-43b9-a1d6-92120778f901/_ds_bundle.js"></script>
+  <style>
+    body { margin: 0; background: #f3f2f2; }
+    * { box-sizing: border-box; }
+    a { color: #201e1d; text-decoration: underline; }
+    a:hover { color: #ae1800; }
+  </style>
+</helmet>
+
+<div style="min-height: 100vh; font-family: var(--font-body); color: var(--color-text); background: {{ pageBg }};">
+
+  <sc-if value="{{ showChrome }}" hint-placeholder-val="{{ true }}">
+    <header style="background: #000; color: #fff; display: flex; align-items: stretch; flex-wrap: wrap; border-bottom: 4px solid #FFE500;">
+      <div style="display: flex; align-items: center; gap: 14px; padding: 0 20px 0 8px; border-right: 2px solid #333;">
+        <img src="assets/logo-negro.png" alt="Lube N Save" style="width: 96px; height: 72px; object-fit: cover; display: block;">
+        <div style="display: flex; flex-direction: column; gap: 2px;">
+          <span style="font-weight: 800; font-size: 18px; letter-spacing: 0.04em; text-transform: uppercase;">Cotizador</span>
+          <span style="font-size: 12px; color: #FFE500;">{{ headerSub }}</span>
+        </div>
+      </div>
+      <nav style="display: flex; flex: 1; min-width: 0; flex-wrap: wrap;">
+        <button onClick="{{ goStep1 }}" style="flex: 0.6; min-width: 120px; text-align: left; padding: 14px 18px; border: none; border-right: 2px solid #333; cursor: pointer; font: inherit; background: {{ tab1Bg }}; color: {{ tab1Fg }};">
+          <div style="font-size: 11px; letter-spacing: 0.08em; opacity: 0.8;">00</div>
+          <div style="font-weight: 800; font-size: 15px;">{{ baseTabLabel }}</div>
+        </button>
+        <button onClick="{{ goStep2 }}" style="flex: 1; min-width: 160px; text-align: left; padding: 14px 18px; border: none; border-right: 2px solid #333; cursor: pointer; font: inherit; background: {{ tab2Bg }}; color: {{ tab2Fg }};">
+          <div style="font-size: 11px; letter-spacing: 0.08em; opacity: 0.8;">01 · Asesor de partes</div>
+          <div style="font-weight: 800; font-size: 15px;">Repuestos {{ okPartesMark }}</div>
+        </button>
+        <button onClick="{{ goStep3 }}" style="flex: 1; min-width: 160px; text-align: left; padding: 14px 18px; border: none; border-right: 2px solid #333; cursor: pointer; font: inherit; background: {{ tab3Bg }}; color: {{ tab3Fg }};">
+          <div style="font-size: 11px; letter-spacing: 0.08em; opacity: 0.8;">02 · Asesor de servicio</div>
+          <div style="font-weight: 800; font-size: 15px;">Mano de obra {{ okServMark }}</div>
+        </button>
+        <button onClick="{{ goStep4 }}" style="flex: 1; min-width: 160px; text-align: left; padding: 14px 18px; border: none; cursor: pointer; font: inherit; background: {{ tab4Bg }}; color: {{ tab4Fg }};">
+          <div style="font-size: 11px; letter-spacing: 0.08em; opacity: 0.8;">03 · Cliente</div>
+          <div style="font-weight: 800; font-size: 15px;">Enviar presupuesto</div>
+        </button>
+      </nav>
+    </header>
+  </sc-if>
+
+  <sc-if value="{{ loading }}" hint-placeholder-val="{{ false }}">
+    <div style="padding: 48px 24px; font-size: 15px;">Cargando historial…</div>
+  </sc-if>
+
+  <!-- ============ 00 BASE ============ -->
+  <sc-if value="{{ isStep1Locked }}" hint-placeholder-val="{{ false }}">
+    <main style="max-width: 520px; margin: 0 auto; padding: 56px 24px; display: flex; flex-direction: column; gap: 18px;">
+      <span style="font-size: 12px; text-transform: uppercase; letter-spacing: 0.08em;">Solo jefe de taller</span>
+      <h1 style="margin: 0; font-size: 32px; text-transform: uppercase;">Base bloqueada</h1>
+      <p style="margin: 0; font-size: 15px; text-wrap: pretty;">{{ lockText }}</p>
+      <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px;">
+        <button onClick="{{ focusPin1 }}" style="text-align: left; border: 2px solid {{ pinB1 }}; background: #fff; font: inherit; padding: 10px 12px; cursor: pointer; display: flex; flex-direction: column; gap: 4px;">
+          <span style="font-size: 12px;">PIN</span><span style="font-size: 22px; font-weight: 800; letter-spacing: 0.3em; min-height: 28px;">{{ pinDots1 }}</span>
+        </button>
+        <sc-if value="{{ pinNew }}" hint-placeholder-val="{{ false }}">
+          <button onClick="{{ focusPin2 }}" style="text-align: left; border: 2px solid {{ pinB2 }}; background: #fff; font: inherit; padding: 10px 12px; cursor: pointer; display: flex; flex-direction: column; gap: 4px;">
+            <span style="font-size: 12px;">Repetir PIN</span><span style="font-size: 22px; font-weight: 800; letter-spacing: 0.3em; min-height: 28px;">{{ pinDots2 }}</span>
+          </button>
+        </sc-if>
+      </div>
+      <div style="display: grid; grid-template-columns: repeat(3, 72px); gap: 8px;">
+        <sc-for list="{{ pinKeys }}" as="k" hint-placeholder-count="12">
+          <button onClick="{{ k.on }}" style="height: 56px; border: 2px solid #000; background: {{ k.bg }}; color: {{ k.fg }}; font: inherit; font-size: 20px; font-weight: 800; cursor: pointer;" style-hover="background: #FFE500; color: #000;">{{ k.label }}</button>
+        </sc-for>
+      </div>
+      <button class="btn" onClick="{{ unlock }}" style="background: #000; color: #FFE500; font-weight: 800; width: fit-content; min-width: 200px; justify-content: flex-start;" style-hover="background: #2d2b2b;">{{ unlockLabel }}</button>
+      <sc-if value="{{ hasPinMsg }}" hint-placeholder-val="{{ false }}"><p style="margin: 0; font-size: 14px; color: #ae1800;">{{ pinMsg }}</p></sc-if>
+    </main>
+  </sc-if>
+  <sc-if value="{{ isStep1 }}" hint-placeholder-val="{{ false }}">
+    <main style="max-width: 1180px; margin: 0 auto; padding: 32px 24px 64px; display: flex; flex-direction: column; gap: 32px;">
+      <div style="display: flex; flex-direction: column; gap: 6px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap;">
+          <h1 style="margin: 0; font-size: 32px; text-transform: uppercase;">Base de datos</h1>
+          <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+            <button class="btn btn-secondary" onClick="{{ changePin }}">Cambiar PIN</button>
+            <button class="btn" onClick="{{ lock }}" style="background: #000; color: #FFE500; font-weight: 800;" style-hover="background: #2d2b2b;">Bloquear Base</button>
+          </div>
+        </div>
+        <p style="margin: 0; font-size: 15px; max-width: 70ch; text-wrap: pretty;">El cotizador lee el export de ClearMechanic “Reporte de Actividad – Cotizaciones”. Para actualizarlo, exporta el mismo reporte como CSV y cárgalo aquí; se guarda en este navegador.</p>
+      </div>
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); border-top: 2px solid #201e1d; border-bottom: 2px solid #201e1d;">
+        <div style="padding: 20px; border-right: 1px solid var(--color-divider); display: flex; flex-direction: column; gap: 4px;"><span style="font-size: 12px; text-transform: uppercase; letter-spacing: 0.06em;">Líneas cotizadas</span><span style="font-size: clamp(22px, 3vw, 36px); font-weight: 800; overflow-wrap: anywhere;">{{ meta.rowsFmt }}</span></div>
+        <div style="padding: 20px; border-right: 1px solid var(--color-divider); display: flex; flex-direction: column; gap: 4px;"><span style="font-size: 12px; text-transform: uppercase; letter-spacing: 0.06em;">Modelos de vehículo</span><span style="font-size: clamp(22px, 3vw, 36px); font-weight: 800; overflow-wrap: anywhere;">{{ meta.models }}</span></div>
+        <div style="padding: 20px; border-right: 1px solid var(--color-divider); display: flex; flex-direction: column; gap: 4px;"><span style="font-size: 12px; text-transform: uppercase; letter-spacing: 0.06em;">Desde</span><span style="font-size: clamp(22px, 3vw, 36px); font-weight: 800; overflow-wrap: anywhere;">{{ meta.fromFmt }}</span></div>
+        <div style="padding: 20px; display: flex; flex-direction: column; gap: 4px;"><span style="font-size: 12px; text-transform: uppercase; letter-spacing: 0.06em;">Hasta</span><span style="font-size: clamp(22px, 3vw, 36px); font-weight: 800; overflow-wrap: anywhere;">{{ meta.toFmt }}</span></div>
+      </div>
+      <section style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 32px;">
+        <div style="display: flex; flex-direction: column; gap: 14px;">
+          <h2 style="margin: 0; font-size: 18px; text-transform: uppercase; border-bottom: 2px solid #201e1d; padding-bottom: 8px;">Actualizar historial</h2>
+          <p style="margin: 0; font-size: 14px;">Fuente actual: <strong>{{ baseSrc }}</strong></p>
+          <p style="margin: 0; font-size: 14px; text-wrap: pretty;">{{ histInfo }}</p>
+          <div style="display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 12px; align-items: end;">
+            <div class="field"><label>Conservar últimos (años)</label><input class="input" inputmode="numeric" value="{{ settings.anos }}" onChange="{{ setAnos }}"></div>
+            <p style="margin: 0; font-size: 13px; color: #605d5d; padding-bottom: 10px;">{{ purgeInfo }}</p>
+          </div>
+          <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+            <button class="btn btn-secondary" onClick="{{ exportHist }}">Descargar respaldo</button>
+            <label class="btn btn-secondary" style="cursor: pointer;"><span>Restaurar respaldo</span><input type="file" accept=".json" onChange="{{ importHist }}" style="display: none;"></label>
+          </div>
+          <label style="display: flex; align-items: center; gap: 10px; padding: 14px 16px; background: #000; color: #FFE500; font-weight: 800; cursor: pointer; width: fit-content;">
+            <span>Agregar CSV de ClearMechanic</span>
+            <input type="file" accept=".csv,.txt" onChange="{{ onFile }}" style="display: none;">
+          </label>
+          <sc-if value="{{ hasMsg }}" hint-placeholder-val="{{ false }}"><p style="margin: 0; font-size: 14px; padding: 10px 12px; background: #fff; border: 1px solid var(--color-divider);">{{ msg }}</p></sc-if>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 14px;">
+          <h2 style="margin: 0; font-size: 18px; text-transform: uppercase; border-bottom: 2px solid #201e1d; padding-bottom: 8px;">Tarifas y ajuste de precios</h2>
+          <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px;">
+            <div class="field"><label>Hora flat rate (Q, sin IVA)</label><input class="input" inputmode="decimal" value="{{ settings.tarifa }}" onChange="{{ setTarifa }}"><span style="font-size: 12px; color: #605d5d; margin-top: 4px;">Con IVA: {{ tarifaIvaFmt }} · vigente desde {{ tarifaDesdeFmt }}</span></div>
+            <div class="field"><label>IVA %</label><input class="input" inputmode="decimal" value="{{ settings.iva }}" onChange="{{ setIva }}"></div>
+            <div class="field"><label>Margen estándar repuestos % (sobre venta)</label><input class="input" inputmode="decimal" value="{{ settings.margen }}" onChange="{{ setMargen }}"></div>
+            <div class="field"><label>Alza anual repuestos %</label><input class="input" inputmode="decimal" value="{{ settings.pct }}" onChange="{{ setPct }}"></div>
+            <div class="field"><label>Aplicar si el precio tiene más de (meses)</label><input class="input" inputmode="decimal" value="{{ settings.meses }}" onChange="{{ setMeses }}"></div>
+          </div>
+          <label style="display: flex; gap: 8px; align-items: center; font-size: 14px; cursor: pointer;"><input type="checkbox" checked="{{ settings.usarPdf }}" onChange="{{ setUsarPdf }}" style="width: 18px; height: 18px; accent-color: #000;"> Si el PDF ya trae precios, usar los del PDF (si no, siempre historial)</label>
+          <span style="font-size: 13px; font-weight: 600;">Tarifa histórica (para convertir la M.O. antigua a horas)</span>
+          <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px;">
+            <div class="field"><label>Hasta dic-2024</label><input class="input" inputmode="decimal" value="{{ settings.r1 }}" onChange="{{ setR1 }}"></div>
+            <div class="field"><label>Ene–jun 2025</label><input class="input" inputmode="decimal" value="{{ settings.r2 }}" onChange="{{ setR2 }}"></div>
+            <div class="field"><label>Desde jul-2025</label><input class="input" inputmode="decimal" value="{{ settings.r3 }}" onChange="{{ setR3 }}"></div>
+          </div>
+        </div>
+      </section>
+      <section style="display: flex; flex-direction: column; gap: 12px;">
+        <h2 style="margin: 0; font-size: 18px; text-transform: uppercase; border-bottom: 2px solid #201e1d; padding-bottom: 8px;">Plantilla oficial de servicios</h2>
+        <p style="margin: 0; font-size: 14px; max-width: 80ch; text-wrap: pretty;">Para Servicio menor, intermedio y mayor manda la plantilla sobre el historial. Si el vehículo coincide con más de una (gasolina / diésel), el asesor elige. El cliente puede abrir “Ver qué incluye”.</p>
+        <p style="margin: 0; font-size: 14px;">Fuente: <strong>{{ servSrc }}</strong> · {{ servCount }} plantillas · checklist {{ tablaText }}</p>
+        <label style="display: flex; align-items: center; gap: 10px; padding: 12px 16px; background: #000; color: #FFE500; font-weight: 800; cursor: pointer; width: fit-content;">
+          <span>Cargar plantilla actualizada (.xlsx)</span>
+          <input type="file" accept=".xlsx" onChange="{{ onServFile }}" style="display: none;">
+        </label>
+      </section>
+      <section style="display: flex; flex-direction: column; gap: 10px;">
+        <h2 style="margin: 0; font-size: 18px; text-transform: uppercase; border-bottom: 2px solid #201e1d; padding-bottom: 8px;">Kits de complementos</h2>
+        <p style="margin: 0; font-size: 14px; max-width: 80ch; text-wrap: pretty;">Una regla por línea: <strong>PUNTO = complemento; complemento</strong>. Cuando el punto del reporte contiene esas palabras, los complementos aparecen como botones para agregar con un clic, con su precio más reciente. Además, el historial sugiere lo que normalmente se cotiza junto a cada punto.</p>
+        <textarea class="input" style="min-height: 160px; font-size: 14px; font-family: var(--font-body);" value="{{ settings.kits }}" onChange="{{ setKits }}"></textarea>
+      </section>
+    </main>
+  </sc-if>
+
+  <!-- ============ 01 REPUESTOS ============ -->
+  <sc-if value="{{ isStep2 }}" hint-placeholder-val="{{ true }}">
+    <main style="max-width: 1180px; margin: 0 auto; padding: 28px 24px 120px; display: flex; flex-direction: column; gap: 24px;">
+      <div style="display: flex; justify-content: space-between; align-items: flex-end; gap: 16px; flex-wrap: wrap;">
+        <div style="display: flex; flex-direction: column; gap: 4px;">
+          <span style="font-size: 12px; text-transform: uppercase; letter-spacing: 0.08em;">Paso 1 de 3 · Asesor de partes</span>
+          <h1 style="margin: 0; font-size: 32px; text-transform: uppercase;">Repuestos</h1>
+        </div>
+        <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+          <button class="btn btn-secondary" onClick="{{ nuevoEst }}">Estimado rápido</button>
+          <button class="btn btn-secondary" onClick="{{ nuevo }}">Nuevo presupuesto</button>
+        </div>
+      </div>
+      <sc-if value="{{ quote.estimado }}" hint-placeholder-val="{{ false }}">
+        <div style="background: #000; color: #fff; padding: 14px 16px; display: flex; flex-direction: column; gap: 4px; border-left: 0; border-top: 4px solid #FFE500;">
+          <span style="font-size: 15px; font-weight: 800; color: #FFE500;">Modo estimado rápido</span>
+          <span style="font-size: 14px; text-wrap: pretty;">Escribe cualquier vehículo y agrega los trabajos abajo. Si ese modelo no tiene historial, el precio sale de vehículos similares (misma marca primero) con su rango. Confirma luego con precios reales de proveedor. No se guarda en el historial.</span>
+        </div>
+      </sc-if>
+
+      <section style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 0; border-top: 2px solid #201e1d; border-bottom: 2px solid #201e1d;">
+        <label style="display: flex; flex-direction: column; gap: 8px; padding: 22px; background: #000; color: #fff; cursor: pointer;" style-hover="background: #1a1a1a;">
+          <span style="font-size: 12px; color: #FFE500; text-transform: uppercase; letter-spacing: 0.08em;">Opción A</span>
+          <span style="font-size: 20px; font-weight: 800;">Subir PDF del reporte</span>
+          <span style="font-size: 13px; color: #d7d3d3;">Descárgalo desde el link de ClearMechanic y súbelo aquí. Se arma solo.</span>
+          <span style="margin-top: 6px; background: #FFE500; color: #000; font-weight: 800; padding: 10px 14px; width: fit-content;">{{ pdfLabel }}</span>
+          <input type="file" accept="application/pdf,.pdf" onChange="{{ onPdf }}" style="display: none;">
+          <button onClick="{{ demoPdf }}" style="margin-top: 2px; background: transparent; border: none; padding: 0; color: #FFE500; font: inherit; font-size: 13px; text-decoration: underline; cursor: pointer; text-align: left; width: fit-content;">Probar con el PDF de ejemplo (OR 5359)</button>
+        </label>
+        <div style="display: flex; flex-direction: column; gap: 8px; padding: 22px; background: #fff;">
+          <span style="font-size: 12px; text-transform: uppercase; letter-spacing: 0.08em;">Opción B</span>
+          <span style="font-size: 20px; font-weight: 800;">Pegar el reporte completo</span>
+          <span style="font-size: 13px; color: #605d5d;">Abre el link, Ctrl+A, Ctrl+C y pega aquí. No hace falta limpiar nada.</span>
+          <textarea class="input" style="min-height: 84px; font-size: 13px;" placeholder="Pega aquí todo el texto del reporte…" value="{{ quote.texto }}" onChange="{{ setTexto }}"></textarea>
+          <button class="btn" onClick="{{ armar }}" style="background: #000; color: #FFE500; font-weight: 800; width: fit-content;" style-hover="background: #2d2b2b;">Armar presupuesto</button>
+        </div>
+      </section>
+
+      <div class="field" style="background: #FEED01; padding: 14px 16px; gap: 6px;">
+        <label style="font-weight: 800; color: #000;">Link de ClearMechanic: fotos y videos para el cliente</label>
+        <input class="input" placeholder="https://vehi.mobi/…" value="{{ quote.link }}" onChange="{{ setLink }}" style="background: #fff; font-size: 15px;">
+      </div>
+      <sc-if value="{{ hasParseMsg }}" hint-placeholder-val="{{ false }}">
+        <div style="background: #FEED01; color: #000; padding: 12px 16px; font-size: 14px; font-weight: 600;">{{ parseMsg }}</div>
+      </sc-if>
+
+      <section style="display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px;">
+        <div class="field"><label>OR #</label><input class="input" value="{{ quote.or }}" onChange="{{ setOr }}"></div>
+        <div class="field" style="grid-column: span 2;"><label>Vehículo</label><input class="input" list="lns-modelos" value="{{ quote.vehiculo }}" onChange="{{ setVehiculo }}" style="border-color: {{ vehBorder }};"></div>
+        <div class="field"><label>Año</label><input class="input" value="{{ quote.anio }}" onChange="{{ setAnio }}"></div>
+        <div class="field"><label>Placa</label><input class="input" value="{{ quote.placa }}" onChange="{{ setPlaca }}"></div>
+        <div class="field"><label>Km</label><input class="input" value="{{ quote.km }}" onChange="{{ setKm }}"></div>
+        <div class="field" style="grid-column: span 2;"><label>Cliente</label><input class="input" value="{{ quote.cliente }}" onChange="{{ setCliente }}"></div>
+        <div class="field"><label>Teléfono</label><input class="input" value="{{ quote.tel }}" onChange="{{ setTel }}"></div>
+        <div class="field"><label>Asesor de servicio</label><input class="input" value="{{ quote.asesor }}" onChange="{{ setAsesor }}"></div>
+        <datalist id="lns-modelos"><sc-for list="{{ modelList }}" as="m" hint-placeholder-count="0"><option value="{{ m }}"></option></sc-for></datalist>
+        <div style="grid-column: 1 / -1; font-size: 13px; color: {{ vehMsgColor }};">{{ vehMsg }}</div>
+      </section>
+
+      <section style="display: flex; flex-direction: column; border-top: 2px solid #201e1d;">
+        <sc-if value="{{ noItems }}" hint-placeholder-val="{{ false }}">
+          <p style="margin: 0; padding: 24px 0; font-size: 15px;">Sube el PDF o pega el reporte para armar la lista.</p>
+        </sc-if>
+        <sc-for list="{{ items }}" as="it" hint-placeholder-count="3">
+          <article style="border-bottom: 2px solid #201e1d; padding: 16px 0; display: flex; gap: 14px;">
+            <div style="width: 6px; flex: none; background: {{ it.urgBg }};"></div>
+            <div style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 10px;">
+              <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+                <input class="input" value="{{ it.name }}" onChange="{{ it.onName }}" style="flex: 1; min-width: 200px; font-weight: 800; font-size: 17px; border-color: transparent; padding-left: 0; background: transparent;">
+                <div class="seg">
+                  <button onClick="{{ it.onRojo }}" style="border: none; font: inherit; font-size: 13px; padding: 7px 11px; cursor: pointer; background: {{ it.rojoBg }}; color: {{ it.rojoFg }};">Urgente</button>
+                  <button onClick="{{ it.onAmarillo }}" style="border: none; border-left: 1px solid var(--color-divider); font: inherit; font-size: 13px; padding: 7px 11px; cursor: pointer; background: {{ it.amaBg }}; color: #000;">Recomendado</button>
+                </div>
+                <button class="btn btn-ghost" onClick="{{ it.onDel }}" style="color: #ae1800;">Quitar</button>
+              </div>
+              <div style="display: flex; gap: 8px; flex-wrap: wrap; align-items: center;">
+                <span class="tag" style="background: {{ it.srcBg }}; color: {{ it.srcFg }};">{{ it.srcText }}</span>
+                <span style="font-size: 12px; color: #605d5d;">{{ it.histText }}</span>
+                <sc-if value="{{ it.hasTplOpts }}" hint-placeholder-val="{{ false }}">
+                  <select class="input" value="{{ it.tplK }}" onChange="{{ it.onTpl }}" style="width: auto; min-height: 30px; font-size: 13px; padding: 4px 8px;">
+                    <sc-for list="{{ it.tplOpts }}" as="o" hint-placeholder-count="2"><option value="{{ o.v }}">{{ o.label }}</option></sc-for>
+                  </select>
+                </sc-if>
+              </div>
+              <div style="display: flex; flex-direction: column; gap: 0;">
+                <div style="display: grid; grid-template-columns: minmax(150px, 1fr) 60px 104px 92px 104px 110px 36px; gap: 8px; font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; padding: 4px 0; border-bottom: 1px solid var(--color-divider);">
+                  <span>Repuesto</span><span>Cant.</span><span>Costo unit. (interno)</span><span>Margen</span><span>Precio unit.</span><span>Total</span><span></span>
+                </div>
+                <sc-for list="{{ it.parts }}" as="ln" hint-placeholder-count="2">
+                  <div style="display: grid; grid-template-columns: minmax(150px, 1fr) 60px 104px 92px 104px 110px 36px; gap: 8px; align-items: center; padding: 5px 0; border-bottom: 1px solid var(--color-neutral-300);">
+                    <input class="input" value="{{ ln.desc }}" onChange="{{ ln.onDesc }}" placeholder="Repuesto">
+                    <input class="input" inputmode="decimal" value="{{ ln.qty }}" onChange="{{ ln.onQ }}" style="padding-left: 6px; padding-right: 6px;">
+                    <input class="input" inputmode="decimal" value="{{ ln.costo }}" onChange="{{ ln.onCosto }}" placeholder="Q costo" style="background: #f8f4f4;">
+                    <sc-if value="{{ ln.mgOn }}" hint-placeholder-val="{{ false }}">
+                      <div style="display: flex; align-items: center; gap: 4px;">
+                        <input class="input" inputmode="decimal" value="{{ ln.mg }}" onChange="{{ ln.onMg }}" style="width: 56px; padding-left: 6px; padding-right: 6px;">
+                        <span style="font-size: 13px;">%</span>
+                        <button onClick="{{ ln.onMgReset }}" aria-label="Volver al margen estándar" title="Volver al margen estándar" style="border: none; background: transparent; cursor: pointer; font: inherit; font-size: 14px; padding: 2px;">↺</button>
+                      </div>
+                    </sc-if>
+                    <sc-if value="{{ ln.mgOff }}" hint-placeholder-val="{{ true }}">
+                      <button onClick="{{ ln.onMgEdit }}" title="Modificar margen" style="border: 1px solid #201e1d; background: {{ ln.mgBg }}; font: inherit; font-size: 13px; padding: 6px 8px; cursor: pointer; text-align: left;" style-hover="background: #FFE500;">{{ ln.mgLabel }}</button>
+                    </sc-if>
+                    <div style="display: flex; flex-direction: column; gap: 2px;">
+                      <span style="font-size: 14px; padding: 8px 0;">{{ ln.unitFmt }}</span>
+                      <span style="font-size: 11px; color: #ae1800;">{{ ln.ajusteText }}</span>
+                    </div>
+                    <span style="font-size: 15px; font-weight: 800;">{{ ln.repFmt }}</span>
+                    <button class="btn btn-ghost btn-icon" onClick="{{ ln.onDel }}" aria-label="Quitar" style="color: #605d5d;">×</button>
+                  </div>
+                </sc-for>
+                <div style="display: flex; justify-content: space-between; align-items: center; padding-top: 8px; gap: 12px; flex-wrap: wrap;">
+                  <button class="btn btn-ghost" onClick="{{ it.onAddPart }}" style="color: #201e1d;">+ Repuesto</button>
+                  <span style="font-size: 14px;">Repuestos <strong>{{ it.repFmt }}</strong></span>
+                </div>
+                <sc-if value="{{ it.hasSugP }}" hint-placeholder-val="{{ false }}">
+                  <div style="display: flex; gap: 6px; flex-wrap: wrap; align-items: center; padding-top: 8px;">
+                    <span style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; margin-right: 4px;">Complementos</span>
+                    <sc-for list="{{ it.sugP }}" as="sg" hint-placeholder-count="3">
+                      <button onClick="{{ sg.onAdd }}" style="border: 1px solid #201e1d; background: #fff; font: inherit; font-size: 12px; padding: 5px 9px; cursor: pointer; text-align: left;" style-hover="background: #FFE500;">{{ sg.label }}</button>
+                    </sc-for>
+                  </div>
+                </sc-if>
+              </div>
+            </div>
+          </article>
+        </sc-for>
+        <div style="display: flex; gap: 8px; padding-top: 16px; flex-wrap: wrap;">
+          <input class="input" list="lns-puntos" placeholder="Agregar punto (ej. Bomba de agua)" value="{{ addName }}" onChange="{{ setAddName }}" style="max-width: 360px;">
+          <button class="btn btn-secondary" onClick="{{ addPunto }}">Agregar punto</button>
+          <datalist id="lns-puntos"><sc-for list="{{ puntoList }}" as="p" hint-placeholder-count="0"><option value="{{ p }}"></option></sc-for></datalist>
+        </div>
+      </section>
+    </main>
+
+    <div style="position: sticky; bottom: 0; background: #000; color: #fff; border-top: 4px solid #FFE500;">
+      <div style="max-width: 1180px; margin: 0 auto; padding: 12px 24px; display: flex; align-items: center; gap: 20px; flex-wrap: wrap;">
+        <span style="font-size: 14px;">{{ sum.countAll }} puntos · repuestos</span>
+        <span style="font-size: 22px; font-weight: 800; color: #FFE500;">{{ sum.repAllFmt }}</span>
+        <span style="font-size: 13px; color: #bab6b6;">{{ okPartesText }}</span>
+        <div style="margin-left: auto; display: flex; gap: 8px; flex-wrap: wrap;">
+          <button class="btn" onClick="{{ copyTeamLink }}" style="background: transparent; color: #fff; border: 1px solid #605d5d;">{{ teamLabel }}</button>
+          <button class="btn" onClick="{{ confirmPartes }}" style="background: #FFE500; color: #000; font-weight: 800; min-width: 220px; justify-content: flex-start;" style-hover="background: #fff;">{{ confirmPartesLabel }}</button>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+
+  <!-- ============ 02 MANO DE OBRA ============ -->
+  <sc-if value="{{ isStep3 }}" hint-placeholder-val="{{ false }}">
+    <main style="max-width: 1180px; margin: 0 auto; padding: 28px 24px 120px; display: flex; flex-direction: column; gap: 24px;">
+      <div style="display: flex; justify-content: space-between; align-items: flex-end; gap: 16px; flex-wrap: wrap;">
+        <div style="display: flex; flex-direction: column; gap: 4px;">
+          <span style="font-size: 12px; text-transform: uppercase; letter-spacing: 0.08em;">Paso 2 de 3 · Asesor de servicio</span>
+          <h1 style="margin: 0; font-size: 32px; text-transform: uppercase;">Mano de obra</h1>
+        </div>
+        <span style="font-size: 14px;">{{ quote.vehiculo }} {{ quote.anio }} · OR {{ quote.or }} · {{ quote.cliente }} · hora flat rate {{ tarifaIvaFmt }} con IVA</span>
+      </div>
+
+      <section style="display: flex; flex-direction: column; border-top: 2px solid #201e1d;">
+        <sc-for list="{{ items }}" as="it" hint-placeholder-count="3">
+          <article style="border-bottom: 2px solid #201e1d; padding: 16px 0; display: flex; gap: 14px;">
+            <div style="width: 6px; flex: none; background: {{ it.urgBg }};"></div>
+            <div style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 10px;">
+              <div style="display: flex; gap: 12px; align-items: baseline; flex-wrap: wrap;">
+                <span style="flex: 1; min-width: 200px; font-weight: 800; font-size: 17px;">{{ it.name }}</span>
+                <span style="font-size: 13px; color: #605d5d;">Repuestos {{ it.repFmt }} (confirmados por partes)</span>
+              </div>
+              <div class="field"><label>Comentario del técnico (lo ve el cliente)</label><input class="input" value="{{ it.nota }}" onChange="{{ it.onNota }}" placeholder="Ej. Pastillas al 2 mm, disco rayado"></div>
+              <div style="display: flex; flex-direction: column;">
+                <div style="display: grid; grid-template-columns: minmax(0, 1fr) 90px 120px 36px; gap: 8px; font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; padding: 4px 0; border-bottom: 1px solid var(--color-divider);">
+                  <span>Operación</span><span>Horas</span><span>M.O.</span><span></span>
+                </div>
+                <sc-for list="{{ it.ops }}" as="ln" hint-placeholder-count="2">
+                  <div style="display: grid; grid-template-columns: minmax(0, 1fr) 90px 120px 36px; gap: 8px; align-items: center; padding: 5px 0; border-bottom: 1px solid var(--color-neutral-300);">
+                    <input class="input" value="{{ ln.desc }}" onChange="{{ ln.onDesc }}" placeholder="Operación">
+                    <input class="input" inputmode="decimal" value="{{ ln.hrs }}" onChange="{{ ln.onHrs }}">
+                    <span style="font-size: 14px;">{{ ln.moFmt }}</span>
+                    <button class="btn btn-ghost btn-icon" onClick="{{ ln.onDel }}" aria-label="Quitar" style="color: #605d5d;">×</button>
+                  </div>
+                </sc-for>
+                <div style="display: flex; justify-content: space-between; align-items: center; padding-top: 8px; gap: 12px; flex-wrap: wrap;">
+                  <button class="btn btn-ghost" onClick="{{ it.onAddOp }}" style="color: #201e1d;">+ Operación</button>
+                  <span style="font-size: 14px;">M.O. {{ it.hrsTot }} h · <strong>{{ it.moFmt }}</strong> · Total punto {{ it.totFmt }}</span>
+                </div>
+                <sc-if value="{{ it.hasSugO }}" hint-placeholder-val="{{ false }}">
+                  <div style="display: flex; gap: 6px; flex-wrap: wrap; align-items: center; padding-top: 8px;">
+                    <span style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; margin-right: 4px;">Trabajos complementarios</span>
+                    <sc-for list="{{ it.sugO }}" as="sg" hint-placeholder-count="3">
+                      <button onClick="{{ sg.onAdd }}" style="border: 1px solid #201e1d; background: #fff; font: inherit; font-size: 12px; padding: 5px 9px; cursor: pointer; text-align: left;" style-hover="background: #FFE500;">{{ sg.label }}</button>
+                    </sc-for>
+                  </div>
+                </sc-if>
+              </div>
+            </div>
+          </article>
+        </sc-for>
+      </section>
+    </main>
+
+    <div style="position: sticky; bottom: 0; background: #000; color: #fff; border-top: 4px solid #FFE500;">
+      <div style="max-width: 1180px; margin: 0 auto; padding: 12px 24px; display: flex; align-items: center; gap: 20px; flex-wrap: wrap;">
+        <span style="font-size: 14px;">M.O. {{ sum.moAllFmt }} · Repuestos {{ sum.repAllFmt }}</span>
+        <span style="font-size: 22px; font-weight: 800; color: #FFE500;">{{ sum.totAllFmt }}</span>
+        <span style="font-size: 13px; color: #bab6b6;">IVA incluido · {{ okServText }}</span>
+        <button class="btn" onClick="{{ confirmServ }}" style="margin-left: auto; background: #FFE500; color: #000; font-weight: 800; min-width: 240px; justify-content: flex-start;" style-hover="background: #fff;">{{ confirmServLabel }}</button>
+      </div>
+    </div>
+  </sc-if>
+
+  <!-- ============ 03 ENVIAR ============ -->
+  <sc-if value="{{ isStep4 }}" hint-placeholder-val="{{ false }}">
+    <div style="max-width: 1180px; margin: 0 auto; padding: 24px 24px 0; display: flex; flex-direction: column; gap: 14px;">
+      <sc-if value="{{ noLink }}" hint-placeholder-val="{{ false }}">
+        <div style="background: #FEED01; color: #000; padding: 12px 16px; font-size: 14px; font-weight: 600;">Falta el link de ClearMechanic: el cliente no podrá ver fotos ni videos. Agrégalo en 01 Repuestos.</div>
+      </sc-if>
+      <sc-if value="{{ locked }}" hint-placeholder-val="{{ false }}">
+        <div style="background: #fff2ef; color: #7c1405; padding: 12px 16px; font-size: 14px; border-left: 0; border-top: 2px solid #ec3013;">{{ lockMsg }}</div>
+      </sc-if>
+      <div style="display: flex; gap: 8px; flex-wrap: wrap; align-items: center;">
+        <span style="font-size: 12px; text-transform: uppercase; letter-spacing: 0.08em; flex: 1; min-width: 200px;">Paso 3 de 3 · Vista previa de lo que verá el cliente</span>
+        <button class="btn btn-secondary" onClick="{{ copyLink }}" disabled="{{ locked }}">{{ copyLabel }}</button>
+        <button class="btn btn-secondary" onClick="{{ sendWa }}" disabled="{{ locked }}">Enviar por WhatsApp</button>
+        <button class="btn" onClick="{{ doPrint }}" disabled="{{ locked }}" style="background: #000; color: #FFE500; font-weight: 800;" style-hover="background: #2d2b2b;">Descargar PDF</button>
+      </div>
+      <section style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 0; border-top: 2px solid #201e1d; border-bottom: 2px solid #201e1d; background: #fff;">
+        <div style="grid-column: 1 / -1; padding: 12px 16px; border-bottom: 1px solid var(--color-divider); display: flex; flex-direction: column; gap: 2px;">
+          <span style="font-size: 15px; font-weight: 800; text-transform: uppercase;">Listados para TallerFLOW · OT {{ quote.or }}</span>
+          <span style="font-size: 13px; color: #605d5d;">Solo lo marcado “Sí, realizar” · {{ exp.countText }}. Texto separado por tabulación, sin encabezados: copia y pega directo en TallerFLOW.</span>
+        </div>
+        <div style="padding: 14px 16px; display: flex; flex-direction: column; gap: 8px; border-right: 1px solid var(--color-divider);">
+          <div style="display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap;">
+            <span style="font-size: 12px; text-transform: uppercase; letter-spacing: 0.08em; font-weight: 600;">Repuestos y subcontratos · {{ exp.nP }}</span>
+            <button class="btn" onClick="{{ exp.copyP }}" disabled="{{ exp.noP }}" style="background: #000; color: #FFE500; font-weight: 800;" style-hover="background: #2d2b2b;">{{ exp.copyPLabel }}</button>
+          </div>
+          <span style="font-size: 11px; color: #605d5d;">Cantidad ⇥ Descripción ⇥ Especificación</span>
+          <textarea class="input" readonly="{{ true }}" value="{{ exp.txtP }}" style="min-height: 140px; font-family: ui-monospace, Menlo, monospace; font-size: 12px; white-space: pre; tab-size: 6; background: #f8f4f4;"></textarea>
+        </div>
+        <div style="padding: 14px 16px; display: flex; flex-direction: column; gap: 8px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap;">
+            <span style="font-size: 12px; text-transform: uppercase; letter-spacing: 0.08em; font-weight: 600;">Mano de obra · {{ exp.nO }}</span>
+            <button class="btn" onClick="{{ exp.copyO }}" disabled="{{ exp.noO }}" style="background: #000; color: #FFE500; font-weight: 800;" style-hover="background: #2d2b2b;">{{ exp.copyOLabel }}</button>
+          </div>
+          <span style="font-size: 11px; color: #605d5d;">Tipo de operación ⇥ Descripción ⇥ Horas</span>
+          <textarea class="input" readonly="{{ true }}" value="{{ exp.txtO }}" style="min-height: 140px; font-family: ui-monospace, Menlo, monospace; font-size: 12px; white-space: pre; tab-size: 6; background: #f8f4f4;"></textarea>
+        </div>
+      </section>
+    </div>
+  </sc-if>
+
+  <!-- ============ CLIENTE · TARJETAS ============ -->
+  <sc-if value="{{ showClient }}" hint-placeholder-val="{{ false }}">
+    <div style="max-width: 1180px; margin: 0 auto; padding: {{ clientPad }};">
+      <div style="background: #000; color: #fff; display: flex; align-items: center; gap: 24px; padding: 0 24px 0 8px; flex-wrap: wrap;">
+        <img src="assets/logo-negro.png" alt="Lube N Save" style="width: 120px; height: 100px; object-fit: cover; display: block;">
+        <div style="flex: 1; min-width: 220px; display: flex; flex-direction: column; gap: 4px; padding: 12px 0;">
+          <span style="font-size: 12px; color: #FFE500; text-transform: uppercase; letter-spacing: 0.08em;">{{ docLabel }} · {{ hoyFmt }}</span>
+          <span style="font-size: 26px; font-weight: 800;">{{ quote.vehiculo }} {{ quote.anio }}</span>
+          <span style="font-size: 14px;">{{ quote.cliente }} · {{ quote.placa }} · {{ quote.km }} km</span>
+          <sc-if value="{{ hasAsesor }}" hint-placeholder-val="{{ false }}"><span style="font-size: 13px; color: #d7d3d3;">Asesor de servicio: {{ quote.asesor }}</span></sc-if>
+        </div>
+        <sc-if value="{{ hasLink }}" hint-placeholder-val="{{ false }}">
+          <a href="{{ quote.link }}" target="_blank" style="background: #FFE500; color: #000; font-weight: 800; font-size: 15px; padding: 14px 18px; text-decoration: none; margin: 12px 0;" style-hover="background: #fff;">Ver fotos y videos de la inspección →</a>
+        </sc-if>
+      </div>
+      <div style="background: #fff; padding: 14px 20px; font-size: 14px; border-bottom: 2px solid #000;">Elige “Sí, realizar” o “Ahora no” en cada trabajo. El total se actualiza al momento.</div>
+
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 24px; padding-top: 24px; align-items: start;">
+        <div style="grid-column: span 2; min-width: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 16px;">
+          <sc-for list="{{ items }}" as="it" hint-placeholder-count="4">
+            <article style="background: #fff; display: flex; flex-direction: column; border-top: 8px solid {{ it.urgBg }}; box-shadow: var(--shadow-sm); break-inside: avoid;">
+              <div style="padding: 16px 18px; display: flex; flex-direction: column; gap: 8px; flex: 1; opacity: {{ it.op }};">
+                <span style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; font-weight: 600;">{{ it.urgLabel }}</span>
+                <span style="font-size: 18px; font-weight: 800; line-height: 1.2;">{{ it.name }}</span>
+                <sc-if value="{{ it.hasNota }}" hint-placeholder-val="{{ false }}"><span style="font-size: 14px; text-wrap: pretty;">{{ it.nota }}</span></sc-if>
+                <sc-if value="{{ it.hasDetalle }}" hint-placeholder-val="{{ false }}">
+                  <button onClick="{{ it.onInc }}" style="align-self: flex-start; border: none; border-bottom: 2px solid #000; background: transparent; font: inherit; font-size: 13px; font-weight: 800; padding: 2px 0; cursor: pointer; text-align: left;" style-hover="background: #FFE500;">{{ it.incLabel }}</button>
+                </sc-if>
+                <div style="display: grid; grid-template-columns: 1fr auto; gap: 4px 12px; font-size: 13px; border-top: 1px solid var(--color-neutral-300); padding-top: 8px; margin-top: auto;">
+                  <span>Mano de obra</span><span>{{ it.moFmt }}</span>
+                  <span>Repuestos</span><span>{{ it.repFmt }}</span>
+                  <span style="font-weight: 800; font-size: 15px;">Total</span><span style="font-weight: 800; font-size: 15px;">{{ it.totFmt }}</span>
+                </div>
+              </div>
+              <div style="display: grid; grid-template-columns: 1fr 1fr; border-top: 2px solid #000;">
+                <button onClick="{{ it.onSi }}" style="border: none; font: inherit; font-weight: 800; font-size: 15px; padding: 12px 16px; text-align: left; cursor: pointer; background: {{ it.siBg }}; color: {{ it.siFg }};">Sí, realizar</button>
+                <button onClick="{{ it.onNo }}" style="border: none; border-left: 2px solid #000; font: inherit; font-weight: 800; font-size: 15px; padding: 12px 16px; text-align: left; cursor: pointer; background: {{ it.noBg }}; color: #201e1d;">Ahora no</button>
+              </div>
+            </article>
+          </sc-for>
+        </div>
+        <aside style="position: sticky; top: 16px; background: #000; color: #fff; display: flex; flex-direction: column;">
+          <div style="padding: 18px 20px; border-bottom: 1px solid #333;"><span style="font-size: 12px; text-transform: uppercase; letter-spacing: 0.08em; color: #FFE500;">Tu selección</span></div>
+          <sc-for list="{{ onItems }}" as="it" hint-placeholder-count="3">
+            <div style="display: flex; justify-content: space-between; gap: 12px; padding: 10px 20px; border-bottom: 1px solid #333; font-size: 14px;"><span>{{ it.name }}</span><span style="white-space: nowrap;">{{ it.totFmt }}</span></div>
+          </sc-for>
+          <div style="padding: 12px 20px; font-size: 13px; color: #d7d3d3;">Todos los precios incluyen IVA.</div>
+          <div style="padding: 16px 20px; background: #FFE500; color: #000; display: flex; flex-direction: column; gap: 2px;">
+            <span style="font-size: 12px; text-transform: uppercase; letter-spacing: 0.08em;">Total a pagar</span>
+            <span style="font-size: 34px; font-weight: 800;">{{ sum.totFmt }}</span>
+            <span style="font-size: 12px;">Presupuesto completo: {{ sum.totAllFmt }}</span>
+          </div>
+          <sc-if value="{{ hasLink }}" hint-placeholder-val="{{ false }}"><a href="{{ quote.link }}" target="_blank" style="color: #FFE500; padding: 14px 20px; font-size: 14px;">Ver fotos del reporte de inspección</a></sc-if>
+        </aside>
+      </div>
+      <sc-if value="{{ hasPrintDetails }}" hint-placeholder-val="{{ false }}">
+        <div style="display: flex; flex-direction: column; gap: 20px; padding-top: 24px;">
+          <span style="font-size: 14px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.06em; border-bottom: 2px solid #000; padding-bottom: 6px;">Desglose por punto</span>
+          <sc-for list="{{ printDetails }}" as="d" hint-placeholder-count="1">
+            <div style="background: #fff; border: 2px solid #000; break-inside: avoid; page-break-inside: avoid; display: flex; flex-direction: column;">
+              <div style="background: #FFE500; padding: 10px 14px; display: flex; flex-direction: column; gap: 2px;">
+                <span style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em;">{{ d.kicker }}</span>
+                <span style="font-size: 16px; font-weight: 800;">{{ d.title }}</span>
+              </div>
+              <sc-for list="{{ d.secs }}" as="sec" hint-placeholder-count="3">
+                <div style="display: flex; flex-direction: column;">
+                  <div style="display: grid; grid-template-columns: 28px minmax(0, 1fr) 50px 90px 100px; gap: 8px; background: #000; color: #FFE500; font-size: 12px; font-weight: 800; padding: 6px 14px; -webkit-print-color-adjust: exact; print-color-adjust: exact;">
+                    <span>No.</span><span>{{ sec.name }}</span><span style="text-align: right;">{{ sec.qLabel }}</span><span style="text-align: right;">Unidad</span><span style="text-align: right;">Total</span>
+                  </div>
+                  <sc-for list="{{ sec.rows }}" as="x" hint-placeholder-count="3">
+                    <div style="display: grid; grid-template-columns: 28px minmax(0, 1fr) 50px 90px 100px; gap: 8px; font-size: 12px; padding: 5px 14px; border-bottom: 1px solid var(--color-neutral-300);">
+                      <span>{{ x.no }}</span><span>{{ x.desc }}</span><span style="text-align: right;">{{ x.q }}</span><span style="text-align: right;">{{ x.unit }}</span><span style="text-align: right;">{{ x.tot }}</span>
+                    </div>
+                  </sc-for>
+                </div>
+              </sc-for>
+              <div style="display: flex; justify-content: space-between; gap: 12px; background: #000; color: #FFE500; padding: 10px 14px; -webkit-print-color-adjust: exact; print-color-adjust: exact;">
+                <span style="font-size: 13px; font-weight: 800; text-transform: uppercase;">{{ d.totLabel }}</span>
+                <span style="font-size: 16px; font-weight: 800;">{{ d.tot }}</span>
+              </div>
+              <sc-if value="{{ d.hasIncluye }}" hint-placeholder-val="{{ false }}">
+                <div style="padding: 10px 14px; display: flex; flex-direction: column; gap: 4px;">
+                  <span style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; font-weight: 600;">Revisiones incluidas en el servicio</span>
+                  <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 2px 14px;">
+                    <sc-for list="{{ d.incluye }}" as="x" hint-placeholder-count="6"><span style="font-size: 11px;">✓ {{ x }}</span></sc-for>
+                  </div>
+                </div>
+              </sc-if>
+            </div>
+          </sc-for>
+        </div>
+      </sc-if>
+      <p style="font-size: 12px; color: #605d5d; padding: 16px 0; margin: 0;">Precios en quetzales con IVA incluido. Mano de obra a tarifa flat rate. Presupuesto válido por 15 días; repuestos sujetos a disponibilidad.</p>
+    </div>
+  </sc-if>
+  <sc-if value="{{ hasModal }}" hint-placeholder-val="{{ false }}">
+    <div onClick="{{ closeModal }}" style="position: fixed; inset: 0; background: rgba(0, 0, 0, 0.6); z-index: 50; display: flex; align-items: center; justify-content: center; padding: 16px;">
+      <div onClick="{{ stopProp }}" role="dialog" aria-modal="true" style="background: #fff; width: 100%; max-width: 600px; max-height: 90vh; overflow: auto; box-shadow: var(--shadow-lg); display: flex; flex-direction: column;">
+        <div style="background: #FFE500; display: flex; align-items: flex-start; gap: 12px; padding: 16px 18px; position: sticky; top: 0;">
+          <div style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px;">
+            <span style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em;">{{ modal.kicker }}</span>
+            <span style="font-size: 18px; font-weight: 800; line-height: 1.2;">{{ modal.title }}</span>
+          </div>
+          <button onClick="{{ closeModal }}" aria-label="Cerrar" style="border: 2px solid #000; background: #fff; font: inherit; font-weight: 800; font-size: 16px; width: 36px; height: 36px; cursor: pointer; flex: none;" style-hover="background: #000; color: #FFE500;">×</button>
+        </div>
+        <sc-for list="{{ modal.secs }}" as="sec" hint-placeholder-count="3">
+          <div style="display: flex; flex-direction: column;">
+            <div style="display: grid; grid-template-columns: 28px minmax(0, 1fr) 44px 84px 92px; gap: 8px; background: #000; color: #FFE500; font-size: 12px; font-weight: 800; padding: 8px 14px;">
+              <span>No.</span><span>{{ sec.name }}</span><span style="text-align: right;">{{ sec.qLabel }}</span><span style="text-align: right;">Unidad</span><span style="text-align: right;">Total</span>
+            </div>
+            <sc-for list="{{ sec.rows }}" as="x" hint-placeholder-count="3">
+              <div style="display: grid; grid-template-columns: 28px minmax(0, 1fr) 44px 84px 92px; gap: 8px; font-size: 13px; padding: 7px 14px; border-bottom: 1px solid var(--color-neutral-300);">
+                <span>{{ x.no }}</span><span>{{ x.desc }}</span><span style="text-align: right;">{{ x.q }}</span><span style="text-align: right; white-space: nowrap;">{{ x.unit }}</span><span style="text-align: right; white-space: nowrap;">{{ x.tot }}</span>
+              </div>
+            </sc-for>
+          </div>
+        </sc-for>
+        <div style="display: flex; justify-content: space-between; align-items: baseline; gap: 12px; background: #000; color: #fff; padding: 14px 18px; border-top: 4px solid #FFE500;">
+          <span style="font-size: 13px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.04em;">{{ modal.totLabel }}</span>
+          <span style="font-size: 22px; font-weight: 800; color: #FFE500; white-space: nowrap;">{{ modal.tot }}</span>
+        </div>
+        <sc-if value="{{ modal.hasIncluye }}" hint-placeholder-val="{{ false }}">
+          <div style="padding: 14px 18px; display: flex; flex-direction: column; gap: 6px;">
+            <span style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; font-weight: 600; padding-bottom: 4px; border-bottom: 2px solid #000;">Revisiones incluidas en el servicio</span>
+            <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 4px 16px;">
+              <sc-for list="{{ modal.incluye }}" as="x" hint-placeholder-count="6"><span style="font-size: 13px; display: flex; gap: 8px;"><span style="font-weight: 800;">✓</span><span>{{ x }}</span></span></sc-for>
+            </div>
+          </div>
+        </sc-if>
+        <p style="margin: 0; padding: 10px 18px 16px; font-size: 12px; color: #605d5d;">Precios en quetzales con IVA incluido.</p>
+      </div>
+    </div>
+  </sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  defS() { return { anos: '3', margen: '50', tarifa: '600', tarifaFija: true, iva: '12', pct: '8', meses: '6', r1: '425', r2: '500', r3: '600',
+    kits: 'RADIADOR = Refrigerante; Abrazaderas; Wipe\nTUBERIA AC = Gas freón; Aceite para compresor\nCOMPRESOR AC = Gas freón; Aceite para compresor\nBOMBA DE AGUA = Refrigerante; Wipe\nTERMOSTATO = Refrigerante\nFRENOS = Líquido de frenos\nCARGADORES = Materiales auxiliares' }; }
+  sample() {
+    return 'Lube N Save Zona 10\nReporte de inspección vehicular\nOrden: 5431\nCliente: Cliente de ejemplo\nTel: 55551234\nHyundai Tucson 2019  Placa P-123ABC  Km 85,000\n\nREQUIERE ATENCIÓN INMEDIATA\nFrenos delanteros  Urgente  Pastillas al 2 mm\nFrenos traseros  Urgente\n\nSUGERIDO\nFiltro de aire acondicionado  Recomendado\nChorritos y plumillas  Recomendado\nLuces de freno  Recomendado\nSoporte de motor  Recomendado\n\nOK\nNivel de aceite  OK\nEstado de llantas  OK';
+  }
+  F() { return 1 + this.num(this.state.settings.iva) / 100; }
+  r2(n) { return Math.round(n * 100) / 100; }
+  emptyQ() { return { ivaIncl: true, link: '', or: '', cliente: '', tel: '', asesor: '', placa: '', km: '', vehiculo: '', anio: '', texto: '', items: [], okP: null, okS: null }; }
+  state = { step: 2, base: null, baseSrc: '', loading: true, msg: '', parseMsg: '', pdfName: '', settings: this.defS(), quote: { ...this.emptyQ(), texto: this.sample(), link: 'https://vehi.mobi/N8XwaN', ivaIncl: true }, clientOnly: false, printing: false, copied: '', addName: '', pinField: 1, pinHash: (() => { try { return localStorage.getItem('lns-pin') || ''; } catch (e) { return ''; } })(), baseOpen: (() => { try { return sessionStorage.getItem('lns-base-open') === '1' && !!localStorage.getItem('lns-pin'); } catch (e) { return false; } })(), pinChanging: false, pin1: '', pin2: '', pinMsg: '', open: {}, serv: null, servSrc: '' };
+
+  componentWillUnmount() { window.removeEventListener('keydown', this._pinKey); }
+  async componentDidMount() {
+    this._pinKey = e => { const st = this.state; if (st.baseOpen || st.step !== 1 || st.clientOnly) return;
+      if (/^\d$/.test(e.key)) { e.preventDefault(); this.pinPress(e.key); } else if (e.key === 'Backspace') { e.preventDefault(); this.pinPress('Borrar'); } else if (e.key === 'Enter') { e.preventDefault(); this.unlock(); } else if (e.key === 'Tab') { e.preventDefault(); this.setState(s => ({ pinField: s.pinField === 2 ? 1 : 2 })); } };
+    window.addEventListener('keydown', this._pinKey);
+    this.lib = await import(new URL('./lns-base.js', location.href).href);
+    const h = location.hash;
+    const m = h.match(/^#([qt])=(.+)$/);
+    if (m) {
+      try {
+        const d = this.dec(m[2]);
+        if (m[1] === 'q') { this.setState({ clientOnly: true, step: 4, quote: d.q, settings: { ...this.defS(), ...d.s }, loading: false }); return; }
+        this.setState({ quote: d.q, settings: { ...this.defS(), ...d.s }, step: d.q.okP ? 3 : 2 });
+      } catch (e) { console.warn('link inválido', e); }
+    } else {
+      try { const saved = JSON.parse(localStorage.getItem('lns-cotizador-v2') || 'null'); if (saved) { const st = { ...this.defS(), ...(saved.settings || {}) }; let q = saved.quote;
+        if (q && !q.ivaIncl) { const F = 1 + this.num(st.iva) / 100; q = { ...q, ivaIncl: true, items: (q.items || []).map(it => ({ ...it, parts: (it.parts || []).map(l => ({ ...l, rep: l.rep ? String(this.r2(this.num(l.rep) * F)) : l.rep, base: l.base ? l.base * F : l.base })), ops: (it.ops || []).map(l => l.fijo ? { ...l, monto: String(this.r2(this.num(l.monto) * F)) } : l) })) }; }
+        this.setState({ quote: q, settings: st }); } } catch (e) {}
+    }
+    try {
+      const P = new URLSearchParams(location.search), keys = ['or', 'link', 'placa', 'vehiculo', 'anio', 'cliente', 'tel', 'km', 'asesor'];
+      const pre = {}; keys.forEach(k => { const v = (P.get(k) || '').trim(); if (v) pre[k] = v; });
+      const ot = (P.get('ot') || '').trim(); if (ot) pre.or = ot;
+      const saved = pre.or ? this.quoteStore()[pre.or] : null;
+      if (saved) { this._pre = true; this.setState({ step: saved.okP && saved.okS ? 4 : saved.okP ? 3 : 2, quote: { ...saved, ...pre, vehiculo: saved.vehiculo || pre.vehiculo, cliente: saved.cliente || pre.cliente }, parseMsg: 'Cotización de la OT ' + pre.or + ' recuperada.' }); throw 'done'; }
+      if (pre.or || pre.link) this._pre = true;
+      if (pre.or || pre.link) this.setState(s => ({ step: 2, quote: pre.or && pre.or !== s.quote.or ? { ...this.emptyQ(), ...pre } : { ...s.quote, ...pre },
+        parseMsg: 'Datos recibidos de TallerFLOW' + (pre.or ? ' · OT ' + pre.or : '') + (pre.vehiculo ? ' · ' + pre.vehiculo : '') + '. Sube el PDF o pega el reporte para armar el presupuesto.' }));
+    } catch (e) {}
+    let recs = await this.idbGet('recs'), src = 'Base propia de este navegador';
+    if (!recs) { recs = await (await fetch('historial-registros.json')).json(); src = 'Historial inicial ClearMechanic'; await this.idbSet(recs, 'recs'); }
+    const cut = this.lib.cutoffFor(new Date(), this.num(this.state.settings.anos) || 3), before = recs.length;
+    recs = recs.filter(x => x[1] >= cut);
+    if (recs.length < before) { await this.idbSet(recs, 'recs'); this.setState({ msg: 'Depuración trimestral: se eliminaron ' + (before - recs.length).toLocaleString('es-GT') + ' casos anteriores a ' + this.fd(cut) + '.' }); }
+    this.recs = recs; const base = this.lib.buildFromRecords(recs);
+    let serv = await this.idbGet('serv'), servSrc = 'Plantilla cargada en este navegador';
+    if (!serv) { try { serv = await (await fetch('servicios.json')).json(); servSrc = 'ESTIMADO SERVICIOS.xlsx (incluida)'; } catch (e) { serv = null; } }
+    this.setState({ base, serv, servSrc, baseSrc: src + ' · procesado ' + this.fd(base.meta.built), loading: false }, () => {
+      if (serv) { const vk = this.vehKeyOf(this.state.quote.vehiculo); let ch = false;
+        const items = (this.state.quote.items || []).map(it => { const tipo = this.svcTipo(it.name); if (!tipo || (it.src && it.src.tpl)) return it;
+          const c = this.tplCands(vk, tipo); if (!c.length) return it; ch = true; return this.itemFromTpl(c, 0, it.urg, it.nota, it.id); });
+        if (ch) this.setState(st => ({ quote: { ...st.quote, items, okP: null, okS: null } })); }
+      if (!this.state.quote.items.length && !this._pre) this.loadDemoPdf();
+    });
+  }
+  quoteStore() { try { return JSON.parse(localStorage.getItem('lns-cotizaciones') || '{}'); } catch (e) { return {}; } }
+  componentDidUpdate() {
+    if (this.state.clientOnly || this.state.loading) return;
+    if (this._lq !== this.state.quote || this._ls !== this.state.settings)
+      try { this._lq = this.state.quote; this._ls = this.state.settings;
+        const q = this.state.quote; if (q.or && q.items && q.items.length && !q.estimado) { const m = this.quoteStore(); m[q.or] = { ...q, _t: Date.now() };
+          const ks = Object.keys(m).sort((a, b) => (m[b]._t || 0) - (m[a]._t || 0)); ks.slice(150).forEach(k => delete m[k]); localStorage.setItem('lns-cotizaciones', JSON.stringify(m)); } localStorage.setItem('lns-cotizador-v2', JSON.stringify({ quote: this.state.quote, settings: this.state.settings })); } catch (e) {}
+  }
+  enc(o) { const b = new TextEncoder().encode(JSON.stringify(o)); let s = ''; b.forEach(x => s += String.fromCharCode(x)); return btoa(s).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, ''); }
+  dec(s) { s = s.replace(/-/g, '+').replace(/_/g, '/'); return JSON.parse(new TextDecoder().decode(Uint8Array.from(atob(s), c => c.charCodeAt(0)))); }
+
+  idb() { return new Promise((res, rej) => { const r = indexedDB.open('lns-cotizador', 1); r.onupgradeneeded = () => r.result.createObjectStore('kv'); r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); }); }
+  async idbGet(key = 'base') { try { const db = await this.idb(); return await new Promise(res => { const g = db.transaction('kv').objectStore('kv').get(key); g.onsuccess = () => res(g.result || null); g.onerror = () => res(null); }); } catch (e) { return null; } }
+  async idbSet(v, key = 'base') { const db = await this.idb(); return new Promise(res => { const t = db.transaction('kv', 'readwrite'); t.objectStore('kv').put(v, key); t.oncomplete = () => res(); }); }
+  pinPress(k) {
+    if (k === 'OK') return this.unlock();
+    this.setState(s => { const f = s.pinField === 2 && (!s.pinHash || s.pinChanging) ? 'pin2' : 'pin1'; const v = s[f] || '';
+      const nv = k === 'Borrar' ? v.slice(0, -1) : (v + k).slice(0, 8);
+      const nx = { [f]: nv, pinMsg: '' }; if (f === 'pin1' && nv.length >= 4 && k !== 'Borrar' && (!s.pinHash || s.pinChanging) && nv.length === 8) nx.pinField = 2; return nx; });
+  }
+  async hash(p) { const b = await crypto.subtle.digest('SHA-256', new TextEncoder().encode('lns-z10:' + p)); return [...new Uint8Array(b)].map(x => x.toString(16).padStart(2, '0')).join(''); }
+  async unlock() {
+    const st = this.state, p = (st.pin1 || '').trim();
+    if (!/^\d{4,8}$/.test(p)) { this.setState({ pinMsg: 'El PIN debe tener de 4 a 8 dígitos.' }); return; }
+    if (!st.pinHash || st.pinChanging) {
+      if (p !== (st.pin2 || '').trim()) { this.setState({ pinMsg: 'Los dos PIN no coinciden.' }); return; }
+      const h = await this.hash(p); try { localStorage.setItem('lns-pin', h); } catch (e) {}
+      this.openBase(h); return;
+    }
+    if (await this.hash(p) === st.pinHash) this.openBase(st.pinHash); else this.setState({ pinMsg: 'PIN incorrecto.', pin1: '' });
+  }
+  openBase(h) { try { sessionStorage.setItem('lns-base-open', '1'); } catch (e) {} this.setState({ pinHash: h, baseOpen: true, pinChanging: false, pin1: '', pin2: '', pinMsg: '' }); }
+  async setRecs(recs) { this.recs = recs; await this.idbSet(recs, 'recs'); this.setState({ base: this.lib.buildFromRecords(recs) }); }
+  async saveToHist(q) {
+    if (q.estimado || !this.recs || !q.items.length) return;
+    const F = this.F(), hoy = new Date().toISOString().slice(0, 10), or = String(q.or || ('LNS-' + Date.now())).trim();
+    const vk = this.vehKeyOf(q.vehiculo) || (() => { const t = this.norm(q.vehiculo).split(' '); return t[0] + '|' + t.slice(1).join(' '); })();
+    const vd = this.state.base.m[vk] ? this.state.base.m[vk].d : (q.vehiculo || '').trim();
+    const add = q.items.map(it => { const lines = [];
+      (it.parts || []).forEach(l => { const v = this.num(l.rep); if ((l.desc || '').trim() && v) lines.push([l.desc.trim(), this.r2(v / F), 0]); });
+      (it.ops || []).forEach(l => { const h = this.num(l.hrs); if ((l.desc || '').trim() && h) lines.push([l.desc.trim(), 0, this.r2(h * this.rateAt(hoy))]); });
+      return lines.length ? [or, hoy, String(q.anio || ''), vk, this.norm(it.name), vd, it.name, lines, 'lns'] : null; }).filter(Boolean);
+    if (!add.length) return;
+    await this.setRecs([...this.recs.filter(x => x[0] !== or), ...add]);
+    this.setState({ msg: 'OR ' + or + ' guardada en el historial (' + add.length + ' puntos).' });
+  }
+  exportHist() {
+    const blob = new Blob([JSON.stringify({ tipo: 'lns-historial', fecha: new Date().toISOString(), recs: this.recs, settings: this.state.settings })], { type: 'application/json' });
+    const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'respaldo-cotizador-lns-' + new Date().toISOString().slice(0, 10) + '.json'; a.click();
+  }
+  async importHist(e) {
+    const f = e.target.files && e.target.files[0]; if (!f) return;
+    try { const d = JSON.parse(await f.text()); if (d.tipo !== 'lns-historial' || !Array.isArray(d.recs)) throw new Error('No es un respaldo del cotizador.');
+      await this.setRecs(d.recs); if (d.settings) this.setState(s => ({ settings: { ...s.settings, ...d.settings } }));
+      this.setState({ msg: 'Respaldo restaurado: ' + d.recs.length.toLocaleString('es-GT') + ' casos.' });
+    } catch (err) { this.setState({ msg: 'Error: ' + err.message }); }
+    e.target.value = '';
+  }
+  estimateP(vk, raw) {
+    const b = this.state.base; const marca = vk ? vk.split('|')[0] : this.norm(this.state.quote.vehiculo).split(' ')[0];
+    const all = [];
+    for (const k in b.m) { if (k === vk) continue; const P = this.match(k, raw, 0.6); if (P) { const tot = P.last.l.reduce((a, l) => a + l[1] + l[2], 0); if (tot > 0) all.push({ k, P, tot }); } }
+    if (all.length < 2) return null;
+    const same = all.filter(c => c.k.split('|')[0] === marca);
+    let pool = same.length ? same : all;
+    const lim = new Date(Date.now() - 548 * 864e5).toISOString().slice(0, 10), recent = pool.filter(c => c.P.last.d >= lim);
+    if (recent.length >= 3) pool = recent;
+    pool.sort((a, c) => a.tot - c.tot);
+    if (pool.length < 2) return null;
+    if (pool.length >= 5) { const q1 = pool[Math.floor(pool.length * 0.25)].tot, q3 = pool[Math.floor(pool.length * 0.75)].tot, iqr = q3 - q1; pool = pool.filter(c => c.tot >= q1 - 1.5 * iqr && c.tot <= q3 + 1.5 * iqr); }
+    const med = pool[Math.floor((pool.length - 1) / 2)];
+    return { P: med.P, model: b.m[med.k].d, n: pool.length, min: pool[0].tot, max: pool[pool.length - 1].tot, sameBrand: !!same.length };
+  }
+  async onServFile(e) {
+    const f = e.target.files && e.target.files[0]; if (!f) return;
+    this.setState({ msg: 'Procesando plantilla ' + f.name + '…' });
+    try {
+      const JSZip = (await import('https://cdn.jsdelivr.net/npm/jszip@3.10.1/+esm')).default;
+      const serv = await this.lib.parseServicios(await f.arrayBuffer(), JSZip);
+      if (!serv.servicios.length) throw new Error('No encontré bloques de servicio (No. / Repuestos / CTD / unidad / total).');
+      await this.idbSet(serv, 'serv'); this._known = null;
+      this.setState({ serv, servSrc: f.name, msg: 'Plantilla lista: ' + serv.servicios.length + ' servicios.' });
+    } catch (err) { this.setState({ msg: 'Error en plantilla: ' + err.message }); }
+    e.target.value = '';
+  }
+
+  async onFile(e) {
+    const f = e.target.files && e.target.files[0]; if (!f) return;
+    this.setState({ msg: 'Procesando ' + f.name + '…' });
+    try {
+      const nuevos = this.lib.parseRecords(this.lib.decode(await f.arrayBuffer()));
+      if (!nuevos.length) throw new Error('No encontré filas tipo “Sub-punto”. ¿Es el reporte de Cotizaciones?');
+      const ors = new Set(nuevos.map(x => x[0])), keep = this.recs.filter(x => !ors.has(x[0]));
+      const cut = this.lib.cutoffFor(new Date(), this.num(this.state.settings.anos) || 3);
+      const add = nuevos.filter(x => x[1] >= cut);
+      await this.setRecs([...keep, ...add]);
+      this.setState({ baseSrc: 'Base propia · último CSV ' + f.name, msg: 'Listo: ' + add.length.toLocaleString('es-GT') + ' casos del CSV integrados (' + ors.size + ' órdenes). Total ' + this.recs.length.toLocaleString('es-GT') + ' casos.' });
+    } catch (err) { this.setState({ msg: 'Error: ' + err.message }); }
+    e.target.value = '';
+  }
+  async onPdf(e) {
+    const f = e.target.files && e.target.files[0]; if (!f) return;
+    await this.loadPdf(await f.arrayBuffer(), f.name);
+    e.target.value = '';
+  }
+  async loadDemoPdf() { const r = await fetch('assets/ejemplo-or-5359.pdf'); await this.loadPdf(await r.arrayBuffer(), 'ejemplo OR 5359'); }
+  async loadPdf(buf, name) {
+    this.setState({ pdfName: name, parseMsg: 'Leyendo ' + name + '…' });
+    try {
+      const pdfjs = await import('https://cdn.jsdelivr.net/npm/pdfjs-dist@4.4.168/build/pdf.min.mjs');
+      pdfjs.GlobalWorkerOptions.workerSrc = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@4.4.168/build/pdf.worker.min.mjs';
+      const doc = await pdfjs.getDocument({ data: buf }).promise;
+      const pages = [];
+      for (let p = 1; p <= doc.numPages; p++) {
+        const tc = await (await doc.getPage(p)).getTextContent();
+        const rows = {};
+        tc.items.forEach(it => { if (!it.str) return; const y = Math.round(it.transform[5] * 2) / 2; (rows[y] = rows[y] || []).push(it); });
+        pages.push(Object.keys(rows).map(Number).sort((a, b) => b - a).map(y => {
+          const its = rows[y].sort((a, b) => a.transform[4] - b.transform[4]);
+          const r = { y, full: '', A: '', C: '', N: [] }; let last = null, lastAll = null;
+          for (const it of its) {
+            const x = it.transform[4], c = x < 160 ? 'A' : x < 250 ? 'C' : 'N';
+            const gapAll = lastAll ? x - lastAll : 0; r.full += (r.full && gapAll > 1.5 ? ' ' : '') + it.str; lastAll = x + it.width;
+            const gap = last && last.c === c ? x - (last.x + last.w) : 99;
+            if (c === 'N') { if (gap <= 1.5 && r.N.length) r.N[r.N.length - 1][1] += it.str; else r.N.push([x, it.str]); }
+            else r[c] += (r[c] && gap > 1.5 ? ' ' : '') + it.str;
+            last = { c, x, w: it.width };
+          }
+          r.A = r.A.trim(); r.C = r.C.trim(); r.N = r.N.map(([x, s]) => [x, s.trim()]).filter(t => t[1]);
+          return r;
+        }));
+      }
+      const res = this.parsePdf(pages);
+      this.fromPdf(res);
+    } catch (err) { console.warn(err); this.setState({ parseMsg: 'No pude leer el PDF: ' + err.message }); }
+  }
+  parsePdf(pages) {
+    const flat = pages.flat().map(r => r.full).join('\n');
+    const g = re => { const m = flat.match(re); return m ? m[1].trim() : ''; };
+    const h = { link: g(/(https?:\/\/[^\s]*(?:vehi\.mobi|clearmechanic)[^\s]*)/i), or: g(/Orden\s*#\s*(\d{3,6})/i), cliente: g(/Nombre:\s*(.+?)\s+Veh[ií]culo:/i), tel: g(/Celular:\s*([\d\s-]{8,12})/i).replace(/\D/g, ''),
+      placa: g(/Placas?:\s*([A-Z0-9 -]{4,10}?)(?:\s|$)/i), km: g(/Kilometraje:\s*([\d.,]+)/i), asesor: g(/Asesor de servicio:\s*([^\n]+?)(?:\s{2,}|$|\n)/i) };
+    const vm = flat.match(/Veh[ií]culo:\s*(.+?)\s+((?:19|20)\d\d)\b/i); if (vm) { h.vehiculoRaw = vm[1]; h.anio = vm[2]; }
+    let cols = null; const points = []; let section = null, stop = false;
+    pages.forEach((rows, pi) => {
+      if (stop) return;
+      const hdr = rows.find(r => /CANT\./.test(r.N.map(t => t[1]).join(' ')));
+      if (hdr) cols = hdr.N.flatMap(([x, s]) => { const out = []; const re = /(CANT\.|DISP\.|PRECIO U\.|HRS\.|PRECIO HR\.|DESC\.|SUBTOTAL|TOTAL|APROBADO)/g; let m; while ((m = re.exec(s))) out.push([x + m.index * 4.2, m[1]]); return out; });
+      const top = rows.find(r => /^INSPECCI/i.test(r.A));
+      const body = rows.filter(r => (!top || r.y < top.y) && !/Impreso por|P[aá]gina \d/i.test(r.full));
+      const cells = [], cBlocks = [], nRows = []; let cur = null, cb = null;
+      for (const r of body) {
+        if (/^Notas$/i.test(r.A)) { stop = true; break; }
+        const sec = r.A.match(/^Puntos\s+(Urgentes|Sugeridos|Ok)/i);
+        if (sec) { cells.push({ t: 'sec', v: sec[1].toUpperCase(), y: r.y, y2: r.y }); cur = null; continue; }
+        if (r.A) {
+          const bullet = /^[·•]/.test(r.A);
+          if (cur && !bullet && cur.y2 - r.y <= 12.5) { cur.text += ' ' + r.A; cur.y2 = r.y; }
+          else { cur = { t: bullet ? 'sub' : 'pt', text: r.A.replace(/^[·•]\s*/, ''), y: r.y, y2: r.y, nums: null, com: '' }; cells.push(cur); }
+        }
+        if (r.C) { if (cb && cb.y2 - r.y <= 12.5) { cb.text += ' ' + r.C; cb.y2 = r.y; } else { cb = { text: r.C, y: r.y, y2: r.y }; cBlocks.push(cb); } }
+        if (r.N.length) nRows.push(r);
+      }
+      const near = (y, pred) => { let b = null, bd = 1e9; cells.forEach(c => { if (!pred(c)) return; const d = Math.abs((c.y + c.y2) / 2 - y); if (d < bd) { bd = d; b = c; } }); return bd < 16 ? b : null; };
+      nRows.forEach(r => { const c = near(r.y, c => c.t !== 'sec'); if (!c) return; const v = {};
+        r.N.forEach(([x, s]) => { let col = null; (cols || []).forEach(([cx, n]) => { if (cx <= x + 6) col = n; }); if (col) v[col] = s; });
+        c.nums = v; });
+      cBlocks.forEach(b => { const c = near((b.y + b.y2) / 2, c => c.t === 'pt') || near((b.y + b.y2) / 2, c => c.t !== 'sec'); if (c) c.com += (c.com ? ' ' : '') + b.text; });
+      let firstPt = true;
+      for (const c of cells) {
+        if (c.t === 'sec') { section = c.v; continue; }
+        if (section === 'OK' || !section) continue;
+        if (c.t === 'pt') {
+          const last = points[points.length - 1];
+          if (firstPt && pi > 0 && last && !c.nums && !last.subs.length) { last.name += ' ' + c.text; last.com += (last.com && c.com ? ' ' : '') + c.com; firstPt = false; continue; }
+          firstPt = false;
+          points.push({ name: c.text, urg: section === 'URGENTES' ? 'rojo' : 'amarillo', com: c.com, subs: [] });
+        } else if (points.length) { firstPt = false; points[points.length - 1].subs.push({ desc: c.text, n: c.nums || {} }); }
+      }
+    });
+    return { h, points };
+  }
+  fromPdf(res) { this._real = true; try { this.fromPdf0(res); } finally { this._real = false; } }
+  fromPdf0({ h, points }) {
+    const b = this.state.base; let vk = '';
+    if (h.vehiculoRaw) { const T = this.norm(h.vehiculoRaw); let bl = 0; for (const k in b.m) { const d = this.norm(b.m[k].d); if (d.length > bl && (T === d || T.startsWith(d + ' ') || T.includes(d))) { vk = k; bl = d.length; } } }
+    const items = points.map(p => {
+      const priced = !this.state.settings.usarPdf ? [] : p.subs.filter(s => this.num(s.n['PRECIO U.']) || this.num(s.n['HRS.']));
+      if (priced.length) {
+        const it = this.makeItem(vk, p.name, p.urg, p.com); it.name = this.cap(p.name); it.src = { pdf: true }; it.parts = []; it.ops = [];
+        priced.forEach(s => { const q = this.num(s.n['CANT.']) || 1, pu = this.num(s.n['PRECIO U.']), hr = this.num(s.n['HRS.']);
+          if (pu) it.parts.push({ desc: this.cap(s.desc), rep: String(this.r2(pu * q * this.F())) });
+          if (hr) it.ops.push({ desc: this.cap(s.desc), hrs: String(hr) }); });
+        return it;
+      }
+      const it = this.makeItem(vk, p.name, p.urg, p.com);
+      if (!it.src && p.subs.length) it.parts = p.subs.map(x => ({ desc: this.cap(x.desc), rep: '' }));
+      return it;
+    });
+    const withHist = items.filter(i => i.src && !i.src.pdf).length, fromPdf = items.filter(i => i.src && i.src.pdf).length;
+    this.setState(s => ({ quote: { ...this.emptyQ(), link: h.link || s.quote.link, or: h.or, cliente: h.cliente, tel: h.tel, placa: h.placa, km: h.km, asesor: h.asesor || '', anio: h.anio || '',
+      vehiculo: vk ? b.m[vk].d : (h.vehiculoRaw || ''), items },
+      parseMsg: 'PDF leído: ' + (vk ? b.m[vk].d : (h.vehiculoRaw || 'vehículo no reconocido')) + ' ' + (h.anio || '') + ' · OR ' + h.or + ' · ' + items.length + ' puntos (' + withHist + ' con precio del historial' + (fromPdf ? ', ' + fromPdf + ' con precios del PDF' : '') + ', ' + (items.length - withHist - fromPdf) + ' para llenar). Revisa y agrega complementos.' }));
+  }
+  kitRules() {
+    return (this.state.settings.kits || '').split(/\n/).map(l => l.split('=')).filter(p => p.length === 2)
+      .map(([k, v]) => ({ k: this.toks(k), items: v.split(/[;,]/).map(s => s.trim()).filter(Boolean) })).filter(r => r.k.length);
+  }
+  priceFor(vk, desc, fallback) {
+    const s = this.state.settings, M = this.state.base && this.state.base.m[vk], dk = this.norm(desc).replace(/[^A-Z0-9 ]/g, ' ').replace(/\s+/g, ' ').trim();
+    let best = null;
+    if (M) for (const P of Object.values(M.p)) for (const l of P.last.l) { if (this.norm(l[0]).replace(/[^A-Z0-9 ]/g, ' ').replace(/\s+/g, ' ').trim() === dk && (!best || P.last.d > best.t)) best = { d: l[0], t: P.last.d, r: l[1], h: l[2], own: true }; }
+    if (!best && fallback) best = { d: fallback[0], t: fallback[2], r: fallback[3], h: fallback[4] };
+    if (!best && this.state.base.dd) { const a = this.toks(desc); let bs = 0;
+      for (const [k, x] of Object.entries(this.state.base.dd)) { const b = this.toks(k); const inter = a.filter(t => b.includes(t)).length; const sc = inter / new Set([...a, ...b]).size + x[1] / 1e5; if (sc > bs && inter === a.length) { bs = sc; best = { d: x[0], t: x[2], r: x[3], h: x[4] }; } } }
+    if (!best) return { desc: this.cap(desc), rep: 0, hrs: 0 };
+    const mo = this.monthsAgo(best.t), f = mo > this.num(s.meses) ? 1 + (this.num(s.pct) / 100) * (mo / 12) : 1;
+    return { desc: this.cap(desc), rep: best.r ? Math.ceil(best.r * f * this.F()) : 0, hrs: best.h ? Math.round(best.h / this.rateAt(best.t) * 10) / 10 : 0, own: !!best.own };
+  }
+  suggest(vk, it) {
+    const b = this.state.base; if (!b) return [];
+    const have = [...(it.parts || []), ...(it.ops || [])].map(l => this.toks(l.desc).join(' '));
+    const out = [], seen = new Set();
+    const push = (desc, fb, kit) => { const key = this.toks(desc).join(' '); if (!key || seen.has(key) || have.some(h => h === key || (h && (h.includes(key) || key.includes(h))))) return; const p = this.priceFor(vk, desc, fb);
+      if (!kit && !p.own) { const dk = this.norm(desc).replace(/[^A-Z0-9 ]/g, ' ').replace(/\s+/g, ' ').trim(); const x = b.dd && b.dd[dk]; if (!x || x[1] < 20) return; }
+      if (!p.rep && !p.hrs && !kit) return;
+      seen.add(key); out.push({ ...p, kit }); };
+    const nt = this.toks(it.name);
+    if (it.src && it.src.tpl) { this.kitRules().forEach(r => { if (r.k.every(t => nt.includes(t))) r.items.forEach(x => push(x, null, true)); }); return out.slice(0, 8); }
+    this.kitRules().forEach(r => { if (r.k.every(t => nt.includes(t))) r.items.forEach(x => push(x, null, true)); });
+    let G = b.g && b.g[it.pk || this.norm(it.name)];
+    if (!G && b.g) { let bs = 0; for (const [k, v] of Object.entries(b.g)) { const kt = this.toks(k); const inter = kt.filter(t => nt.includes(t)).length; const sc = inter / new Set([...kt, ...nt]).size; if (sc > bs) { bs = sc; G = sc >= 0.6 ? v : null; } } }
+    if (G) G.l.forEach(l => push(l[0], l, false));
+    return out.slice(0, 8);
+  }
+  addSug(i, s) {
+    this.setState(st => ({ quote: { ...st.quote, items: st.quote.items.map((it, k) => k !== i ? it : { ...it,
+      parts: s.rep || !s.hrs ? [...(it.parts || []), { desc: s.desc, rep: s.rep ? String(s.rep) : '' }] : it.parts,
+      ops: s.hrs ? [...(it.ops || []), { desc: s.desc, hrs: String(s.hrs) }] : it.ops }), okP: s.rep ? null : st.quote.okP, okS: null } }));
+  }
+
+  norm(s) { return (s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase().replace(/\s+/g, ' ').trim(); }
+  toks(s) {
+    const stop = new Set(['DE', 'DEL', 'LA', 'EL', 'LOS', 'LAS', 'Y', 'CON', 'PARA', 'EN', 'POR']);
+    return this.norm(s).replace(/A\/C|AIRE ACONDICIONADO/g, 'AC').replace(/[^A-Z0-9 ]/g, ' ').split(' ').filter(w => w.length > 1 && !stop.has(w)).map(w => w.length > 4 ? w.replace(/(ES|S)$/, '') : w);
+  }
+  cap(s) { s = (s || '').trim().toLowerCase(); return s.charAt(0).toUpperCase() + s.slice(1); }
+  num(v) { return parseFloat(String(v ?? '').replace(/[Q,\s]/g, '')) || 0; }
+  fmt(n) { return 'Q' + (n || 0).toLocaleString('es-GT', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
+  fd(iso) { if (!iso) return ''; const [y, m, d] = iso.split('-'); return d + '/' + m + '/' + y; }
+  vehKeyOf(v) { const b = this.state.base; if (!b) return ''; const k = this.norm(v); if (!k) return ''; for (const key in b.m) if (this.norm(b.m[key].d) === k || key.replace('|', ' ') === k) return key; return ''; }
+  rateAt(d) { const s = this.state.settings; if (s.tarifaDesde && d >= s.tarifaDesde) return this.num(s.tarifa) || 600; return this.num(d < '2025-01-01' ? s.r1 : d < '2025-07-01' ? s.r2 : s.r3) || 1; }
+  monthsAgo(d) { return (Date.now() - new Date(d + 'T12:00:00').getTime()) / (1000 * 3600 * 24 * 30.44); }
+
+  match(vk, name, min) {
+    const M = this.state.base && this.state.base.m[vk]; if (!M) return null;
+    const a = this.toks(name); if (!a.length) return null;
+    let best = null, bs = 0;
+    for (const pk in M.p) {
+      const b = this.toks(pk); if (!b.length) continue;
+      const inter = b.filter(t => a.includes(t)).length;
+      const sc = inter / b.length * (inter / Math.max(a.length, 1) > 0.3 ? 1 : 0.6) + M.p[pk].n / 1e4;
+      if (sc > bs) { bs = sc; best = M.p[pk]; }
+    }
+    return bs >= (min || 0.75) ? best : null;
+  }
+  svcTipo(name) { const m = this.norm(name).match(/SERVICIO\s+(MENOR|INTERMEDIO|MAYOR)(\s+COMPLETO)?/); return m ? 'SERVICIO ' + m[1] + (m[2] ? ' COMPLETO' : '') : ''; }
+  tplBrands(s) {
+    const known = this._known || (this._known = new Set([...Object.keys(this.state.base.m).map(k => k.split('|')[0]), ...this.state.serv.servicios.flatMap(x => this.norm(x.hoja).split(/[^A-Z]+/))].filter(w => w.length > 2)));
+    const first = this.norm(s.t).split(/[\s\/]+/).find(Boolean) || '';
+    if (known.has(first)) return first === 'VOLKWAGEN' ? ['VOLKSWAGEN'] : [first];
+    return this.norm(s.hoja).split(/[^A-Z]+/).filter(w => w.length > 1);
+  }
+  tplCands(vk, tipo) {
+    const S = this.state.serv; if (!S || !this.state.base) return [];
+    let marca, modelo;
+    if (vk) [marca, modelo] = vk.split('|'); else { const t = this.norm(this.state.quote.vehiculo).split(' '); marca = t[0] || ''; modelo = t.slice(1).join(' '); }
+    if (!marca || !modelo) return [];
+    const mc = modelo.replace(/[^A-Z0-9]/g, '');
+    const okT = t => t === tipo || (t.startsWith('SERVICIO MAYOR') && tipo.startsWith('SERVICIO MAYOR'));
+    const res = [];
+    S.servicios.forEach((s, idx) => {
+      if (!okT(s.tipo)) return;
+      const brands = this.tplBrands(s);
+      if (!brands.some(b => marca === b || marca.startsWith(b) || b.startsWith(marca) || marca.split(/[\s-]/).includes(b))) return;
+      const segs = this.norm(s.t).replace(/\([^)]*\)?/g, ' ').replace(/\b\d{1,2}-?\d{0,2}W\d{2}\b|\bGULF\b|\bGASOLINA\b|\bDIESEL\b|100%|SINTETICO|MECANICA|4X4|SERVICIO|MENOR|INTERMEDIO|MAYOR|PICK UP|GT LINE/g, ' ')
+        .split(/[\/,]| Y /).map(x => x.split(' ').filter(w => !brands.includes(w)).join('').replace(/[^A-Z0-9]/g, '')).filter(Boolean);
+      let sc = 0;
+      segs.forEach(g => { if (g === mc) sc = Math.max(sc, 3); else if (g.length >= 2 && mc.length >= 2 && (mc.startsWith(g) || g.startsWith(mc))) sc = Math.max(sc, 2); });
+      if (sc >= 2) res.push({ idx, sc: sc + (s.tipo === tipo ? 0.5 : 0) });
+    });
+    return res.sort((a, b) => b.sc - a.sc).map(r => r.idx);
+  }
+  itemFromTpl(cands, k, urg, nota, id) {
+    const S = this.state.serv, s = S.servicios[cands[k]];
+    const tb = S.tabla[s.tipo.replace('SERVICIO ', '').replace(' COMPLETO', '')];
+    const parts = [], ops = [];
+    s.items.forEach(([sec, name, q, u]) => { const tot = Math.round(q * u * 100) / 100; if (!tot) return;
+      if (/MANO DE OBRA/i.test(sec)) ops.push({ desc: this.cap(name), hrs: String(Math.round(tot / (this.num(this.state.settings.tarifa) || 600) * 10000) / 10000) });
+      else parts.push({ desc: this.cap(name.replace(/^wippe$/i, 'Wipe')), sec: this.cap(sec || 'Repuestos'), q, rep: String(this.r2(tot * this.F())) }); });
+    return { id: id || Math.random().toString(36).slice(2), name: this.cap(s.tipo), pk: s.tipo, urg, nota: nota || '', on: true,
+      src: { tpl: true, t: s.t }, tpl: { cands, k }, hist: [], parts, ops,
+      incluye: tb ? tb.l.map(x => this.cap(x)) : [], mat: s.items.filter(i => !/MANO DE OBRA/i.test(i[0]) && i[3] > 0).map(i => this.cap(i[1].replace(/^wippe$/i, 'Wipe'))) };
+  }
+  makeItem(vk, raw, urg, nota) {
+    const tipo = this.svcTipo(raw);
+    if (tipo) { const c = this.tplCands(vk, tipo); if (c.length) return this.itemFromTpl(c, 0, urg, nota); }
+    let P = this.match(vk, raw, 0.6), est = null; const s = this.state.settings;
+    if (!P && this.state.quote.estimado && !this._real && this.state.base) { est = this.estimateP(vk, raw); if (est) P = est.P; }
+    const it = { id: Math.random().toString(36).slice(2), name: this.cap(P ? P.name : raw), pk: P ? this.norm(P.name) : '', urg, nota: nota || '', foto: '', on: true, src: null, hist: [], parts: [], ops: [] };
+    if (!P) { it.parts = [{ desc: '', rep: '' }]; it.ops = [{ desc: '', hrs: '' }]; return it; }
+    const L = P.last, mo = this.monthsAgo(L.d), applies = mo > this.num(s.meses);
+    const f = applies ? 1 + (this.num(s.pct) / 100) * (mo / 12) : 1;
+    it.src = { or: L.or, d: L.d, y: L.y, n: P.n, adj: applies ? Math.round((f - 1) * 100) : 0, est: est ? { model: est.model, n: est.n, min: Math.round(est.min * this.F()), max: Math.round(est.max * this.F()), sb: est.sameBrand } : null };
+    if (est) it.name = this.cap(raw);
+    it.hist = P.h;
+    L.l.forEach(([desc, rep, m]) => {
+      if (rep) it.parts.push({ desc: this.cap(desc), rep: String(f === 1 ? this.r2(rep * this.F()) : Math.ceil(rep * f * this.F())), base: rep * this.F(), adj: applies ? Math.round((f - 1) * 100) : 0 });
+      if (m) it.ops.push({ desc: this.cap(desc), hrs: String(Math.round((m / this.rateAt(L.d)) * 10) / 10) });
+    });
+    if (!it.ops.length) it.ops = [];
+    return it;
+  }
+
+  detect(text) {
+    const b = this.state.base, T = this.norm(text), q = {};
+    let best = '', bl = 0;
+    for (const k in b.m) { const d = this.norm(b.m[k].d); if (d.length > bl && d.length > 4 && T.includes(d)) { best = k; bl = d.length; } }
+    if (best) q.vehiculo = b.m[best].d;
+    const g = (re) => { const m = text.match(re); return m ? m[1].trim() : ''; };
+    q.or = g(/(?:\bOR\b|orden(?: de reparaci[oó]n)?)\s*(?:#|no\.?|n[uú]mero)?\s*:?\s*(\d{3,6})/i);
+    q.placa = g(/\b([PMCAOTU]-?\s?\d{3}\s?[A-Z]{3})\b/);
+    q.km = g(/(?:km|kilometraje)\s*:?\s*([\d.,]{3,9})/i) || g(/([\d.,]{4,9})\s*(?:km|kms)\b/i);
+    q.anio = g(/\b(19[89]\d|20[0-3]\d)\b/);
+    q.cliente = g(/cliente\s*:?\s*([^\n]{3,60})/i);
+    q.tel = g(/(?:tel[eé]fono|tel|m[oó]vil|cel)\.?\s*:?\s*(\+?[\d\s-]{8,14})/i);
+    Object.keys(q).forEach(k => { if (!q[k]) delete q[k]; });
+    return { q, vk: best };
+  }
+  parseText(text) {
+    const g = re => { const m = text.match(re); return m ? m[1].trim() : ''; };
+    const h = { link: g(/(https?:\/\/[^\s]*(?:vehi\.mobi|clearmechanic)[^\s]*)/i), or: g(/Orden\s*#\s*(\d{3,6})/i), cliente: g(/Nombre:\s*([^\n]+?)(?:\s+Veh[ií]culo:|\n|$)/i), tel: g(/Celular:\s*([\d\s-]{8,12})/i).replace(/\D/g, ''),
+      placa: g(/Placas?:\s*([A-Z0-9-]{4,10})/i), km: g(/Kilometraje:\s*([\d.,]+)/i), asesor: g(/Asesor de servicio:\s*([^\n]+?)(?:\s{2,}|\n|$)/i) };
+    const vm = text.match(/Veh[ií]culo:\s*([^\n]+?)\s+((?:19|20)\d\d)\b/i); if (vm) { h.vehiculoRaw = vm[1]; h.anio = vm[2]; }
+    const vk = (() => { if (!h.vehiculoRaw) return ''; const T = this.norm(h.vehiculoRaw), b = this.state.base; let k0 = '', bl = 0; for (const k in b.m) { const d = this.norm(b.m[k].d); if (d.length > bl && T.includes(d)) { k0 = k; bl = d.length; } } return k0; })();
+    const isPoint = t => !!(this.match(vk, t, 0.75) || (this.state.base.g && Object.keys(this.state.base.g).some(k => this.norm(k) === this.norm(t))) || this.svcTipo(t));
+    const points = []; let section = null;
+    for (let line of text.split(/\r?\n/)) {
+      line = line.trim(); if (!line) continue;
+      if (/^Notas\b/i.test(line)) break;
+      const sec = line.match(/Puntos\s+(Urgentes|Sugeridos|Ok)/i); if (sec) { section = sec[1].toUpperCase(); continue; }
+      if (!section || section === 'OK') continue;
+      if (/CANT\.|PRECIO|SUBTOTAL|APROBADO|INSPECCI[OÓ]N|Impreso por|P[aá]gina \d|^Total\b/i.test(line)) continue;
+      const clean = line.replace(/\s+(Q\s?)?[\d.,]+(\s+(Q\s?)?[\d.,%]+)*\s*$/, '').trim();
+      if (!clean || /^[\d\s.,Q%-]+$/.test(clean)) continue;
+      const last = points[points.length - 1];
+      if (/^[·•\-*]/.test(clean)) { if (last) last.subs.push({ desc: clean.replace(/^[·•\-*]\s*/, ''), n: {} }); continue; }
+      if (last && !isPoint(clean) && (last.subs.length || last.com.length < 200) && !/^[A-ZÁÉÍÓÚÑ0-9 /]+$/.test(clean) && clean.split(' ').length > 3) { last.com += (last.com ? ' ' : '') + clean; continue; }
+      points.push({ name: clean, urg: section === 'URGENTES' ? 'rojo' : 'amarillo', com: '', subs: [] });
+    }
+    return { h, points };
+  }
+  armar() { this._real = true; try { this.armar0(); } finally { this._real = false; } }
+  armar0() {
+    const text = this.state.quote.texto || ''; if (!this.state.base || !text.trim()) return;
+    if (/Puntos\s+(Urgentes|Sugeridos)/i.test(text)) { this.fromPdf(this.parseText(text)); return; }
+    if (this.state.quote.estimado) this.setQ({ estimado: false });
+    const { q: dq, vk: dvk } = this.detect(text);
+    const vk = dvk || this.vehKeyOf(this.state.quote.vehiculo);
+    const items = [], seen = new Set(); let section = null, skipped = 0;
+    for (let line of text.split(/\r?\n/)) {
+      line = line.trim(); if (!line) continue;
+      const N = this.norm(line);
+      const rest = this.toks(N.replace(/\b(REQUIERE|ATENCION|INMEDIATA?|URGENTES?|CRITICOS?|ROJOS?|SUGERIDOS?|RECOMENDADOS?|AMARILLOS?|PRONTO|PUNTOS?|ITEMS?|TRABAJOS?)\b/g, ' '));
+      if (/INMEDIAT|URGENTE|CRITIC|ROJO/.test(N) && rest.length <= 1) { section = 'rojo'; continue; }
+      if (/SUGERID|RECOMENDAD|AMARILLO|PRONTO/.test(N) && rest.length <= 1) { section = 'amarillo'; continue; }
+      if (/^(OK|BIEN|BUEN ESTADO|VERDE|APROBADO)\b/.test(N) && N.length < 30) { section = 'ok'; continue; }
+      const hasOk = /\b(OK|BIEN|BUEN ESTADO|VERDE)\b/.test(N);
+      const urg = /URGENTE|ROJO|INMEDIAT|CRITIC/.test(N) ? 'rojo' : /RECOMENDAD|SUGERID|AMARILLO|PRONTO/.test(N) ? 'amarillo' : section;
+      if (!urg || urg === 'ok' || (hasOk && urg !== 'rojo' && urg !== 'amarillo')) { if (this.match(vk, line, 0.75)) skipped++; continue; }
+      const clean = line.replace(/\b(urgente|rojo|amarillo|recomendado|sugerido|inmediat\w*)\b/ig, '  ').split(/\s{2,}|\t| - /).map(x => x.trim()).filter(Boolean);
+      if (!clean.length) continue;
+      const P = this.match(vk, clean[0], 0.6) || this.match(vk, clean.join(' '), 0.75);
+      if (!P && !vk) continue;
+      const it = this.makeItem(vk, P ? P.name : clean[0], urg, clean.slice(1).join(' · '));
+      const key = this.norm(it.name); if (seen.has(key)) continue; seen.add(key); items.push(it);
+    }
+    const withHist = items.filter(i => i.src).length;
+    const vehName = vk ? this.state.base.m[vk].d : (dq.vehiculo || 'vehículo no reconocido');
+    this.setState(s => ({ quote: { ...s.quote, ...dq, vehiculo: dq.vehiculo || s.quote.vehiculo, items, okP: null, okS: null },
+      parseMsg: 'Detecté ' + vehName + (dq.anio ? ' ' + dq.anio : '') + (dq.or ? ' · OR ' + dq.or : '') + ' · ' + items.length + ' puntos a cotizar (' + withHist + ' con precio del historial, ' + (items.length - withHist) + ' para llenar)' + (skipped ? ' · ' + skipped + ' en OK omitidos' : '') + '. Revisa y confirma.' }));
+  }
+
+  setQ(p) { this.setState(s => ({ quote: { ...s.quote, ...p } })); }
+  setS(k, v) { this.setState(s => ({ settings: { ...s.settings, [k]: v } })); }
+  updItem(i, p, role) { this.setState(s => ({ quote: { ...s.quote, items: s.quote.items.map((it, k) => k === i ? { ...it, ...p } : it), ...(role === 'p' ? { okP: null, okS: null } : role === 's' ? { okS: null } : {}) } })); }
+  updList(i, list, j, p, role) { this.setState(s => ({ quote: { ...s.quote, items: s.quote.items.map((it, k) => k === i ? { ...it, [list]: it[list].map((l, m) => m === j ? { ...l, ...p, adj: 'rep' in p ? 0 : l.adj } : l) } : it), ...(role === 'p' ? { okP: null, okS: null } : { okS: null }) } })); }
+  priceFromCost(costo, mg) { const c = this.num(costo), m = Math.min(this.num(mg), 95) / 100; return c ? String(this.r2(c / (1 - m))) : ''; }
+  updCost(i, j, p) {
+    const def = this.state.settings.margen || '50';
+    this.setState(s => ({ quote: { ...s.quote, okP: null, okS: null, items: s.quote.items.map((it, k) => k !== i ? it : { ...it, parts: it.parts.map((l, m) => {
+      if (m !== j) return l; const n = { ...l, ...p }; const mg = n.mgOn ? n.mg : def;
+      const qn = this.num(n.q) || 1; let u = l.unit != null && l.unit !== '' ? this.num(l.unit) : this.num(l.rep) / (this.num(l.q) || 1);
+      if (('costo' in p || 'mg' in p || 'mgOn' in p) && this.num(n.costo)) { u = this.num(this.priceFromCost(n.costo, mg)); n.adj = 0; }
+      n.unit = u ? String(this.r2(u)) : ''; if (u) n.rep = String(this.r2(u * qn));
+      return n; }) }) } }));
+  }
+  expRows(items, T) {
+    const on = items.filter(i => i.on !== false), P = [], O = [];
+    on.forEach(it => {
+      (it.parts || []).forEach(l => { const tot = this.num(l.rep); if (!(l.desc || '').trim() || !tot) return; P.push([String(this.num(l.q) || 1), l.desc.trim(), (l.espec || '').trim()]); });
+      (it.ops || []).forEach(l => { const h = this.num(l.hrs); if (!(l.desc || '').trim() || !h) return; O.push([(l.tipo || '').trim(), l.desc.trim(), String(this.r2(h))]); });
+    });
+    return { P, O };
+  }
+  tsv(rows) { return rows.map(r => r.map(v => String(v ?? '').replace(/[\t\r\n]+/g, ' ').trim()).join('\t')).join('\n'); }
+  expOut(kind, rows, mode) {
+    const q = this.state.quote;
+    const head = kind === 'P' ? ['Punto', 'Repuesto', 'Cantidad'] : ['Punto', 'Operación', 'Horas'];
+    const sep = mode === 'csv' ? ';' : '\t';
+    const cell = v => typeof v === 'number' ? (mode === 'csv' ? String(v).replace('.', ',') : String(v)) : '"' + String(v).replace(/"/g, '""') + '"';
+    const txt = [head, ...rows].map(r => r.map(cell).join(sep)).join('\r\n');
+    if (mode === 'copy') { this.copy(txt, 'exp' + kind); return; }
+    const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob(['\ufeff' + txt], { type: 'text/csv;charset=utf-8' }));
+    a.download = 'OR-' + (q.or || 'sin') + '-' + (kind === 'P' ? 'repuestos' : 'mano-de-obra') + '.csv'; a.click();
+  }
+  stamp() { return new Date().toLocaleString('es-GT', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }); }
+  copy(url, label) {
+    (navigator.clipboard ? navigator.clipboard.writeText(url) : Promise.reject()).catch(() => window.prompt('Copia el link:', url));
+    this.setState({ copied: label }); setTimeout(() => this.setState({ copied: '' }), 2000);
+  }
+  clientUrl() { const q = this.state.quote; return location.href.split('#')[0] + '#q=' + this.enc({ q: { ...q, texto: '', items: q.items.map(it => ({ ...it, parts: (it.parts || []).map(({ costo, mg, mgOn, ...l }) => l) })) }, s: { tarifa: this.state.settings.tarifa, iva: this.state.settings.iva } }); }
+  doPrint() {
+    this.setState({ printing: true }, () => setTimeout(() => {
+      const done = () => { this.setState({ printing: false }); window.removeEventListener('afterprint', done); };
+      window.addEventListener('afterprint', done); window.print();
+    }, 300));
+  }
+
+  renderVals() {
+    const st = this.state, q = st.quote, S = st.settings, T = this.num(S.tarifa) || 600, IVA = this.num(S.iva) / 100;
+    const base = st.base, vk = this.vehKeyOf(q.vehiculo), M = base && vk ? base.m[vk] : null;
+    const RED = '#ec3013', YEL = '#FFE500', pr0 = st.printing;
+    const items = q.items.map((it, i) => {
+      let rep = 0, mo = 0, hrs = 0;
+      const parts = (it.parts || []).map((l, j) => { const r = this.num(l.rep); rep += r;
+        const qn = this.num(l.q) || 1, u = l.unit != null && l.unit !== '' ? this.num(l.unit) : r / qn;
+        const c = this.num(l.costo), real = c && u ? Math.round((1 - c / u) * 1000) / 10 : null, defM = this.num(S.margen || 50);
+        return { ...l, qty: String(l.q || 1), unitFmt: u ? this.fmt(u) : '—', onQ: e => this.updCost(i, j, { q: e.target.value }), repFmt: r ? this.fmt(r) : '—', costo: l.costo || '', mgOn: !!l.mgOn, mgOff: !l.mgOn, mg: l.mg ?? String(defM),
+          mgLabel: real === null ? defM + '% ✎' : real + '% ✎', mgBg: real !== null && Math.abs(real - defM) > 0.5 ? '#fff2ef' : '#fff',
+          onCosto: e => this.updCost(i, j, { costo: e.target.value }), onMg: e => this.updCost(i, j, { mg: e.target.value }),
+          onMgEdit: () => this.updCost(i, j, { mgOn: true, mg: String(real ?? defM) }), onMgReset: () => this.updCost(i, j, { mgOn: false, mg: undefined }),
+          ajusteText: l.adj ? '+' + l.adj + '% sobre ' + this.fmt(l.base) : '',
+          onDesc: e => this.updList(i, 'parts', j, { desc: e.target.value }, 'p'), onRep: e => this.updList(i, 'parts', j, { rep: e.target.value }, 'p'),
+          onDel: () => this.updItem(i, { parts: it.parts.filter((_, k) => k !== j) }, 'p') }; });
+      const ops = (it.ops || []).map((l, j) => { if (l.fijo) l = { ...l, fijo: false, hrs: String(Math.round(this.num(l.monto) / (T * (1 + IVA)) * 10000) / 10000) }; const h = this.num(l.hrs), m = h * T * (1 + IVA); hrs += h; mo += m;
+        return { ...l, fijo: !!l.fijo, noFijo: !l.fijo, moFmt: this.fmt(m), onMonto: e => this.updList(i, 'ops', j, { monto: e.target.value }, 's'), onDesc: e => this.updList(i, 'ops', j, { desc: e.target.value }, 's'), onHrs: e => this.updList(i, 'ops', j, { hrs: e.target.value, fijo: false }, 's'),
+          onDel: () => this.updItem(i, { ops: it.ops.filter((_, k) => k !== j) }, 's') }; });
+      const rojo = it.urg === 'rojo', on = it.on !== false;
+      const sugs = st.clientOnly ? [] : this.suggest(vk, it);
+      const cliOps = ops.filter(l => (l.desc || '').trim() && (l.fijo ? this.num(l.monto) : this.num(l.hrs))).map(l => ({ desc: l.desc, amt: l.moFmt }));
+      const cliParts = parts.filter(l => (l.desc || '').trim() && this.num(l.rep)).map(l => ({ desc: l.desc, amt: this.fmt(this.num(l.rep)) }));
+      return { ...it, parts, ops, hasSugP: false, hasSugO: false, rep, mo, tot: rep + mo, hrsTot: Math.round(hrs * 10) / 10, repFmt: this.fmt(rep), moFmt: this.fmt(mo), totFmt: this.fmt(rep + mo),
+        urgBg: rojo ? RED : YEL, urgLabel: rojo ? 'Atención inmediata' : 'Recomendado',
+        rojoBg: rojo ? RED : '#fff', rojoFg: rojo ? '#fff' : '#201e1d', amaBg: rojo ? '#fff' : YEL,
+        sugP: sugs.filter(s => (s.rep >= s.hrs * T * (1 + IVA) && s.rep > 0) || (!s.rep && !s.hrs)).map(s => ({ label: '+ ' + s.desc + ' · ' + (s.rep ? this.fmt(s.rep) : 'sin precio') + (s.kit ? ' · kit' : ''), onAdd: () => this.addSug(i, s) })),
+        sugO: sugs.filter(s => s.hrs > 0 && s.hrs * T * (1 + IVA) > s.rep).map(s => ({ label: '+ ' + s.desc + ' · ' + s.hrs + ' h' + (s.rep ? ' + ' + this.fmt(s.rep) : ''), onAdd: () => this.addSug(i, s) })),
+        cliOps, cliParts, hasCliOps: cliOps.length > 0, hasCliParts: cliParts.length > 0,
+        hasIncluye: !!(it.incluye && it.incluye.length), hasDetalle: cliOps.length + cliParts.length > 0 || !!(it.incluye && it.incluye.length),
+        incOpen: false, incLabel: 'Ver desglose ▾',
+        onInc: () => this.setState({ modal: it.id }),
+        hasTplOpts: !!(it.tpl && it.tpl.cands.length > 1), tplK: it.tpl ? String(it.tpl.k) : '0',
+        tplOpts: it.tpl ? it.tpl.cands.map((c, k) => ({ v: String(k), label: st.serv.servicios[c].t + ' · ' + this.cap(st.serv.servicios[c].tipo) })) : [],
+        onTpl: e => { const k = +e.target.value; this.setState(s => ({ quote: { ...s.quote, okP: null, okS: null, items: s.quote.items.map((x, n) => n === i ? this.itemFromTpl(x.tpl.cands, k, x.urg, x.nota, x.id) : x) } })); },
+        srcText: it.src && it.src.tpl ? 'Plantilla oficial · ' + it.src.t : it.src && it.src.pdf ? 'Precios tomados del PDF' : it.src && it.src.est ? 'Estimado · ref. ' + it.src.est.model + ' OR ' + it.src.or + ' · rango Q' + it.src.est.min.toLocaleString('es-GT') + '–Q' + it.src.est.max.toLocaleString('es-GT') + ' en ' + it.src.est.n + ' vehículos ' + (it.src.est.sb ? 'de la misma marca' : 'de otras marcas') : it.src ? 'Ref. OR ' + it.src.or + ' · ' + this.fd(it.src.d) + ' · año ' + it.src.y + (it.src.adj ? ' · repuestos +' + it.src.adj + '%' : '') : 'Sin historial de “' + it.name + '” para ' + (q.vehiculo || 'este vehículo') + ' — ingresa costo de: ' + ((it.parts || []).filter(l => (l.desc || '').trim()).map(l => l.desc).join(', ') || 'los repuestos que lleve') + ', y horas en Mano de obra',
+        srcBg: it.src && it.src.est ? '#fff2ef' : it.src && it.src.tpl ? '#FEED01' : it.src ? 'var(--color-neutral-200)' : 'var(--color-accent-100)', srcFg: it.src ? '#201e1d' : '#7c1405',
+        histText: it.src ? 'Cotizado ' + it.src.n + ' veces · últimos: ' + (it.hist || []).map(h => this.fd(h[0]).slice(3) + ' Q' + h[1].toLocaleString('es-GT')).join(', ') : '',
+        hasNota: !!(it.nota || '').trim(), hasFoto: /^https?:\/\//.test(it.foto || ''),
+        op: on ? 1 : 0.45, siBg: on ? '#000' : '#fff', siFg: on ? YEL : '#201e1d', noBg: on ? '#fff' : '#d7d3d3',
+        onSi: () => this.updItem(i, { on: true }), onNo: () => this.updItem(i, { on: false }),
+        onRojo: () => this.updItem(i, { urg: 'rojo' }), onAmarillo: () => this.updItem(i, { urg: 'amarillo' }),
+        onName: e => this.updItem(i, { name: e.target.value }, 'p'), onNota: e => this.updItem(i, { nota: e.target.value }, 's'), onFoto: e => this.updItem(i, { foto: e.target.value }, 's'),
+        onDel: () => this.setState(s => ({ quote: { ...s.quote, items: s.quote.items.filter((_, k) => k !== i), okP: null, okS: null } })),
+        onAddPart: () => this.updItem(i, { parts: [...(it.parts || []), { desc: '', rep: '' }] }, 'p'),
+        onAddOp: () => this.updItem(i, { ops: [...(it.ops || []), { desc: '', hrs: '' }] }, 's') };
+    });
+    items.forEach(i => { i.hasSugP = i.sugP.length > 0; i.hasSugO = i.sugO.length > 0; });
+    const detail = mi => {
+      const tplS = mi.src && mi.src.tpl && st.serv && mi.tpl ? st.serv.servicios[mi.tpl.cands[mi.tpl.k]] : null;
+      const groups = {}, order = [];
+      (q.items.find(x => x.id === mi.id).parts || []).forEach(l => { const tot = this.num(l.rep); if (!(l.desc || '').trim() || !tot) return;
+        let desc = l.desc, qty = l.q; const m = !qty && desc.match(/\s\((\d+(?:\.\d+)?)\)$/); if (m) { qty = +m[1]; desc = desc.slice(0, m.index); } qty = qty || 1;
+        const g = l.sec || (tplS ? 'Adicionales' : 'Repuestos'); if (!groups[g]) { groups[g] = []; order.push(g); }
+        groups[g].push({ desc, q: String(qty), unit: this.fmt(tot / qty), tot: this.fmt(tot) }); });
+      const secs = order.map(g => ({ name: g, qLabel: 'CTD', rows: groups[g].map((x, k) => ({ ...x, no: String(k + 1) })) }));
+      const opsRows = mi.ops.filter(l => (l.desc || '').trim() && this.num(l.hrs)).map((l, k) => ({ no: String(k + 1), desc: l.desc, q: String(this.num(l.hrs)), unit: this.fmt(T * (1 + IVA)), tot: l.moFmt }));
+      if (opsRows.length) secs.push({ name: 'Mano de obra', qLabel: 'Horas', rows: opsRows });
+      const modal = { kicker: (tplS ? 'Detalle del servicio' : 'Desglose') + ' · ' + (q.vehiculo || '') + ' ' + (q.anio || ''), title: tplS ? tplS.t : mi.name,
+        secs, totLabel: 'Total ' + mi.name, tot: mi.totFmt, incluye: mi.incluye || [], hasIncluye: !!(mi.incluye && mi.incluye.length) };
+      return modal;
+    };
+    let modal = null; const mi = items.find(i => i.id === st.modal); if (mi) detail(mi);
+    const printDetails = pr0 ? items.filter(i => i.on !== false && (i.cliOps.length || i.cliParts.length)).map(i => { modal = null; return detail(i); }) : [];
+    modal = null; if (mi) modal = detail(mi);
+    const onItems = items.filter(i => i.on !== false);
+    const sub = onItems.reduce((a, i) => a + i.tot, 0), subAll = items.reduce((a, i) => a + i.tot, 0);
+    const sum = { countAll: items.length, totFmt: this.fmt(sub), totAllFmt: this.fmt(subAll),
+      repAllFmt: this.fmt(items.reduce((a, i) => a + i.rep, 0)), moAllFmt: this.fmt(items.reduce((a, i) => a + i.mo, 0)) };
+    const step = st.clientOnly ? 4 : st.step, pr = st.printing;
+    const tab = n => ({ bg: step === n ? YEL : '#000', fg: step === n ? '#000' : '#fff' });
+    const meta = base ? base.meta : { rows: 0, models: 0, from: '', to: '' };
+    const locked = !(q.okP && q.okS);
+    return {
+      loading: st.loading, showChrome: !st.clientOnly && !pr,
+      headerSub: q.or ? 'OR ' + q.or + ' · ' + (q.vehiculo || '') : 'Zona 10',
+      isStep1: !st.loading && !pr && step === 1 && st.baseOpen, isStep2: !st.loading && !pr && step === 2, isStep3: !st.loading && !pr && step === 3, isStep4: !st.loading && !pr && step === 4 && !st.clientOnly,
+      showClient: !st.loading && step === 4,
+      pageBg: pr ? '#fff' : '#f3f2f2', clientPad: pr ? '0' : st.clientOnly ? '0 0 24px' : '16px 24px 48px',
+      tab1Bg: tab(1).bg, tab1Fg: tab(1).fg, tab2Bg: tab(2).bg, tab2Fg: tab(2).fg, tab3Bg: tab(3).bg, tab3Fg: tab(3).fg, tab4Bg: tab(4).bg, tab4Fg: tab(4).fg,
+      goStep1: () => this.setState({ step: 1 }), goStep2: () => this.setState({ step: 2 }), goStep3: () => this.setState({ step: 3 }), goStep4: () => this.setState({ step: 4 }),
+      okPartesMark: q.okP ? '✓' : '', okServMark: q.okS ? '✓' : '',
+      meta: { ...meta, rowsFmt: (meta.rows || 0).toLocaleString('es-GT'), fromFmt: this.fd(meta.from), toFmt: this.fd(meta.to) },
+      baseSrc: st.baseSrc, msg: st.msg, hasMsg: !!st.msg, onFile: e => this.onFile(e), settings: S,
+      setTarifa: e => { const v = e.target.value; this.setState(s => ({ settings: { ...s.settings, tarifa: v, tarifaDesde: new Date().toISOString().slice(0, 10), r3: s.settings.tarifaDesde ? s.settings.r3 : s.settings.r3 } })); },
+      tarifaDesdeFmt: S.tarifaDesde ? this.fd(S.tarifaDesde) : 'jul-2025',
+      baseTabLabel: st.baseOpen ? 'Base' : 'Base · bloqueada',
+      isStep1Locked: !st.loading && !pr && step === 1 && !st.baseOpen,
+      pinNew: !st.pinHash || st.pinChanging, lockText: !st.pinHash ? 'Crea un PIN de 4 a 8 dígitos. Solo quien lo sepa podrá cambiar tarifas, márgenes, kits y cargar la base.' : st.pinChanging ? 'Escribe el PIN nuevo dos veces.' : 'Ingresa el PIN del jefe de taller.',
+      unlockLabel: !st.pinHash ? 'Crear PIN y abrir' : st.pinChanging ? 'Guardar PIN nuevo' : 'Abrir Base',
+      pin1: st.pin1, pin2: st.pin2,
+      pinDots1: '•'.repeat((st.pin1 || '').length), pinDots2: '•'.repeat((st.pin2 || '').length),
+      pinB1: st.pinField !== 2 ? '#000' : 'var(--color-neutral-300)', pinB2: st.pinField === 2 ? '#000' : 'var(--color-neutral-300)',
+      focusPin1: () => this.setState({ pinField: 1 }), focusPin2: () => this.setState({ pinField: 2 }),
+      pinKeys: ['1','2','3','4','5','6','7','8','9','Borrar','0','OK'].map(k => ({ label: k, bg: k === 'OK' ? '#000' : '#fff', fg: k === 'OK' ? '#FFE500' : '#000', on: () => this.pinPress(k) })), setPin1: e => { const v = e.target.value.replace(/\D/g, '').slice(0, 8); if (e.target.value !== v) e.target.value = v; this.setState({ pin1: v, pinMsg: '' }); }, setPin2: e => { const v = e.target.value.replace(/\D/g, '').slice(0, 8); if (e.target.value !== v) e.target.value = v; this.setState({ pin2: v, pinMsg: '' }); },
+      pinMsg: st.pinMsg, hasPinMsg: !!st.pinMsg, unlock: () => this.unlock(), pinKey: e => { if (e.key === 'Enter') this.unlock(); },
+      lock: () => { try { sessionStorage.removeItem('lns-base-open'); } catch (e) {} this.setState({ baseOpen: false, step: 2 }); },
+      changePin: () => this.setState({ baseOpen: false, pinChanging: true, pin1: '', pin2: '' }), setMargen: e => this.setS('margen', e.target.value), setIva: e => this.setS('iva', e.target.value), setPct: e => this.setS('pct', e.target.value), setMeses: e => this.setS('meses', e.target.value),
+      setR1: e => this.setS('r1', e.target.value), setR2: e => this.setS('r2', e.target.value), setR3: e => this.setS('r3', e.target.value),
+      onPdf: e => this.onPdf(e), tarifaIvaFmt: this.fmt(T * (1 + IVA)), onServFile: e => this.onServFile(e), servSrc: st.servSrc || '—', servCount: st.serv ? st.serv.servicios.length : 0,
+      tablaText: st.serv ? Object.entries(st.serv.tabla).map(([k, v]) => this.cap(k) + ' ' + v.l.length).join(', ') : '—', demoPdf: e => { e.preventDefault(); e.stopPropagation(); this.loadDemoPdf(); }, setUsarPdf: e => this.setS('usarPdf', e.target.checked), setKits: e => this.setS('kits', e.target.value), setAsesor: e => this.setQ({ asesor: e.target.value }),
+      hasAsesor: !!(q.asesor || '').trim(), pdfLabel: st.pdfName ? 'Cambiar PDF (' + st.pdfName + ')' : 'Elegir PDF', armar: () => this.armar(),
+      parseMsg: st.parseMsg, hasParseMsg: !!st.parseMsg,
+      quote: q, items, onItems, hasModal: !!modal && !pr0, printDetails, hasPrintDetails: printDetails.length > 0, modal: modal || { secs: [], incluye: [] },
+      closeModal: () => this.setState({ modal: null }), stopProp: e => e.stopPropagation(), noItems: !items.length, sum,
+      setLink: e => this.setQ({ link: e.target.value }), setOr: e => this.setQ({ or: e.target.value }), setCliente: e => this.setQ({ cliente: e.target.value }), setTel: e => this.setQ({ tel: e.target.value }),
+      setPlaca: e => this.setQ({ placa: e.target.value }), setKm: e => this.setQ({ km: e.target.value }), setVehiculo: e => this.setQ({ vehiculo: e.target.value }),
+      setAnio: e => this.setQ({ anio: e.target.value }), setTexto: e => this.setQ({ texto: e.target.value }),
+      modelList: base ? Object.values(base.m).map(m => m.d).sort() : [],
+      puntoList: M ? Object.values(M.p).sort((a, b) => b.n - a.n).map(p => this.cap(p.name)) : base && base.g ? Object.entries(base.g).sort((a, b) => b[1].n - a[1].n).slice(0, 300).map(([k]) => this.cap(k)) : [],
+      vehBorder: q.vehiculo && !M ? '#ec3013' : 'var(--color-divider)',
+      vehMsg: !q.vehiculo ? '' : !M && q.estimado ? 'Sin historial propio para ' + q.vehiculo + ': se estimará con vehículos similares.' : M ? 'Historial: ' + Object.keys(M.p).length + ' puntos cotizados para ' + M.d + '.' : 'Sin historial con ese nombre. Elige una opción de la lista y presiona “Armar presupuesto” otra vez.',
+      vehMsgColor: q.vehiculo && !M ? '#ae1800' : '#605d5d',
+      nuevo: () => { if (q.items.length && !window.confirm('¿Descartar el presupuesto actual (' + (q.or || 'sin OR') + ')?')) return; this.setState({ quote: this.emptyQ(), parseMsg: '', pdfName: '' }); },
+      nuevoEst: () => q.items.length && !window.confirm('¿Descartar el presupuesto actual (' + (q.or || 'sin OR') + ') para hacer un estimado?') ? null : this.setState({ quote: { ...this.emptyQ(), estimado: true, or: 'EST-' + new Date().toISOString().slice(2, 10).replace(/-/g, '') }, parseMsg: '', pdfName: '', step: 2 }),
+      docLabel: q.estimado ? 'Estimado de referencia' : 'Presupuesto · OR ' + (q.or || ''),
+      setAnos: e => this.setS('anos', e.target.value), exportHist: () => this.exportHist(), importHist: e => this.importHist(e),
+      histInfo: base ? (meta.recs || 0).toLocaleString('es-GT') + ' casos guardados, ' + (meta.own || 0).toLocaleString('es-GT') + ' creados en esta herramienta. Cada presupuesto confirmado por partes y servicio se agrega solo.' : '',
+      purgeInfo: (() => { if (!this.lib) return ''; const y = this.num(S.anos) || 3, now = new Date(), qn = new Date(now.getFullYear(), Math.floor(now.getMonth() / 3) * 3 + 3, 1); return 'Próxima depuración ' + qn.toLocaleDateString('es-GT') + ': borra lo anterior a ' + this.fd(this.lib.cutoffFor(qn, y)) + '.'; })(),
+      addName: st.addName, setAddName: e => this.setState({ addName: e.target.value }),
+      addPunto: () => { if (!st.addName.trim()) return; this.setState(s => ({ addName: '', quote: { ...s.quote, items: [...s.quote.items, this.makeItem(vk, st.addName, 'amarillo')], okP: null, okS: null } })); },
+      okPartesText: q.okP ? 'Confirmado ' + q.okP : 'Pendiente de confirmar',
+      confirmPartesLabel: q.okP ? 'Ir a mano de obra →' : 'Confirmar repuestos ✓',
+      confirmPartes: () => { if (q.okP) this.setState({ step: 3 }); else { this.setQ({ okP: this.stamp() }); if (q.okS) this.saveToHist(q); } },
+      teamLabel: st.copied === 'team' ? 'Link copiado ✓' : 'Copiar link para asesor de servicio',
+      copyTeamLink: () => this.copy(location.href.split('#')[0] + '#t=' + this.enc({ q: { ...q, texto: '' }, s: S }), 'team'),
+      okServText: q.okS ? 'confirmado ' + q.okS : 'pendiente de confirmar',
+      confirmServLabel: q.okS ? 'Ir a enviar al cliente →' : 'Confirmar mano de obra ✓',
+      confirmServ: () => { if (q.okS) this.setState({ step: 4 }); else { this.setQ({ okS: this.stamp() }); if (q.okP) this.saveToHist(q); } },
+      locked, lockMsg: !q.okP ? 'Falta que el asesor de partes confirme los repuestos.' : 'Falta que el asesor de servicio confirme la mano de obra.',
+      copyLabel: st.copied === 'cli' ? 'Link copiado ✓' : 'Copiar link para cliente',
+      copyLink: () => this.copy(this.clientUrl(), 'cli'),
+      sendWa: () => { const tel = (q.tel || '').replace(/\D/g, ''); const msg = 'Lube N Save Zona 10 — Presupuesto OR ' + q.or + ' para su ' + q.vehiculo + '. Elija qué trabajos realizar aquí: ' + this.clientUrl();
+        window.open('https://wa.me/' + (tel ? (tel.length === 8 ? '502' + tel : tel) : '') + '?text=' + encodeURIComponent(msg), '_blank'); },
+      doPrint: () => this.doPrint(),
+      exp: (() => { const E = this.expRows(items, T * (1 + IVA)); const txtP = this.tsv(E.P), txtO = this.tsv(E.O);
+        return { nP: E.P.length, nO: E.O.length, noP: !E.P.length, noO: !E.O.length,  countText: onItems.length + ' de ' + items.length + ' puntos',
+          txtP, txtO, copyP: () => this.copy(txtP, 'expP'), copyO: () => this.copy(txtO, 'expO'),
+          copyPLabel: st.copied === 'expP' ? 'Copiado ✓' : 'Copiar repuestos', copyOLabel: st.copied === 'expO' ? 'Copiado ✓' : 'Copiar mano de obra' }; })(),
+      hasLink: !!(q.link || '').trim(), noLink: !(q.link || '').trim() && !st.clientOnly, hoyFmt: new Date().toLocaleDateString('es-GT')
+    };
+  }
+}
+</script>
+</body>
+</html>
