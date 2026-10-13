@@ -553,6 +553,8 @@ class Component extends DCLogic {
     this._pinKey = e => { const st = this.state; if (st.baseOpen || st.step !== 1 || st.clientOnly) return;
       if (/^\d$/.test(e.key)) { e.preventDefault(); this.pinPress(e.key); } else if (e.key === 'Backspace') { e.preventDefault(); this.pinPress('Borrar'); } else if (e.key === 'Enter') { e.preventDefault(); this.unlock(); } else if (e.key === 'Tab') { e.preventDefault(); this.setState(s => ({ pinField: s.pinField === 2 ? 1 : 2 })); } };
     window.addEventListener('keydown', this._pinKey);
+    // Un link #q=/#t= pegado en una pestaña ya abierta no recarga la página: forzar recarga para que se aplique.
+    window.addEventListener('hashchange', () => { if (/^#[qt]=/.test(location.hash)) location.reload(); });
     this.lib = await import(new URL('./lns-base.js', location.href).href);
     const h = location.hash;
     const m = h.match(/^#([qt])=(.+)$/);
