@@ -264,11 +264,16 @@
         <div style="grid-column: 1 / -1; font-size: 13px; color: {{ vehMsgColor }};">{{ vehMsg }}</div>
       </section>
 
+      <div style="position: sticky; top: 0; z-index: 30; background: #f3f2f2; padding: 10px 0; display: flex; gap: 8px; align-items: center; border-bottom: 1px solid #c9c5c5;">
+        <input class="input" value="{{ buscar }}" onChange="{{ setBuscar }}" placeholder="Buscar punto, repuesto u operación (ej. bosch, bomba, frenos)" style="flex: 1; background: #fff;">
+        <span style="font-size: 12px; white-space: nowrap;">{{ buscarInfo }}</span>
+        <sc-if value="{{ hasBuscar }}" hint-placeholder-val="{{ false }}"><button class="btn btn-secondary" onClick="{{ clearBuscar }}" style="font-size: 12px;">Limpiar</button></sc-if>
+      </div>
       <section style="display: flex; flex-direction: column; border-top: 2px solid #201e1d;">
         <sc-if value="{{ noItems }}" hint-placeholder-val="{{ false }}">
           <p style="margin: 0; padding: 24px 0; font-size: 15px;">Sube el PDF o pega el reporte para armar la lista.</p>
         </sc-if>
-        <sc-for list="{{ items }}" as="it" hint-placeholder-count="3">
+        <sc-for list="{{ itemsVis }}" as="it" hint-placeholder-count="3">
           <article style="border-bottom: 2px solid #201e1d; padding: 16px 0; display: flex; gap: 14px;">
             <div style="width: 6px; flex: none; background: {{ it.urgBg }};"></div>
             <div style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 10px;">
@@ -365,8 +370,13 @@
         <span style="font-size: 14px;">{{ quote.vehiculo }} {{ quote.anio }} · OR {{ quote.or }} · {{ quote.cliente }} · hora flat rate {{ tarifaIvaFmt }} con IVA</span>
       </div>
 
+      <div style="position: sticky; top: 0; z-index: 30; background: #f3f2f2; padding: 10px 0; display: flex; gap: 8px; align-items: center; border-bottom: 1px solid #c9c5c5;">
+        <input class="input" value="{{ buscar }}" onChange="{{ setBuscar }}" placeholder="Buscar punto, repuesto u operación (ej. bosch, bomba, frenos)" style="flex: 1; background: #fff;">
+        <span style="font-size: 12px; white-space: nowrap;">{{ buscarInfo }}</span>
+        <sc-if value="{{ hasBuscar }}" hint-placeholder-val="{{ false }}"><button class="btn btn-secondary" onClick="{{ clearBuscar }}" style="font-size: 12px;">Limpiar</button></sc-if>
+      </div>
       <section style="display: flex; flex-direction: column; border-top: 2px solid #201e1d;">
-        <sc-for list="{{ items }}" as="it" hint-placeholder-count="3">
+        <sc-for list="{{ itemsVis }}" as="it" hint-placeholder-count="3">
           <article style="border-bottom: 2px solid #201e1d; padding: 16px 0; display: flex; gap: 14px;">
             <div style="width: 6px; flex: none; background: {{ it.urgBg }};"></div>
             <div style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 10px;">
@@ -376,15 +386,15 @@
               </div>
               <div class="field"><label>Comentario del técnico (lo ve el cliente)</label><input class="input" value="{{ it.nota }}" onChange="{{ it.onNota }}" placeholder="Ej. Pastillas al 2 mm, disco rayado"></div>
               <div style="display: flex; flex-direction: column;">
-                <div style="display: grid; grid-template-columns: minmax(0, 1fr) 90px 120px 36px; gap: 8px; font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; padding: 4px 0; border-bottom: 1px solid var(--color-divider);">
+                <div style="display: grid; grid-template-columns: minmax(0, 1fr) 90px 120px 70px; gap: 8px; font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; padding: 4px 0; border-bottom: 1px solid var(--color-divider);">
                   <span>Operación</span><span>Horas</span><span>M.O.</span><span></span>
                 </div>
                 <sc-for list="{{ it.ops }}" as="ln" hint-placeholder-count="2">
-                  <div style="display: grid; grid-template-columns: minmax(0, 1fr) 90px 120px 36px; gap: 8px; align-items: center; padding: 5px 0; border-bottom: 1px solid var(--color-neutral-300);">
+                  <div style="display: grid; grid-template-columns: minmax(0, 1fr) 90px 120px 70px; gap: 8px; align-items: center; padding: 5px 0; border-bottom: 1px solid var(--color-neutral-300);">
                     <input class="input" value="{{ ln.desc }}" onChange="{{ ln.onDesc }}" placeholder="Operación">
                     <input class="input" inputmode="decimal" value="{{ ln.hrs }}" onChange="{{ ln.onHrs }}">
                     <span style="font-size: 14px;">{{ ln.moFmt }}</span>
-                    <button class="btn btn-ghost btn-icon" onClick="{{ ln.onDel }}" aria-label="Quitar" style="color: #605d5d;">×</button>
+                    <button class="btn btn-ghost btn-icon" onClick="{{ ln.onDel }}" aria-label="Quitar operación" style="color: #ae1800; font-size: 12px; width: auto; padding: 4px 6px;">Quitar</button>
                   </div>
                 </sc-for>
                 <div style="display: flex; justify-content: space-between; align-items: center; padding-top: 8px; gap: 12px; flex-wrap: wrap;">
@@ -620,7 +630,7 @@ class Component extends DCLogic {
       try {
         const d = await this.decAny(m[2]);
         if (m[1] === 'q') { this.setState({ clientOnly: true, step: 4, quote: d.q, settings: { ...this.defS(), ...d.s }, loading: false }); return; }
-        this._hashT = true; if (d.q.okP) this._baseSnap = this.snapQ(d.q); this.setState({ quote: d.q, settings: { ...this.defS(), ...d.s }, step: d.q.okP ? 3 : 2 });
+        this._hashT = true; d.q = this.withOps(d.q); if (d.q.okP) this._baseSnap = this.snapQ(d.q); this.setState({ quote: d.q, settings: { ...this.defS(), ...d.s }, step: d.q.okP ? 3 : 2 });
       } catch (e) { console.warn('link inválido', e); }
     } else {
       try { const saved = JSON.parse(localStorage.getItem('lns-cotizador-v2') || 'null'); if (saved) { const st = { ...this.defS(), ...(saved.settings || {}) }; let q = saved.quote;
@@ -1304,6 +1314,11 @@ class Component extends DCLogic {
     const base = this._tfOt ? location.origin + location.pathname + '?ot=' + encodeURIComponent(this._tfOt) : location.href.split('#')[0];
     return base + '#t=' + await this.encZ({ q: slim, s: sm });
   }
+  // Todo punto debe tener al menos una operación (con horas en blanco) para que el asesor solo ponga el tiempo.
+  withOps(q) {
+    return { ...q, items: (q.items || []).map(it => (it.ops || []).some(o => (o.desc || '').trim() || this.num(o.hrs)) ? it
+      : { ...it, ops: [{ desc: 'Cambio de ' + String(it.name || '').trim().replace(/^./, c => c.toLowerCase()), hrs: '' }] }) };
+  }
   // Devuelve a TallerFLOW (la pestaña que abrió el cotizador) el link del cliente para guardarlo en el historial de la orden.
   notifyTF(url, tipo) {
     try { if (this._tfOt && window.opener && !window.opener.closed) { window.opener.postMessage({ tipo: tipo === 'partes' ? 'lns-cotizacion-partes' : 'lns-cotizacion', ot: this._tfOt, url, total: this._tot || '', ts: Date.now() }, 'https://lubensave2026.github.io'); this.setState({ msg: (tipo === 'partes' ? 'Cotización de repuestos enviada a TallerFLOW' : 'Link enviado a TallerFLOW') + ' (OT ' + this._tfOt + ').' }); } } catch (e) {}
@@ -1404,7 +1419,7 @@ class Component extends DCLogic {
       showClient: !st.loading && step === 4,
       pageBg: pr ? '#fff' : '#f3f2f2', clientPad: pr ? '0' : st.clientOnly ? '0 0 24px' : '16px 24px 48px',
       tab1Bg: tab(1).bg, tab1Fg: tab(1).fg, tab2Bg: tab(2).bg, tab2Fg: tab(2).fg, tab3Bg: tab(3).bg, tab3Fg: tab(3).fg, tab4Bg: tab(4).bg, tab4Fg: tab(4).fg,
-      goStep1: () => this.setState({ step: 1 }), goStep2: () => this.setState({ step: 2 }), goStep3: () => this.setState({ step: 3 }), goStep4: () => this.setState({ step: 4 }),
+      goStep1: () => this.setState({ step: 1 }), goStep2: () => this.setState({ step: 2 }), goStep3: () => this.setState(st => ({ step: 3, quote: this.withOps(st.quote) })), goStep4: () => this.setState({ step: 4 }),
       okPartesMark: q.okP ? '✓' : '', okServMark: q.okS ? '✓' : '',
       meta: { ...meta, rowsFmt: (meta.rows || 0).toLocaleString('es-GT'), fromFmt: this.fd(meta.from), toFmt: this.fd(meta.to) },
       baseSrc: st.baseSrc, msg: st.msg, hasMsg: !!st.msg, onFile: e => this.onFile(e), settings: S,
@@ -1427,6 +1442,9 @@ class Component extends DCLogic {
       tablaText: st.serv ? Object.entries(st.serv.tabla).map(([k, v]) => this.cap(k) + ' ' + v.l.length).join(', ') : '—', demoPdf: e => { e.preventDefault(); e.stopPropagation(); this.loadDemoPdf(); }, setUsarPdf: e => this.setS('usarPdf', e.target.checked), setKits: e => this.setS('kits', e.target.value), setPaquetes: e => this.setS('paquetes', e.target.value), setAsesor: e => this.setQ({ asesor: e.target.value }),
       hasAsesor: !!(q.asesor || '').trim(), pdfLabel: st.pdfName ? 'Cambiar PDF (' + st.pdfName + ')' : 'Elegir PDF', armar: () => this.armar(),
       parseMsg: st.parseMsg, hasParseMsg: !!st.parseMsg,
+      buscar: st.buscar || '', setBuscar: e => this.setState({ buscar: e.target.value }), clearBuscar: () => this.setState({ buscar: '' }), hasBuscar: !!(st.buscar || '').trim(),
+      itemsVis: (() => { const k = this.norm(st.buscar || ''); return k ? items.filter(it => this.norm([it.name, it.nota, ...(it.parts || []).map(l => l.desc), ...(it.ops || []).map(l => l.desc)].join(' ')).includes(k)) : items; })(),
+      buscarInfo: (st.buscar || '').trim() ? 'Mostrando ' + (() => { const k = this.norm(st.buscar || ''); return k ? items.filter(it => this.norm([it.name, it.nota, ...(it.parts || []).map(l => l.desc), ...(it.ops || []).map(l => l.desc)].join(' ')).includes(k)) : items; })().length + ' de ' + items.length : items.length + ' puntos',
       quote: q, items, onItems, hasModal: !!modal && !pr0, printDetails, hasPrintDetails: printDetails.length > 0, modal: modal || { secs: [], incluye: [] },
       closeModal: () => this.setState({ modal: null }), stopProp: e => e.stopPropagation(), noItems: !items.length, sum,
       setLink: e => this.setQ({ link: this.normLink(e.target.value) }), selAll: e => { try { e.target.select(); } catch (x) {} }, linkHref: this.normLink(q.link), setOr: e => this.setQ({ or: e.target.value }), setCliente: e => this.setQ({ cliente: e.target.value }), setTel: e => this.setQ({ tel: e.target.value }),
@@ -1447,7 +1465,7 @@ class Component extends DCLogic {
       addPunto: () => { if (!st.addName.trim()) return; this.setState(s => ({ addName: '', quote: { ...s.quote, items: [...s.quote.items, this.makeItem(vk, st.addName, 'amarillo')], okP: null, okS: null } })); },
       okPartesText: q.okP ? 'Confirmado ' + q.okP : 'Pendiente de confirmar',
       confirmPartesLabel: q.okP ? 'Ir a mano de obra →' : 'Confirmar repuestos ✓',
-      confirmPartes: () => { if (q.okP) this.setState({ step: 3 }); else { const stp = this.stamp(); this._baseSnap = this.snapQ(q); this.setQ({ okP: stp }); this.teamUrl({ ...q, okP: stp }).then(u => this.notifyTF(u, 'partes')); if (q.okS) { this.saveToHist(q); this.saveFB(q); } } },
+      confirmPartes: () => { if (q.okP) this.setState({ step: 3 }); else { const stp = this.stamp(), q2 = this.withOps({ ...q, okP: stp }); this._baseSnap = this.snapQ(q2); this.setQ({ okP: stp, items: q2.items }); this.teamUrl(q2).then(u => this.notifyTF(u, 'partes')); if (q.okS) { this.saveToHist(q); this.saveFB(q); } } },
       teamLabel: st.copied === 'team' ? 'Link copiado ✓' : 'Copiar link para asesor de servicio',
       copyTeamLink: async () => { const u = await this.teamUrl(q); this.copy(u, 'team'); if (u.length > 3900) this.setState({ msg: 'Aviso: el link del asesor mide ' + u.length + ' caracteres; TallerFLOW solo acepta menos de 4000.' }); },
       okServText: q.okS ? 'confirmado ' + q.okS : 'pendiente de confirmar',
