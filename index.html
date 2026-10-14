@@ -739,11 +739,12 @@ class Component extends DCLogic {
       this.fromPdf(res);
     } catch (err) { console.warn(err); this.setState({ parseMsg: 'No pude leer el PDF: ' + err.message }); }
   }
+  fmtPlaca(t) { t = (t || '').toUpperCase(); const m = t.match(/^\s*([A-Z]{1,2})[\s-]*(\d{2,3})[\s-]*([A-Z]{3})(?![A-Z0-9])/); if (m) return (m[1].length === 1 ? m[1] + '-' : m[1]) + m[2] + m[3]; const w = t.match(/^\s*([A-Z0-9-]{4,10})/); return w ? w[1] : ''; }
   parsePdf(pages) {
-    const flat = pages.flat().map(r => r.full).join('\n');
+    const flat = pages.flat().map(r => r.full).join('\n').replace(/[\uE000-\uF8FF]/g, '');
     const g = re => { const m = flat.match(re); return m ? m[1].trim() : ''; };
     const h = { link: g(/(https?:\/\/[^\s]*(?:vehi\.mobi|clearmechanic)[^\s]*)/i), or: g(/Orden\s*#\s*(\d{3,6})/i), cliente: g(/Nombre:\s*(.+?)\s+Veh[ií]culo:/i), tel: g(/Celular:\s*([\d\s-]{8,12})/i).replace(/\D/g, ''),
-      placa: g(/Placas?:\s*([A-Z0-9 -]{4,10}?)(?:\s|$)/i), km: g(/Kilometraje:\s*([\d.,]+)/i), asesor: g(/Asesor de servicio:\s*([^\n]+?)(?:\s{2,}|$|\n)/i) };
+      placa: this.fmtPlaca(g(/Placas?:[ \t]*([^\n]{0,24})/i)), km: g(/Kilometraje:\s*([\d.,]+)/i), asesor: g(/Asesor de servicio:\s*([^\n]+?)(?:\s{2,}|$|\n)/i) };
     const vm = flat.match(/Veh[ií]culo:\s*(.+?)\s+((?:19|20)\d\d)\b/i); if (vm) { h.vehiculoRaw = vm[1]; h.anio = vm[2]; }
     h.vehCtx = (flat.match(/Veh[ií]culo:\s*([\s\S]{0,200})/i) || [])[1] || '';
     let cols = null; const points = []; let section = null, stop = false;
@@ -805,6 +806,7 @@ class Component extends DCLogic {
       }
       const it = this.makeItem(vk, p.name, p.urg, p.com);
       if (!it.src && p.subs.length) it.parts = p.subs.map(x => ({ desc: this.cap(x.desc), rep: '' }));
+      else if (!it.src) { const nm = this.cap(p.name), cambio = /reemplaz|cambi/i.test((p.com || '') + ' ' + p.name); it.parts = [{ desc: nm, rep: '' }]; it.ops = [{ desc: cambio && !/^cambio/i.test(nm) ? 'Cambio de ' + nm.charAt(0).toLowerCase() + nm.slice(1) : nm, hrs: '' }]; }
       return it;
     });
     const withHist = items.filter(i => i.src && !i.src.pdf).length, fromPdf = items.filter(i => i.src && i.src.pdf).length;
