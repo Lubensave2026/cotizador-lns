@@ -807,7 +807,7 @@ class Component extends DCLogic {
         const it = this.makeItem(vk, p.name, p.urg, p.com); it.name = this.cap(p.name); it.src = { pdf: true }; it.parts = []; it.ops = [];
         priced.forEach(s => { const q = this.num(s.n['CANT.']) || 1, pu = this.num(s.n['PRECIO U.']), hr = this.num(s.n['HRS.']);
           // Renglón con horas = mano de obra (va a Mano de obra, no a Repuestos); su PRECIO U. es insumo aparte.
-          if (pu) it.parts.push({ desc: hr ? 'Insumos: ' + this.cap(s.desc) : this.cap(s.desc), rep: String(this.r2(pu * q * this.F())) });
+          if (pu) it.parts.push({ desc: hr ? 'Insumos: ' + this.cap(s.desc) : this.cap(s.desc), rep: String(this.r2(pu * q)) }); // los precios del PDF ya incluyen IVA: no se vuelve a sumar
           if (hr) it.ops.push({ desc: this.cap(s.desc), hrs: String(hr) }); });
         // PDF con precios de repuestos pero sin horas: las horas se sugieren del historial (mismo vehículo/punto).
         if (!it.ops.length) { const h = this.makeItem(vk, p.name, p.urg, p.com); if (h.ops.length && h.ops.some(o => o.hrs)) it.ops = h.ops; }
