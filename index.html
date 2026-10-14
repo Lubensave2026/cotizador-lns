@@ -632,7 +632,7 @@ class Component extends DCLogic {
       try {
         const d = await this.decAny(m[2]);
         if (m[1] === 'q') { this.setState({ clientOnly: true, step: 4, quote: d.q, settings: { ...this.defS(), ...d.s }, loading: false }); return; }
-        this._hashT = true; d.q = this.withOps(d.q); if (d.q.okP) this._baseSnap = this.snapQ(d.q); this.setState({ quote: d.q, settings: { ...this.defS(), ...d.s }, step: d.q.okP ? 3 : 2 });
+        this._hashT = true; d.q = this.withOps(this.richest(d.q)); if (d.q.okP) this._baseSnap = this.snapQ(d.q); this.setState({ quote: d.q, settings: { ...this.defS(), ...d.s }, step: d.q.okP ? 3 : 2 });
       } catch (e) { console.warn('link inválido', e); }
     } else {
       try { const saved = JSON.parse(localStorage.getItem('lns-cotizador-v2') || 'null'); if (saved) { const st = { ...this.defS(), ...(saved.settings || {}) }; let q = saved.quote;
@@ -643,7 +643,7 @@ class Component extends DCLogic {
       const P = new URLSearchParams(location.search), keys = ['or', 'link', 'placa', 'vehiculo', 'anio', 'cliente', 'tel', 'km', 'asesor'];
       const pre = {}; keys.forEach(k => { const v = (P.get(k) || '').trim(); if (v) pre[k] = v; });
       const ot = (P.get('ot') || '').trim(); if (ot) { pre.or = ot; this._tfOt = ot; } if (pre.link) pre.link = this.normLink(pre.link);
-      const saved = pre.or && !this._hashT ? this.quoteStore()[pre.or] : null;
+      const saved = pre.or && !this._hashT ? (this.quoteStore()[pre.or] ? this.richest(this.quoteStore()[pre.or]) : (this.backupStore()[pre.or] || null)) : null;
       if (saved) { this._pre = true; this.setState({ step: saved.okP && saved.okS ? 4 : saved.okP ? 3 : 2, quote: { ...saved, ...pre, vehiculo: saved.vehiculo || pre.vehiculo, cliente: saved.cliente || pre.cliente }, parseMsg: 'Cotización de la OT ' + pre.or + ' recuperada.' }); throw 'done'; }
       if (pre.or || pre.link) this._pre = true;
       if ((pre.or || pre.link) && !this._hashT) this.setState(s => ({ step: 2, quote: pre.or && pre.or !== s.quote.or ? { ...this.emptyQ(), ...pre } : { ...s.quote, ...pre },
@@ -671,7 +671,7 @@ class Component extends DCLogic {
     if (this.state.clientOnly || this.state.loading) return;
     if (this._lq !== this.state.quote || this._ls !== this.state.settings)
       try { this._lq = this.state.quote; this._ls = this.state.settings;
-        const q = this.state.quote; if (q.or && q.items && q.items.length && !q.estimado) { const m = this.quoteStore(); m[q.or] = { ...q, _t: Date.now() };
+        const q = this.state.quote; if (q.or && q.items && q.items.length && !q.estimado) { const m = this.quoteStore(); const old = m[q.or]; if (old && this.opsScore(old) > this.opsScore(q)) { try { const b = this.backupStore(); b[q.or] = { ...old, _t: Date.now() }; Object.keys(b).sort((x, y) => (b[y]._t || 0) - (b[x]._t || 0)).slice(40).forEach(k => delete b[k]); localStorage.setItem('lns-cotiz-respaldo', JSON.stringify(b)); } catch (e) {} } m[q.or] = { ...q, _t: Date.now() };
           const ks = Object.keys(m).sort((a, b) => (m[b]._t || 0) - (m[a]._t || 0)); ks.slice(150).forEach(k => delete m[k]); localStorage.setItem('lns-cotizaciones', JSON.stringify(m)); } localStorage.setItem('lns-cotizador-v2', JSON.stringify({ quote: this.state.quote, settings: this.state.settings })); if (this.state.baseOpen) { if (this._lsRef === undefined) this._lsRef = this.state.settings; else if (this._lsRef !== this.state.settings) { this._lsRef = this.state.settings; this.pushSettings(); } } else this._lsRef = undefined; } catch (e) {}
   }
   enc(o) { const b = new TextEncoder().encode(JSON.stringify(o)); let s = ''; b.forEach(x => s += String.fromCharCode(x)); return btoa(s).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, ''); }
@@ -1189,7 +1189,7 @@ class Component extends DCLogic {
     if (!h) { this.setState({ msg: 'Aún no hay PIN en este navegador: créalo en la Base de datos antes de editar.' }); return; }
     if (await this.hash(pin) !== h) { window.alert('PIN incorrecto.'); return; }
     this._baseSnap = this.snapQ(this.state.quote);
-    this.setState(s => ({ clientOnly: false, step: 2, savedFB: null, quote: { ...s.quote, okP: null, okS: null }, parseMsg: 'Editando el presupuesto guardado de la OT ' + this._tfOt + '. Al confirmar de nuevo se actualiza el mismo link del cliente.' }));
+    this.setState(s => ({ clientOnly: false, step: 2, savedFB: null, quote: { ...s.quote, okP: null, okS: null }, parseMsg: 'Editando el presupuesto de la OT ' + (this._tfOt || this.state.quote.or) + '. Al confirmar de nuevo se actualiza el mismo link del cliente.' }));
   }
   // Consulta de precios del historial: más reciente, más alto y promedio (con IVA), sin crear presupuesto.
   consultar() {
@@ -1328,6 +1328,14 @@ class Component extends DCLogic {
     return { ...q, items: (q.items || []).map(it => (it.ops || []).some(o => (o.desc || '').trim() || this.num(o.hrs)) ? it
       : { ...it, ops: [{ desc: this.verboDe(it.nota) + ' de ' + String(it.name || '').trim().replace(/^./, c => c.toLowerCase()), hrs: '' }] }) };
   }
+  // ===== Protección del trabajo del asesor: nunca pisar una cotización con más mano de obra por otra más vacía =====
+  opsScore(q) { return (q.okS ? 1000 : 0) + ((q && q.items) || []).reduce((a, it) => a + (it.ops || []).filter(o => this.num(o.hrs) > 0).length, 0); }
+  backupStore() { try { return JSON.parse(localStorage.getItem('lns-cotiz-respaldo') || '{}'); } catch (e) { return {}; } }
+  richest(q) {
+    const or = q && q.or; if (!or) return q; let best = q;
+    [this.quoteStore()[or], this.backupStore()[or]].forEach(c => { if (c && c.items && this.opsScore(c) > this.opsScore(best)) best = c; });
+    return best;
+  }
   // Devuelve a TallerFLOW (la pestaña que abrió el cotizador) el link del cliente para guardarlo en el historial de la orden.
   notifyTF(url, tipo) {
     try { if (this._tfOt && window.opener && !window.opener.closed) { window.opener.postMessage({ tipo: tipo === 'partes' ? 'lns-cotizacion-partes' : 'lns-cotizacion', ot: this._tfOt, url, total: this._tot || '', ts: Date.now() }, 'https://lubensave2026.github.io'); this.setState({ msg: (tipo === 'partes' ? 'Cotización de repuestos enviada a TallerFLOW' : 'Link enviado a TallerFLOW') + ' (OT ' + this._tfOt + ').' }); } } catch (e) {}
@@ -1422,7 +1430,7 @@ class Component extends DCLogic {
     return {
       consOpen: !!st.consOpen, toggleCons: () => this.setState(x => ({ consOpen: !x.consOpen })), consVeh: st.consVeh || '', consPieza: st.consPieza || '', setConsVeh: e => this.setState({ consVeh: e.target.value }), setConsPieza: e => this.setState({ consPieza: e.target.value }), cons: st.consOpen ? this.consultar() : {},
       publishHist: () => this.publishHist(),
-      cliPdf: st.clientOnly && !pr, canEdit: !!st.savedFB && st.clientOnly && !pr, editSaved: () => this.editSaved(),
+      cliPdf: st.clientOnly && !pr, canEdit: st.clientOnly && !pr, editSaved: () => this.editSaved(),
       loading: st.loading, showChrome: !st.clientOnly && !pr,
       headerSub: q.or ? 'OR ' + q.or + ' · ' + (q.vehiculo || '') : 'Zona 10',
       isStep1: !st.loading && !pr && step === 1 && st.baseOpen, isStep2: !st.loading && !pr && step === 2, isStep3: !st.loading && !pr && step === 3, isStep4: !st.loading && !pr && step === 4 && !st.clientOnly,
