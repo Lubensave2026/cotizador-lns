@@ -506,6 +506,7 @@
         </div>
       </sc-if>
       <p style="font-size: 12px; color: #605d5d; padding: 16px 0; margin: 0;">Precios en quetzales con IVA incluido. Mano de obra a tarifa flat rate. Presupuesto válido por 15 días; repuestos sujetos a disponibilidad.</p>
+      <sc-if value="{{ cliPdf }}" hint-placeholder-val="{{ false }}"><button class="btn" onClick="{{ doPrint }}" style="margin: 0 0 12px; background: #000; color: #FFE500; font-weight: 800;">Descargar PDF</button></sc-if>
       <sc-if value="{{ canEdit }}" hint-placeholder-val="{{ false }}"><button class="btn btn-secondary" onClick="{{ editSaved }}" style="margin: 0 0 24px; font-size: 12px;">Editar presupuesto (equipo · PIN)</button></sc-if>
     </div>
   </sc-if>
@@ -576,7 +577,7 @@ class Component extends DCLogic {
       try {
         const d = this.dec(m[2]);
         if (m[1] === 'q') { this.setState({ clientOnly: true, step: 4, quote: d.q, settings: { ...this.defS(), ...d.s }, loading: false }); return; }
-        this.setState({ quote: d.q, settings: { ...this.defS(), ...d.s }, step: d.q.okP ? 3 : 2 });
+        this._hashT = true; this.setState({ quote: d.q, settings: { ...this.defS(), ...d.s }, step: d.q.okP ? 3 : 2 });
       } catch (e) { console.warn('link inválido', e); }
     } else {
       try { const saved = JSON.parse(localStorage.getItem('lns-cotizador-v2') || 'null'); if (saved) { const st = { ...this.defS(), ...(saved.settings || {}) }; let q = saved.quote;
@@ -587,10 +588,10 @@ class Component extends DCLogic {
       const P = new URLSearchParams(location.search), keys = ['or', 'link', 'placa', 'vehiculo', 'anio', 'cliente', 'tel', 'km', 'asesor'];
       const pre = {}; keys.forEach(k => { const v = (P.get(k) || '').trim(); if (v) pre[k] = v; });
       const ot = (P.get('ot') || '').trim(); if (ot) { pre.or = ot; this._tfOt = ot; }
-      const saved = pre.or ? this.quoteStore()[pre.or] : null;
+      const saved = pre.or && !this._hashT ? this.quoteStore()[pre.or] : null;
       if (saved) { this._pre = true; this.setState({ step: saved.okP && saved.okS ? 4 : saved.okP ? 3 : 2, quote: { ...saved, ...pre, vehiculo: saved.vehiculo || pre.vehiculo, cliente: saved.cliente || pre.cliente }, parseMsg: 'Cotización de la OT ' + pre.or + ' recuperada.' }); throw 'done'; }
       if (pre.or || pre.link) this._pre = true;
-      if (pre.or || pre.link) this.setState(s => ({ step: 2, quote: pre.or && pre.or !== s.quote.or ? { ...this.emptyQ(), ...pre } : { ...s.quote, ...pre },
+      if ((pre.or || pre.link) && !this._hashT) this.setState(s => ({ step: 2, quote: pre.or && pre.or !== s.quote.or ? { ...this.emptyQ(), ...pre } : { ...s.quote, ...pre },
         parseMsg: 'Datos recibidos de TallerFLOW' + (pre.or ? ' · OT ' + pre.or : '') + (pre.vehiculo ? ' · ' + pre.vehiculo : '') + '. Sube el PDF o pega el reporte para armar el presupuesto.' }));
     } catch (e) {}
     let recs = await this.idbGet('recs'), src = 'Base propia de este navegador';
@@ -1114,8 +1115,8 @@ class Component extends DCLogic {
     this.setState(s => ({ clientOnly: false, step: 2, savedFB: null, quote: { ...s.quote, okP: null, okS: null }, parseMsg: 'Editando el presupuesto guardado de la OT ' + this._tfOt + '. Al confirmar de nuevo se actualiza el mismo link del cliente.' }));
   }
   // Devuelve a TallerFLOW (la pestaña que abrió el cotizador) el link del cliente para guardarlo en el historial de la orden.
-  notifyTF(url) {
-    try { if (this._tfOt && window.opener && !window.opener.closed) { window.opener.postMessage({ tipo: 'lns-cotizacion', ot: this._tfOt, url, total: this._tot || '', ts: Date.now() }, 'https://lubensave2026.github.io'); this.setState({ msg: 'Link enviado a TallerFLOW (OT ' + this._tfOt + ').' }); } } catch (e) {}
+  notifyTF(url, tipo) {
+    try { if (this._tfOt && window.opener && !window.opener.closed) { window.opener.postMessage({ tipo: tipo === 'partes' ? 'lns-cotizacion-partes' : 'lns-cotizacion', ot: this._tfOt, url, total: this._tot || '', ts: Date.now() }, 'https://lubensave2026.github.io'); this.setState({ msg: (tipo === 'partes' ? 'Cotización de repuestos enviada a TallerFLOW' : 'Link enviado a TallerFLOW') + ' (OT ' + this._tfOt + ').' }); } } catch (e) {}
   }
   copy(url, label) {
     (navigator.clipboard ? navigator.clipboard.writeText(url) : Promise.reject()).catch(() => window.prompt('Copia el link:', url));
@@ -1203,7 +1204,7 @@ class Component extends DCLogic {
     const meta = base ? base.meta : { rows: 0, models: 0, from: '', to: '' };
     const locked = !(q.okP && q.okS);
     return {
-      canEdit: !!st.savedFB && st.clientOnly && !pr, editSaved: () => this.editSaved(),
+      cliPdf: st.clientOnly && !pr, canEdit: !!st.savedFB && st.clientOnly && !pr, editSaved: () => this.editSaved(),
       loading: st.loading, showChrome: !st.clientOnly && !pr,
       headerSub: q.or ? 'OR ' + q.or + ' · ' + (q.vehiculo || '') : 'Zona 10',
       isStep1: !st.loading && !pr && step === 1 && st.baseOpen, isStep2: !st.loading && !pr && step === 2, isStep3: !st.loading && !pr && step === 3, isStep4: !st.loading && !pr && step === 4 && !st.clientOnly,
@@ -1253,7 +1254,7 @@ class Component extends DCLogic {
       addPunto: () => { if (!st.addName.trim()) return; this.setState(s => ({ addName: '', quote: { ...s.quote, items: [...s.quote.items, this.makeItem(vk, st.addName, 'amarillo')], okP: null, okS: null } })); },
       okPartesText: q.okP ? 'Confirmado ' + q.okP : 'Pendiente de confirmar',
       confirmPartesLabel: q.okP ? 'Ir a mano de obra →' : 'Confirmar repuestos ✓',
-      confirmPartes: () => { if (q.okP) this.setState({ step: 3 }); else { this.setQ({ okP: this.stamp() }); if (q.okS) { this.saveToHist(q); this.saveFB(q); } } },
+      confirmPartes: () => { if (q.okP) this.setState({ step: 3 }); else { const stp = this.stamp(); this.setQ({ okP: stp }); this.notifyTF(location.href.split('#')[0] + '#t=' + this.enc({ q: { ...q, okP: stp, texto: '' }, s: S }), 'partes'); if (q.okS) { this.saveToHist(q); this.saveFB(q); } } },
       teamLabel: st.copied === 'team' ? 'Link copiado ✓' : 'Copiar link para asesor de servicio',
       copyTeamLink: () => this.copy(location.href.split('#')[0] + '#t=' + this.enc({ q: { ...q, texto: '' }, s: S }), 'team'),
       okServText: q.okS ? 'confirmado ' + q.okS : 'pendiente de confirmar',
