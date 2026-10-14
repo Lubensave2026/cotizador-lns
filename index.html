@@ -245,7 +245,7 @@
 
       <div class="field" style="background: #FEED01; padding: 14px 16px; gap: 6px;">
         <label style="font-weight: 800; color: #000;">Link de ClearMechanic: fotos y videos para el cliente</label>
-        <input class="input" placeholder="https://vehi.mobi/…" value="{{ quote.link }}" onChange="{{ setLink }}" style="background: #fff; font-size: 15px;">
+        <input class="input" placeholder="https://vehi.mobi/…" value="{{ quote.link }}" onFocus="{{ selAll }}" onChange="{{ setLink }}" style="background: #fff; font-size: 15px;">
       </div>
       <sc-if value="{{ hasParseMsg }}" hint-placeholder-val="{{ false }}">
         <div style="background: #FEED01; color: #000; padding: 12px 16px; font-size: 14px; font-weight: 600;">{{ parseMsg }}</div>
@@ -468,7 +468,7 @@
           <sc-if value="{{ hasAsesor }}" hint-placeholder-val="{{ false }}"><span style="font-size: 13px; color: #d7d3d3;">Asesor de servicio: {{ quote.asesor }}</span></sc-if>
         </div>
         <sc-if value="{{ hasLink }}" hint-placeholder-val="{{ false }}">
-          <a href="{{ quote.link }}" target="_blank" style="background: #FFE500; color: #000; font-weight: 800; font-size: 15px; padding: 14px 18px; text-decoration: none; margin: 12px 0;" style-hover="background: #fff;">Ver fotos y videos de la inspección →</a>
+          <a href="{{ linkHref }}" target="_blank" style="background: #FFE500; color: #000; font-weight: 800; font-size: 15px; padding: 14px 18px; text-decoration: none; margin: 12px 0;" style-hover="background: #fff;">Ver fotos y videos de la inspección →</a>
         </sc-if>
       </div>
       <div style="background: #fff; padding: 14px 20px; font-size: 14px; border-bottom: 2px solid #000;">Elige “Sí, realizar” o “Ahora no” en cada trabajo. El total se actualiza al momento.</div>
@@ -508,7 +508,7 @@
             <span style="font-size: 34px; font-weight: 800;">{{ sum.totFmt }}</span>
             <span style="font-size: 12px;">Presupuesto completo: {{ sum.totAllFmt }}</span>
           </div>
-          <sc-if value="{{ hasLink }}" hint-placeholder-val="{{ false }}"><a href="{{ quote.link }}" target="_blank" style="color: #FFE500; padding: 14px 20px; font-size: 14px;">Ver fotos del reporte de inspección</a></sc-if>
+          <sc-if value="{{ hasLink }}" hint-placeholder-val="{{ false }}"><a href="{{ linkHref }}" target="_blank" style="color: #FFE500; padding: 14px 20px; font-size: 14px;">Ver fotos del reporte de inspección</a></sc-if>
         </aside>
       </div>
       <sc-if value="{{ hasPrintDetails }}" hint-placeholder-val="{{ false }}">
@@ -876,7 +876,7 @@ class Component extends DCLogic {
       return it;
     });
     const withHist = items.filter(i => i.src && !i.src.pdf).length, fromPdf = items.filter(i => i.src && i.src.pdf).length;
-    this.setState(s => ({ quote: { ...this.emptyQ(), link: h.link || s.quote.link, or: h.or, cliente: h.cliente, tel: h.tel, placa: h.placa, km: h.km, asesor: h.asesor || '', anio: h.anio || '',
+    this.setState(s => ({ quote: { ...this.emptyQ(), link: h.link || (s.quote.link === 'https://vehi.mobi/N8XwaN' ? '' : s.quote.link), or: h.or, cliente: h.cliente, tel: h.tel, placa: h.placa, km: h.km, asesor: h.asesor || '', anio: h.anio || '',
       vehiculo: vk ? b.m[vk].d : (h.vehiculoRaw || ''), items },
       parseMsg: 'PDF leído: ' + (vk ? b.m[vk].d : (h.vehiculoRaw || 'vehículo no reconocido')) + ' ' + (h.anio || '') + ' · OR ' + h.or + ' · ' + items.length + ' puntos (' + withHist + ' con precio del historial' + (fromPdf ? ', ' + fromPdf + ' con precios del PDF' : '') + ', ' + (items.length - withHist - fromPdf) + ' para llenar). Revisa y agrega complementos.' }));
   }
@@ -1274,6 +1274,13 @@ class Component extends DCLogic {
       if (window.opener && !window.opener.closed) window.opener.postMessage({ tipo: 'lns-cotizacion-modificada', ot: this._tfOt, ts: Date.now(), resumen: t.join('; ') }, 'https://lubensave2026.github.io');
     } catch (e) {}
   }
+  // Limpia el link de ClearMechanic: si quedó pegado dos veces o mezclado (https + https://...), conserva uno solo y válido.
+  normLink(v) {
+    v = String(v || '').trim(); if (!v) return '';
+    const m = v.match(/vehi\.mobi\/([A-Za-z0-9_-]+)/i); if (m) return 'https://vehi.mobi/' + m[1];
+    const u = v.match(/https?:\/\/[^\s]+/i); if (!u) return /^[\w.-]+\.[a-z]{2,}(\/|$)/i.test(v) ? 'https://' + v : v;
+    return u[0].split(/https?:\/\//i).filter(Boolean)[0] ? 'https://' + u[0].replace(/^https?:\/\//i, '').split(/https?:\/\//i)[0].replace(/:\/\/.*$/, '') : v;
+  }
   // Devuelve a TallerFLOW (la pestaña que abrió el cotizador) el link del cliente para guardarlo en el historial de la orden.
   notifyTF(url, tipo) {
     try { if (this._tfOt && window.opener && !window.opener.closed) { window.opener.postMessage({ tipo: tipo === 'partes' ? 'lns-cotizacion-partes' : 'lns-cotizacion', ot: this._tfOt, url, total: this._tot || '', ts: Date.now() }, 'https://lubensave2026.github.io'); this.setState({ msg: (tipo === 'partes' ? 'Cotización de repuestos enviada a TallerFLOW' : 'Link enviado a TallerFLOW') + ' (OT ' + this._tfOt + ').' }); } } catch (e) {}
@@ -1399,7 +1406,7 @@ class Component extends DCLogic {
       parseMsg: st.parseMsg, hasParseMsg: !!st.parseMsg,
       quote: q, items, onItems, hasModal: !!modal && !pr0, printDetails, hasPrintDetails: printDetails.length > 0, modal: modal || { secs: [], incluye: [] },
       closeModal: () => this.setState({ modal: null }), stopProp: e => e.stopPropagation(), noItems: !items.length, sum,
-      setLink: e => this.setQ({ link: e.target.value }), setOr: e => this.setQ({ or: e.target.value }), setCliente: e => this.setQ({ cliente: e.target.value }), setTel: e => this.setQ({ tel: e.target.value }),
+      setLink: e => this.setQ({ link: this.normLink(e.target.value) }), selAll: e => { try { e.target.select(); } catch (x) {} }, linkHref: this.normLink(q.link), setOr: e => this.setQ({ or: e.target.value }), setCliente: e => this.setQ({ cliente: e.target.value }), setTel: e => this.setQ({ tel: e.target.value }),
       setPlaca: e => this.setQ({ placa: e.target.value }), setKm: e => this.setQ({ km: e.target.value }), setVehiculo: e => this.setQ({ vehiculo: e.target.value }),
       setAnio: e => this.setQ({ anio: e.target.value }), setTexto: e => this.setQ({ texto: e.target.value }),
       modelList: base ? Object.values(base.m).map(m => m.d).sort() : [],
