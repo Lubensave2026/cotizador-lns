@@ -808,7 +808,7 @@ class Component extends DCLogic {
         priced.forEach(s => { const q = this.num(s.n['CANT.']) || 1, pu = this.num(s.n['PRECIO U.']), hr = this.num(s.n['HRS.']);
           // Renglón con horas = mano de obra (va a Mano de obra, no a Repuestos); su PRECIO U. es insumo aparte.
           if (pu) it.parts.push({ desc: hr ? 'Insumos: ' + this.cap(s.desc) : this.cap(s.desc), rep: String(this.r2(pu * q)) }); // los precios del PDF ya incluyen IVA: no se vuelve a sumar
-          if (hr) it.ops.push({ desc: this.cap(s.desc), hrs: String(hr) }); });
+          if (hr) it.ops.push({ desc: this.cap(s.desc), hrs: String(hr), ...(this.num(s.n['PRECIO HR.']) ? { tar: String(this.num(s.n['PRECIO HR.'])) } : {}) }); }); // la hora del PDF ya incluye IVA
         // PDF con precios de repuestos pero sin horas: las horas se sugieren del historial (mismo vehículo/punto).
         if (!it.ops.length) { const h = this.makeItem(vk, p.name, p.urg, p.com); if (h.ops.length && h.ops.some(o => o.hrs)) it.ops = h.ops; }
         return it;
@@ -1144,7 +1144,7 @@ class Component extends DCLogic {
           ajusteText: l.adj ? '+' + l.adj + '% sobre ' + this.fmt(l.base) : '',
           onDesc: e => this.updList(i, 'parts', j, { desc: e.target.value }, 'p'), onRep: e => this.updList(i, 'parts', j, { rep: e.target.value }, 'p'),
           onDel: () => this.updItem(i, { parts: it.parts.filter((_, k) => k !== j) }, 'p') }; });
-      const ops = (it.ops || []).map((l, j) => { if (l.fijo) l = { ...l, fijo: false, hrs: String(Math.round(this.num(l.monto) / (T * (1 + IVA)) * 10000) / 10000) }; const h = this.num(l.hrs), m = h * T * (1 + IVA); hrs += h; mo += m;
+      const ops = (it.ops || []).map((l, j) => { if (l.fijo) l = { ...l, fijo: false, hrs: String(Math.round(this.num(l.monto) / (T * (1 + IVA)) * 10000) / 10000) }; const h = this.num(l.hrs), m = h * (this.num(l.tar) || T * (1 + IVA)); hrs += h; mo += m;
         return { ...l, fijo: !!l.fijo, noFijo: !l.fijo, moFmt: this.fmt(m), onMonto: e => this.updList(i, 'ops', j, { monto: e.target.value }, 's'), onDesc: e => this.updList(i, 'ops', j, { desc: e.target.value }, 's'), onHrs: e => this.updList(i, 'ops', j, { hrs: e.target.value, fijo: false }, 's'),
           onDel: () => this.updItem(i, { ops: it.ops.filter((_, k) => k !== j) }, 's') }; });
       const rojo = it.urg === 'rojo', on = it.on !== false;
@@ -1184,7 +1184,7 @@ class Component extends DCLogic {
         const g = l.sec || (tplS ? 'Adicionales' : 'Repuestos'); if (!groups[g]) { groups[g] = []; order.push(g); }
         groups[g].push({ desc, q: String(qty), unit: this.fmt(tot / qty), tot: this.fmt(tot) }); });
       const secs = order.map(g => ({ name: g, qLabel: 'CTD', rows: groups[g].map((x, k) => ({ ...x, no: String(k + 1) })) }));
-      const opsRows = mi.ops.filter(l => (l.desc || '').trim() && this.num(l.hrs)).map((l, k) => ({ no: String(k + 1), desc: l.desc, q: String(this.num(l.hrs)), unit: this.fmt(T * (1 + IVA)), tot: l.moFmt }));
+      const opsRows = mi.ops.filter(l => (l.desc || '').trim() && this.num(l.hrs)).map((l, k) => ({ no: String(k + 1), desc: l.desc, q: String(this.num(l.hrs)), unit: this.fmt(this.num(l.tar) || T * (1 + IVA)), tot: l.moFmt }));
       if (opsRows.length) secs.push({ name: 'Mano de obra', qLabel: 'Horas', rows: opsRows });
       const modal = { kicker: (tplS ? 'Detalle del servicio' : 'Desglose') + ' · ' + (q.vehiculo || '') + ' ' + (q.anio || ''), title: tplS ? tplS.t : mi.name,
         secs, totLabel: 'Total ' + mi.name, tot: mi.totFmt, incluye: mi.incluye || [], hasIncluye: !!(mi.incluye && mi.incluye.length) };
