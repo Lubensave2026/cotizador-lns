@@ -585,7 +585,7 @@ class Component extends DCLogic {
     try {
       const P = new URLSearchParams(location.search), keys = ['or', 'link', 'placa', 'vehiculo', 'anio', 'cliente', 'tel', 'km', 'asesor'];
       const pre = {}; keys.forEach(k => { const v = (P.get(k) || '').trim(); if (v) pre[k] = v; });
-      const ot = (P.get('ot') || '').trim(); if (ot) pre.or = ot;
+      const ot = (P.get('ot') || '').trim(); if (ot) { pre.or = ot; this._tfOt = ot; }
       const saved = pre.or ? this.quoteStore()[pre.or] : null;
       if (saved) { this._pre = true; this.setState({ step: saved.okP && saved.okS ? 4 : saved.okP ? 3 : 2, quote: { ...saved, ...pre, vehiculo: saved.vehiculo || pre.vehiculo, cliente: saved.cliente || pre.cliente }, parseMsg: 'Cotización de la OT ' + pre.or + ' recuperada.' }); throw 'done'; }
       if (pre.or || pre.link) this._pre = true;
@@ -1062,6 +1062,10 @@ class Component extends DCLogic {
     a.download = 'OR-' + (q.or || 'sin') + '-' + (kind === 'P' ? 'repuestos' : 'mano-de-obra') + '.csv'; a.click();
   }
   stamp() { return new Date().toLocaleString('es-GT', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }); }
+  // Devuelve a TallerFLOW (la pestaña que abrió el cotizador) el link del cliente para guardarlo en el historial de la orden.
+  notifyTF(url) {
+    try { if (this._tfOt && window.opener && !window.opener.closed) { window.opener.postMessage({ tipo: 'lns-cotizacion', ot: this._tfOt, url, total: this._tot || '', ts: Date.now() }, 'https://lubensave2026.github.io'); this.setState({ msg: 'Link enviado a TallerFLOW (OT ' + this._tfOt + ').' }); } } catch (e) {}
+  }
   copy(url, label) {
     (navigator.clipboard ? navigator.clipboard.writeText(url) : Promise.reject()).catch(() => window.prompt('Copia el link:', url));
     this.setState({ copied: label }); setTimeout(() => this.setState({ copied: '' }), 2000);
@@ -1205,8 +1209,8 @@ class Component extends DCLogic {
       confirmServ: () => { if (q.okS) this.setState({ step: 4 }); else { this.setQ({ okS: this.stamp() }); if (q.okP) this.saveToHist(q); } },
       locked, lockMsg: !q.okP ? 'Falta que el asesor de partes confirme los repuestos.' : 'Falta que el asesor de servicio confirme la mano de obra.',
       copyLabel: st.copied === 'cli' ? 'Link copiado ✓' : 'Copiar link para cliente',
-      copyLink: () => this.copy(this.clientUrl(), 'cli'),
-      sendWa: () => { const tel = (q.tel || '').replace(/\D/g, ''); const msg = 'Lube N Save Zona 10 — Presupuesto OR ' + q.or + ' para su ' + q.vehiculo + '. Elija qué trabajos realizar aquí: ' + this.clientUrl();
+      copyLink: () => { const u = this.clientUrl(); this.copy(u, 'cli'); this.notifyTF(u); },
+      sendWa: () => { const tel = (q.tel || '').replace(/\D/g, ''); const msg = 'Lube N Save Zona 10 — Presupuesto OR ' + q.or + ' para su ' + q.vehiculo + '. Elija qué trabajos realizar aquí: ' + (this._cu = this.clientUrl()); this.notifyTF(this._cu);
         window.open('https://wa.me/' + (tel ? (tel.length === 8 ? '502' + tel : tel) : '') + '?text=' + encodeURIComponent(msg), '_blank'); },
       doPrint: () => this.doPrint(),
       exp: (() => { const E = this.expRows(items, T * (1 + IVA)); const txtP = this.tsv(E.P), txtO = this.tsv(E.O);
