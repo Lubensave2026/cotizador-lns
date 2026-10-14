@@ -867,6 +867,8 @@ class Component extends DCLogic {
           else if (pu) it.parts.push({ desc: this.cap(s.desc), rep: String(this.r2(pu * q)), q: String(q) }); });
         // PDF con precios de repuestos pero sin horas: las horas se sugieren del historial (mismo vehículo/punto).
         if (!it.ops.length) { const h = this.makeItem(vk, p.name, p.urg, p.com); if (h.ops.length && h.ops.some(o => o.hrs)) it.ops = h.ops; }
+        // Sin horas ni historial: dejar las operaciones creadas (paquete o "Cambio de…") para que el asesor solo ponga las horas.
+        if (!it.ops.length) { const k2 = this.pkgItem(vk, p.name, p.com); it.ops = k2 && k2.ops.length ? k2.ops : [{ desc: 'Cambio de ' + p.name.charAt(0).toLowerCase() + p.name.slice(1), hrs: '' }]; }
         return it;
       }
       const it = this.makeItem(vk, p.name, p.urg, p.com);
