@@ -806,9 +806,10 @@ class Component extends DCLogic {
       if (priced.length) {
         const it = this.makeItem(vk, p.name, p.urg, p.com); it.name = this.cap(p.name); it.src = { pdf: true }; it.parts = []; it.ops = [];
         priced.forEach(s => { const q = this.num(s.n['CANT.']) || 1, pu = this.num(s.n['PRECIO U.']), hr = this.num(s.n['HRS.']);
-          // Renglón con horas = mano de obra (va a Mano de obra, no a Repuestos); su PRECIO U. es insumo aparte.
-          if (pu) it.parts.push({ desc: hr ? 'Insumos: ' + this.cap(s.desc) : this.cap(s.desc), rep: String(this.r2(pu * q)), q: String(q) }); // los precios del PDF ya incluyen IVA: no se vuelve a sumar
-          if (hr) it.ops.push({ desc: this.cap(s.desc), hrs: String(hr), ...(q > 1 ? { q: String(q) } : {}), ...(this.num(s.n['PRECIO HR.']) ? { tar: String(this.num(s.n['PRECIO HR.'])) } : {}) }); }); // la hora del PDF ya incluye IVA
+          // Renglón con horas = mano de obra, a la tarifa configurada con IVA (hrs x hora con IVA). Su PRECIO U. en el PDF es el IVA de esa mano de obra, no un repuesto: no se agrega a Repuestos.
+          // Renglón sin horas = repuesto: el precio del PDF ya incluye IVA, se toma tal cual.
+          if (hr) it.ops.push({ desc: this.cap(s.desc), hrs: String(hr), ...(q > 1 ? { q: String(q) } : {}) });
+          else if (pu) it.parts.push({ desc: this.cap(s.desc), rep: String(this.r2(pu * q)), q: String(q) }); });
         // PDF con precios de repuestos pero sin horas: las horas se sugieren del historial (mismo vehículo/punto).
         if (!it.ops.length) { const h = this.makeItem(vk, p.name, p.urg, p.com); if (h.ops.length && h.ops.some(o => o.hrs)) it.ops = h.ops; }
         return it;
