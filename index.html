@@ -115,6 +115,7 @@
           </div>
           <div style="display: flex; gap: 8px; flex-wrap: wrap;">
             <button class="btn btn-secondary" onClick="{{ exportHist }}">Descargar respaldo</button>
+            <button class="btn btn-secondary" onClick="{{ publishHist }}">Publicar historial en la nube</button>
             <label class="btn btn-secondary" style="cursor: pointer;"><span>Restaurar respaldo</span><input type="file" accept=".json" onChange="{{ importHist }}" style="display: none;"></label>
           </div>
           <label style="display: flex; align-items: center; gap: 10px; padding: 14px 16px; background: #000; color: #FFE500; font-weight: 800; cursor: pointer; width: fit-content;">
@@ -649,7 +650,7 @@ class Component extends DCLogic {
           const c = this.tplCands(vk, tipo); if (!c.length) return it; ch = true; return this.itemFromTpl(c, 0, it.urg, it.nota, it.id); });
         if (ch) this.setState(st => ({ quote: { ...st.quote, items, okP: null, okS: null } })); }
       if (!this.state.quote.items.length && !this._pre) this.loadDemoPdf();
-      this.fbOpen();
+      this.fbOpen(); this.fbSync();
     });
   }
   quoteStore() { try { return JSON.parse(localStorage.getItem('lns-cotizaciones') || '{}'); } catch (e) { return {}; } }
@@ -658,7 +659,7 @@ class Component extends DCLogic {
     if (this._lq !== this.state.quote || this._ls !== this.state.settings)
       try { this._lq = this.state.quote; this._ls = this.state.settings;
         const q = this.state.quote; if (q.or && q.items && q.items.length && !q.estimado) { const m = this.quoteStore(); m[q.or] = { ...q, _t: Date.now() };
-          const ks = Object.keys(m).sort((a, b) => (m[b]._t || 0) - (m[a]._t || 0)); ks.slice(150).forEach(k => delete m[k]); localStorage.setItem('lns-cotizaciones', JSON.stringify(m)); } localStorage.setItem('lns-cotizador-v2', JSON.stringify({ quote: this.state.quote, settings: this.state.settings })); } catch (e) {}
+          const ks = Object.keys(m).sort((a, b) => (m[b]._t || 0) - (m[a]._t || 0)); ks.slice(150).forEach(k => delete m[k]); localStorage.setItem('lns-cotizaciones', JSON.stringify(m)); } localStorage.setItem('lns-cotizador-v2', JSON.stringify({ quote: this.state.quote, settings: this.state.settings })); if (this.state.baseOpen) { if (this._lsRef === undefined) this._lsRef = this.state.settings; else if (this._lsRef !== this.state.settings) { this._lsRef = this.state.settings; this.pushSettings(); } } else this._lsRef = undefined; } catch (e) {}
   }
   enc(o) { const b = new TextEncoder().encode(JSON.stringify(o)); let s = ''; b.forEach(x => s += String.fromCharCode(x)); return btoa(s).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, ''); }
   dec(s) { s = s.replace(/-/g, '+').replace(/_/g, '/'); return JSON.parse(new TextDecoder().decode(Uint8Array.from(atob(s), c => c.charCodeAt(0)))); }
@@ -695,7 +696,7 @@ class Component extends DCLogic {
       (it.ops || []).forEach(l => { const h = this.num(l.hrs); if ((l.desc || '').trim() && h) lines.push([l.desc.trim(), 0, this.r2(h * this.rateAt(hoy))]); });
       return lines.length ? [or, hoy, String(q.anio || ''), vk, this.norm(it.name), vd, it.name, lines, 'lns'] : null; }).filter(Boolean);
     if (!add.length) return;
-    await this.setRecs([...this.recs.filter(x => x[0] !== or), ...add]);
+    await this.setRecs([...this.recs.filter(x => x[0] !== or), ...add]); this.pushDelta(or, add);
     this.setState({ msg: 'OR ' + or + ' guardada en el historial (' + add.length + ' puntos).' });
   }
   exportHist() {
@@ -1171,6 +1172,61 @@ class Component extends DCLogic {
     const P = sum(r.P), O = sum(r.O);
     return { msg: fb ? 'No hay registros para ese vehículo: se muestran los de todos los vehículos.' : (vt.length ? 'Solo vehículos que coinciden con “' + st.consVeh + '”.' : 'Todos los vehículos.'), hasP: !!P, P: P || {}, hasO: !!O, O: O || {} };
   }
+  // ===== Historial y ajustes compartidos en Firebase (cotizador/historial, cotizador/ajustes) =====
+  // Base: cotizador/historial/meta {rev, chunks, n, prev} + cotizador/historial/chunks/{rev}/{i} (texto JSON).
+  // Cambios posteriores: cotizador/historial/delta/{OR} (texto JSON con los renglones de esa OR).
+  async fbSync() {
+    try {
+      if (this.state.clientOnly || /^#[qt]=/.test(location.hash) || !this.recs) return;
+      const db = await this.fbDb(); if (!db) return;
+      const meta = (await db.ref('cotizador/historial/meta').once('value')).val();
+      if (meta && meta.rev) {
+        const delta = (await db.ref('cotizador/historial/delta').once('value')).val() || {}, keys = Object.keys(delta).sort();
+        const sig = meta.rev + ':' + keys.map(k => { let x = 0; const t = String(delta[k]); for (let i = 0; i < t.length; i++) x = (x * 31 + t.charCodeAt(i)) | 0; return k + '@' + x; }).join(',');
+        if ((await this.idbGet('histSig')) !== sig) {
+          let recs = this.recs;
+          if ((await this.idbGet('histRev')) !== meta.rev) {
+            recs = [];
+            for (let i = 0; i < meta.chunks; i++) { const t = (await db.ref('cotizador/historial/chunks/' + meta.rev + '/' + i).once('value')).val(); recs.push(...JSON.parse(t)); }
+            await this.idbSet(meta.rev, 'histRev');
+          }
+          const ds = keys.flatMap(k => { try { return JSON.parse(delta[k]); } catch (e) { return []; } }), ors = new Set(ds.map(x => x[0]));
+          recs = [...recs.filter(x => !ors.has(x[0])), ...ds];
+          await this.setRecs(recs); await this.idbSet(sig, 'histSig');
+          this.setState({ baseSrc: 'Historial compartido (nube) · ' + recs.length.toLocaleString('es-GT') + ' casos' });
+        }
+      }
+      const aj = (await db.ref('cotizador/ajustes').once('value')).val();
+      if (aj && aj.json) { const cs = JSON.parse(aj.json); this._ajTs = aj.ts; this.setState(st => ({ settings: { ...st.settings, ...cs } })); }
+    } catch (e) { console.warn('fbSync', e); }
+  }
+  async publishHist() {
+    try {
+      if (!this.recs || !this.recs.length) { this.setState({ msg: 'No hay historial local para publicar.' }); return; }
+      if (!window.confirm('Publicar este historial (' + this.recs.length.toLocaleString('es-GT') + ' casos) en la nube? Reemplaza el historial compartido: todas las computadoras lo usarán.')) return;
+      this.setState({ msg: 'Publicando historial en la nube…' });
+      const db = await this.fbDb(); if (!db) { this.setState({ msg: 'No hay conexión con Firebase.' }); return; }
+      const rev = Date.now().toString(36), prev = ((await db.ref('cotizador/historial/meta').once('value')).val() || {}).rev || '', chunks = []; let cur = [], len = 0;
+      for (const r of this.recs) { const l = JSON.stringify(r).length; if (len + l > 250000 && cur.length) { chunks.push(JSON.stringify(cur)); cur = []; len = 0; } cur.push(r); len += l; }
+      if (cur.length) chunks.push(JSON.stringify(cur));
+      for (let i = 0; i < chunks.length; i++) await db.ref('cotizador/historial/chunks/' + rev + '/' + i).set(chunks[i]);
+      await db.ref('cotizador/historial/meta').set({ rev, chunks: chunks.length, n: this.recs.length, ts: Date.now(), prev });
+      await db.ref('cotizador/historial/delta').set(null);
+      if (prev) await db.ref('cotizador/historial/chunks/' + prev).set(null);
+      await this.idbSet(rev, 'histRev'); await this.idbSet(rev + ':', 'histSig');
+      this.setState({ msg: 'Historial publicado en la nube (' + this.recs.length.toLocaleString('es-GT') + ' casos). Las demás computadoras lo recibirán al abrir el cotizador.' });
+    } catch (e) { console.warn(e); this.setState({ msg: 'No se pudo publicar el historial: ' + e.message }); }
+  }
+  async pushDelta(or, recsOr) {
+    try {
+      const db = await this.fbDb(); if (!db) return;
+      await db.ref('cotizador/historial/delta/' + this.fbKey(or)).set(JSON.stringify(recsOr));
+    } catch (e) { console.warn('pushDelta', e); }
+  }
+  pushSettings() {
+    clearTimeout(this._ajT);
+    this._ajT = setTimeout(async () => { try { const db = await this.fbDb(); if (!db) return; await db.ref('cotizador/ajustes').set({ json: JSON.stringify(this.state.settings), ts: Date.now() }); } catch (e) { console.warn('pushSettings', e); } }, 1500);
+  }
   // Devuelve a TallerFLOW (la pestaña que abrió el cotizador) el link del cliente para guardarlo en el historial de la orden.
   notifyTF(url, tipo) {
     try { if (this._tfOt && window.opener && !window.opener.closed) { window.opener.postMessage({ tipo: tipo === 'partes' ? 'lns-cotizacion-partes' : 'lns-cotizacion', ot: this._tfOt, url, total: this._tot || '', ts: Date.now() }, 'https://lubensave2026.github.io'); this.setState({ msg: (tipo === 'partes' ? 'Cotización de repuestos enviada a TallerFLOW' : 'Link enviado a TallerFLOW') + ' (OT ' + this._tfOt + ').' }); } } catch (e) {}
@@ -1262,6 +1318,7 @@ class Component extends DCLogic {
     const locked = !(q.okP && q.okS);
     return {
       consOpen: !!st.consOpen, toggleCons: () => this.setState(x => ({ consOpen: !x.consOpen })), consVeh: st.consVeh || '', consPieza: st.consPieza || '', setConsVeh: e => this.setState({ consVeh: e.target.value }), setConsPieza: e => this.setState({ consPieza: e.target.value }), cons: st.consOpen ? this.consultar() : {},
+      publishHist: () => this.publishHist(),
       cliPdf: st.clientOnly && !pr, canEdit: !!st.savedFB && st.clientOnly && !pr, editSaved: () => this.editSaved(),
       loading: st.loading, showChrome: !st.clientOnly && !pr,
       headerSub: q.or ? 'OR ' + q.or + ' · ' + (q.vehiculo || '') : 'Zona 10',
