@@ -386,14 +386,15 @@
               </div>
               <div class="field"><label>Comentario del técnico (lo ve el cliente)</label><input class="input" value="{{ it.nota }}" onChange="{{ it.onNota }}" placeholder="Ej. Pastillas al 2 mm, disco rayado"></div>
               <div style="display: flex; flex-direction: column;">
-                <div style="display: grid; grid-template-columns: 118px minmax(0, 1fr) 90px 120px 70px; gap: 8px; font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; padding: 4px 0; border-bottom: 1px solid var(--color-divider);">
-                  <span>Tipo</span><span>Operación</span><span>Horas</span><span>M.O.</span><span></span>
+                <div style="display: grid; grid-template-columns: 118px minmax(0, 1fr) 60px 90px 120px 70px; gap: 8px; font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; padding: 4px 0; border-bottom: 1px solid var(--color-divider);">
+                  <span>Tipo</span><span>Operación</span><span>Cant.</span><span>Horas</span><span>M.O.</span><span></span>
                 </div>
                 <sc-for list="{{ it.ops }}" as="ln" hint-placeholder-count="2">
-                  <div style="display: grid; grid-template-columns: 118px minmax(0, 1fr) 90px 120px 70px; gap: 8px; align-items: center; padding: 5px 0; border-bottom: 1px solid var(--color-neutral-300);">
+                  <div style="display: grid; grid-template-columns: 118px minmax(0, 1fr) 60px 90px 120px 70px; gap: 8px; align-items: center; padding: 5px 0; border-bottom: 1px solid var(--color-neutral-300);">
                     <select class="input" value="{{ ln.verbo }}" onChange="{{ ln.onVerbo }}" style="min-height: 36px; font-size: 13px; padding: 4px 6px;"><option value="">—</option><option value="Desmontaje">Desmontaje</option><option value="Cambio">Cambio</option><option value="Reparación">Reparación</option><option value="Revisión">Revisión</option></select>
                     <input class="input" value="{{ ln.desc }}" onChange="{{ ln.onDesc }}" placeholder="Operación">
-                    <input class="input" inputmode="decimal" value="{{ ln.hrs }}" onChange="{{ ln.onHrs }}">
+                    <input class="input" inputmode="decimal" value="{{ ln.qv }}" onChange="{{ ln.onQ }}" title="Cantidad de piezas. Al cambiarla, las horas se ajustan en proporción.">
+                    <input class="input" inputmode="decimal" value="{{ ln.hrs }}" onChange="{{ ln.onHrs }}" title="Horas totales de la operación">
                     <span style="font-size: 14px;">{{ ln.moFmt }}</span>
                     <button class="btn btn-ghost btn-icon" onClick="{{ ln.onDel }}" aria-label="Quitar operación" style="color: #ae1800; font-size: 12px; width: auto; padding: 4px 6px;">Quitar</button>
                   </div>
@@ -1361,7 +1362,7 @@ class Component extends DCLogic {
           onDel: () => this.updItem(i, { parts: it.parts.filter((_, k) => k !== j) }, 'p') }; });
       const ops = (it.ops || []).map((l, j) => { if (l.fijo) l = { ...l, fijo: false, hrs: String(Math.round(this.num(l.monto) / (T * (1 + IVA)) * 10000) / 10000) }; const h = this.num(l.hrs), m = h * (this.num(l.tar) || T * (1 + IVA)); hrs += h; mo += m;
         const VB = /^(desmontaje|cambio|reparaci[oó]n|revisi[oó]n)(?:\s+(?:de|del))?\s+(?=[\p{L}\d(])/iu, vm = (l.desc || '').match(VB), verbo = vm ? ({ desmontaje: 'Desmontaje', cambio: 'Cambio', 'reparación': 'Reparación', 'reparacion': 'Reparación', 'revisión': 'Revisión', 'revision': 'Revisión' })[vm[1].toLowerCase()] : '';
-        return { ...l, verbo, onVerbo: e => { const v = e.target.value; if (!v) return; const b = (l.desc || '').replace(VB, '').trim(); this.updList(i, 'ops', j, { desc: v + ' de ' + b.charAt(0).toLowerCase() + b.slice(1) }, 's'); }, fijo: !!l.fijo, noFijo: !l.fijo, moFmt: this.fmt(m), onMonto: e => this.updList(i, 'ops', j, { monto: e.target.value }, 's'), onDesc: e => this.updList(i, 'ops', j, { desc: e.target.value }, 's'), onHrs: e => this.updList(i, 'ops', j, { hrs: e.target.value, fijo: false }, 's'),
+        return { ...l, qv: String(l.q || 1), onQ: e => { const nq = this.num(e.target.value) > 0 ? this.num(e.target.value) : 1, oq = this.num(l.q) || 1, h0 = this.num(l.hrs); this.updList(i, 'ops', j, { q: String(nq), ...(h0 ? { hrs: String(Math.round(h0 / oq * nq * 10000) / 10000) } : {}) }, 's'); }, verbo, onVerbo: e => { const v = e.target.value; if (!v) return; const b = (l.desc || '').replace(VB, '').trim(); this.updList(i, 'ops', j, { desc: v + ' de ' + b.charAt(0).toLowerCase() + b.slice(1) }, 's'); }, fijo: !!l.fijo, noFijo: !l.fijo, moFmt: this.fmt(m), onMonto: e => this.updList(i, 'ops', j, { monto: e.target.value }, 's'), onDesc: e => this.updList(i, 'ops', j, { desc: e.target.value }, 's'), onHrs: e => this.updList(i, 'ops', j, { hrs: e.target.value, fijo: false }, 's'),
           onDel: () => this.updItem(i, { ops: it.ops.filter((_, k) => k !== j) }, 's') }; });
       const rojo = it.urg === 'rojo', on = it.on !== false;
       const sugs = st.clientOnly ? [] : this.suggest(vk, it);
