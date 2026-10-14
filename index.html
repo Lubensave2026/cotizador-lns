@@ -386,11 +386,12 @@
               </div>
               <div class="field"><label>Comentario del técnico (lo ve el cliente)</label><input class="input" value="{{ it.nota }}" onChange="{{ it.onNota }}" placeholder="Ej. Pastillas al 2 mm, disco rayado"></div>
               <div style="display: flex; flex-direction: column;">
-                <div style="display: grid; grid-template-columns: minmax(0, 1fr) 90px 120px 70px; gap: 8px; font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; padding: 4px 0; border-bottom: 1px solid var(--color-divider);">
-                  <span>Operación</span><span>Horas</span><span>M.O.</span><span></span>
+                <div style="display: grid; grid-template-columns: 118px minmax(0, 1fr) 90px 120px 70px; gap: 8px; font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; padding: 4px 0; border-bottom: 1px solid var(--color-divider);">
+                  <span>Tipo</span><span>Operación</span><span>Horas</span><span>M.O.</span><span></span>
                 </div>
                 <sc-for list="{{ it.ops }}" as="ln" hint-placeholder-count="2">
-                  <div style="display: grid; grid-template-columns: minmax(0, 1fr) 90px 120px 70px; gap: 8px; align-items: center; padding: 5px 0; border-bottom: 1px solid var(--color-neutral-300);">
+                  <div style="display: grid; grid-template-columns: 118px minmax(0, 1fr) 90px 120px 70px; gap: 8px; align-items: center; padding: 5px 0; border-bottom: 1px solid var(--color-neutral-300);">
+                    <select class="input" value="{{ ln.verbo }}" onChange="{{ ln.onVerbo }}" style="min-height: 36px; font-size: 13px; padding: 4px 6px;"><option value="">—</option><option value="Desmontaje">Desmontaje</option><option value="Cambio">Cambio</option><option value="Reparación">Reparación</option><option value="Revisión">Revisión</option></select>
                     <input class="input" value="{{ ln.desc }}" onChange="{{ ln.onDesc }}" placeholder="Operación">
                     <input class="input" inputmode="decimal" value="{{ ln.hrs }}" onChange="{{ ln.onHrs }}">
                     <span style="font-size: 14px;">{{ ln.moFmt }}</span>
@@ -878,13 +879,13 @@ class Component extends DCLogic {
         // PDF con precios de repuestos pero sin horas: las horas se sugieren del historial (mismo vehículo/punto).
         if (!it.ops.length) { const h = this.makeItem(vk, p.name, p.urg, p.com); if (h.ops.length && h.ops.some(o => o.hrs)) it.ops = h.ops; }
         // Sin horas ni historial: dejar las operaciones creadas (paquete o "Cambio de…") para que el asesor solo ponga las horas.
-        if (!it.ops.length) { const k2 = this.pkgItem(vk, p.name, p.com); it.ops = k2 && k2.ops.length ? k2.ops : [{ desc: 'Cambio de ' + p.name.charAt(0).toLowerCase() + p.name.slice(1), hrs: '' }]; }
+        if (!it.ops.length) { const k2 = this.pkgItem(vk, p.name, p.com); it.ops = k2 && k2.ops.length ? k2.ops : [{ desc: this.verboDe(p.com) + ' de ' + p.name.charAt(0).toLowerCase() + p.name.slice(1), hrs: '' }]; }
         return it;
       }
       const it = this.makeItem(vk, p.name, p.urg, p.com);
       if (!it.src && p.subs.length) it.parts = p.subs.map(x => ({ desc: this.cap(x.desc), rep: '' }));
       else if (!it.src && (pk = this.pkgItem(vk, p.name, p.com))) { it.parts = pk.parts; it.ops = pk.ops; }
-      else if (!it.src) { const nm = this.cap(p.name), cambio = /reemplaz|cambi/i.test((p.com || '') + ' ' + p.name); it.parts = [{ desc: nm, rep: '' }]; it.ops = [{ desc: cambio && !/^cambio/i.test(nm) ? 'Cambio de ' + nm.charAt(0).toLowerCase() + nm.slice(1) : nm, hrs: '' }]; }
+      else if (!it.src) { const nm = this.cap(p.name), cambio = /reemplaz|cambi/i.test((p.com || '') + ' ' + p.name); it.parts = [{ desc: nm, rep: '' }]; it.ops = [{ desc: this.verboDe(p.com) + ' de ' + nm.charAt(0).toLowerCase() + nm.slice(1), hrs: '' }]; }
       return it;
     });
     const withHist = items.filter(i => i.src && !i.src.pdf).length, fromPdf = items.filter(i => i.src && i.src.pdf).length;
@@ -1314,10 +1315,17 @@ class Component extends DCLogic {
     const base = this._tfOt ? location.origin + location.pathname + '?ot=' + encodeURIComponent(this._tfOt) : location.href.split('#')[0];
     return base + '#t=' + await this.encZ({ q: slim, s: sm });
   }
+  // Verbo de la operación por defecto según lo que pide el técnico en su comentario (gana la palabra que aparece primero). Sin pista: Desmontaje.
+  verboDe(txt) {
+    const t = String(txt || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, ''), P = [['Cambio', /\b(cambi\w*|reemplaz\w*|sustitu\w*)/], ['Reparación', /\b(repar\w*|arregl\w*|solda\w*|rectific\w*)/], ['Revisión', /\b(revis\w*|inspecc\w*|verific\w*|diagn\w*|test\b|prueba\w*)/], ['Desmontaje', /\b(desmont\w*|desarm\w*)/]];
+    let best = 'Desmontaje', pos = Infinity;
+    P.forEach(([v, re]) => { const m = t.match(re); if (m && m.index < pos) { pos = m.index; best = v; } });
+    return best;
+  }
   // Todo punto debe tener al menos una operación (con horas en blanco) para que el asesor solo ponga el tiempo.
   withOps(q) {
     return { ...q, items: (q.items || []).map(it => (it.ops || []).some(o => (o.desc || '').trim() || this.num(o.hrs)) ? it
-      : { ...it, ops: [{ desc: 'Cambio de ' + String(it.name || '').trim().replace(/^./, c => c.toLowerCase()), hrs: '' }] }) };
+      : { ...it, ops: [{ desc: this.verboDe(it.nota) + ' de ' + String(it.name || '').trim().replace(/^./, c => c.toLowerCase()), hrs: '' }] }) };
   }
   // Devuelve a TallerFLOW (la pestaña que abrió el cotizador) el link del cliente para guardarlo en el historial de la orden.
   notifyTF(url, tipo) {
@@ -1352,7 +1360,8 @@ class Component extends DCLogic {
           onDesc: e => this.updList(i, 'parts', j, { desc: e.target.value }, 'p'), onRep: e => this.updList(i, 'parts', j, { rep: e.target.value }, 'p'),
           onDel: () => this.updItem(i, { parts: it.parts.filter((_, k) => k !== j) }, 'p') }; });
       const ops = (it.ops || []).map((l, j) => { if (l.fijo) l = { ...l, fijo: false, hrs: String(Math.round(this.num(l.monto) / (T * (1 + IVA)) * 10000) / 10000) }; const h = this.num(l.hrs), m = h * (this.num(l.tar) || T * (1 + IVA)); hrs += h; mo += m;
-        return { ...l, fijo: !!l.fijo, noFijo: !l.fijo, moFmt: this.fmt(m), onMonto: e => this.updList(i, 'ops', j, { monto: e.target.value }, 's'), onDesc: e => this.updList(i, 'ops', j, { desc: e.target.value }, 's'), onHrs: e => this.updList(i, 'ops', j, { hrs: e.target.value, fijo: false }, 's'),
+        const VB = /^(desmontaje|cambio|reparaci[oó]n|revisi[oó]n)(?:\s+(?:de|del))?\s+(?=[\p{L}\d(])/iu, vm = (l.desc || '').match(VB), verbo = vm ? ({ desmontaje: 'Desmontaje', cambio: 'Cambio', 'reparación': 'Reparación', 'reparacion': 'Reparación', 'revisión': 'Revisión', 'revision': 'Revisión' })[vm[1].toLowerCase()] : '';
+        return { ...l, verbo, onVerbo: e => { const v = e.target.value; if (!v) return; const b = (l.desc || '').replace(VB, '').trim(); this.updList(i, 'ops', j, { desc: v + ' de ' + b.charAt(0).toLowerCase() + b.slice(1) }, 's'); }, fijo: !!l.fijo, noFijo: !l.fijo, moFmt: this.fmt(m), onMonto: e => this.updList(i, 'ops', j, { monto: e.target.value }, 's'), onDesc: e => this.updList(i, 'ops', j, { desc: e.target.value }, 's'), onHrs: e => this.updList(i, 'ops', j, { hrs: e.target.value, fijo: false }, 's'),
           onDel: () => this.updItem(i, { ops: it.ops.filter((_, k) => k !== j) }, 's') }; });
       const rojo = it.urg === 'rojo', on = it.on !== false;
       const sugs = st.clientOnly ? [] : this.suggest(vk, it);
