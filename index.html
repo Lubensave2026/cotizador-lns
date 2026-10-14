@@ -289,6 +289,7 @@
                   </select>
                 </sc-if>
               </div>
+              <sc-if value="{{ it.hasNota }}" hint-placeholder-val="{{ false }}"><p style="margin: 0; font-size: 13px; padding: 8px 10px; background: #f3f2f2; border-left: 3px solid #FFE500; text-wrap: pretty;"><strong>Observación del técnico:</strong> {{ it.nota }}</p></sc-if>
               <div style="display: flex; flex-direction: column; gap: 0;">
                 <div style="display: grid; grid-template-columns: minmax(150px, 1fr) 60px 104px 92px 104px 110px 36px; gap: 8px; font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; padding: 4px 0; border-bottom: 1px solid var(--color-divider);">
                   <span>Repuesto</span><span>Cant.</span><span>Costo unit. (interno)</span><span>Margen</span><span>Precio unit.</span><span>Total</span><span></span>
@@ -595,7 +596,7 @@
 <script type="text/x-dc" data-dc-script>
 class Component extends DCLogic {
   defS() { return { usarPdf: true, anos: '3', margen: '50', tarifa: '600', tarifaFija: true, iva: '12', pct: '8', meses: '6', r1: '425', r2: '500', r3: '600',
-    paquetes: 'FRENOS DELANTEROS = Pastillas de freno delanteras; Líquido de frenos; Rectificado de discos | Cambio de pastillas delanteras; Desmontaje de discos delanteros\nFRENOS TRASEROS = Pastillas de freno traseras; Líquido de frenos | Cambio de pastillas traseras; Desmontaje de discos traseros\nBALATAS TRASERAS = Balatas traseras; Líquido de frenos | Cambio de balatas traseras\nAMORTIGUADORES DELANTEROS = Amortiguadores delanteros; Bases de amortiguador | Cambio de amortiguadores delanteros\nAMORTIGUADORES TRASEROS = Amortiguadores traseros | Cambio de amortiguadores traseros\nBATERIA = Batería | Cambio de batería\nBUJIAS = Bujías | Cambio de bujías\nCLUTCH = Kit de clutch; Aceite de transmisión | Desmontaje de caja; Cambio de clutch\nCABEZALES DIRECCION = Cabezales de dirección | Cambio de cabezales de dirección; Alineación\nTERMINALES = Terminales de dirección | Cambio de terminales; Alineación\nROTULAS = Rótulas | Cambio de rótulas; Alineación\nBUJES BARRA ESTABILIZADORA = Bujes de barra estabilizadora | Cambio de bujes de barra estabilizadora\nBOMBA DE AGUA = Bomba de agua; Refrigerante | Cambio de bomba de agua\nTERMOSTATO = Termostato; Refrigerante | Cambio de termostato\nRADIADOR = Radiador; Refrigerante | Cambio de radiador\nACEITE DIFERENCIAL = Aceite de diferencial; Empaque o sello de tapón | Cambio de aceite de diferencial\nACEITE TRANSMISION = Aceite de transmisión | Cambio de aceite de transmisión\nBANDA = Banda de accesorios | Cambio de banda de accesorios\nCORREA TIEMPO = Kit de distribución; Bomba de agua; Refrigerante | Cambio de kit de distribución\nLLANTAS = Llantas | Montaje y balanceo de llantas; Alineación\nESCOBILLAS = Escobillas limpiaparabrisas | Cambio de escobillas\nFILTRO AIRE ACONDICIONADO = Filtro de aire acondicionado | Cambio de filtro de aire acondicionado',
+    paquetes: 'FRENOS DELANTEROS = Pastillas de freno delanteras; Líquido de frenos; Rectificado de discos | Cambio de pastillas delanteras; Desmontaje de discos delanteros\nFRENOS TRASEROS = Pastillas de freno traseras; Líquido de frenos | Cambio de pastillas traseras; Desmontaje de discos traseros\nBALATAS TRASERAS = Balatas traseras; Líquido de frenos | Cambio de balatas traseras\nAMORTIGUADORES DELANTEROS = Amortiguadores delanteros; Bases de amortiguador | Cambio de amortiguadores delanteros\nAMORTIGUADORES TRASEROS = Amortiguadores traseros | Cambio de amortiguadores traseros\nBATERIA = Batería | Cambio de batería\nBUJIAS = Bujías | Cambio de bujías\nCLUTCH = Kit de clutch; Aceite de transmisión | Desmontaje de caja; Cambio de clutch\nCABEZALES DIRECCION = Cabezales de dirección | Cambio de cabezales de dirección; Alineación\nTERMINALES = Terminales de dirección | Cambio de terminales; Alineación\nROTULAS = Rótulas | Cambio de rótulas; Alineación\nBUJES BARRA ESTABILIZADORA = Bujes de barra estabilizadora | Cambio de bujes de barra estabilizadora\nBOMBA DE AGUA = Bomba de agua; Refrigerante | Cambio de bomba de agua\nTERMOSTATO = Termostato; Refrigerante | Cambio de termostato\nRADIADOR = Radiador; Refrigerante | Cambio de radiador\nFUGA REFRIGERANTE = Refrigerante | Cambio de refrigerante; Purgado de sistema de enfriamiento\nBRIDA AGUA = Brida de agua; Empaque de brida; Sellador | Cambio de brida de agua\nMANGUERA RADIADOR = Manguera de radiador; Refrigerante | Cambio de manguera de radiador; Purgado de sistema de enfriamiento\nFUGA ACEITE MOTOR = Empaque o sello; Sellador; Aceite de motor; Filtro de aceite | Cambio de empaque o sello; Cambio de aceite y filtro\nACEITE DIFERENCIAL = Aceite de diferencial; Empaque o sello de tapón | Cambio de aceite de diferencial\nACEITE TRANSMISION = Aceite de transmisión | Cambio de aceite de transmisión\nBANDA = Banda de accesorios | Cambio de banda de accesorios\nCORREA TIEMPO = Kit de distribución; Bomba de agua; Refrigerante | Cambio de kit de distribución\nLLANTAS = Llantas | Montaje y balanceo de llantas; Alineación\nESCOBILLAS = Escobillas limpiaparabrisas | Cambio de escobillas\nFILTRO AIRE ACONDICIONADO = Filtro de aire acondicionado | Cambio de filtro de aire acondicionado',
     kits: 'RADIADOR = Refrigerante; Abrazaderas; Wipe\nTUBERIA AC = Gas freón; Aceite para compresor\nCOMPRESOR AC = Gas freón; Aceite para compresor\nBOMBA DE AGUA = Refrigerante; Wipe\nTERMOSTATO = Refrigerante\nFRENOS = Líquido de frenos\nCARGADORES = Materiales auxiliares' }; }
   sample() {
     return 'Lube N Save Zona 10\nReporte de inspección vehicular\nOrden: 5431\nCliente: Cliente de ejemplo\nTel: 55551234\nHyundai Tucson 2019  Placa P-123ABC  Km 85,000\n\nREQUIERE ATENCIÓN INMEDIATA\nFrenos delanteros  Urgente  Pastillas al 2 mm\nFrenos traseros  Urgente\n\nSUGERIDO\nFiltro de aire acondicionado  Recomendado\nChorritos y plumillas  Recomendado\nLuces de freno  Recomendado\nSoporte de motor  Recomendado\n\nOK\nNivel de aceite  OK\nEstado de llantas  OK';
@@ -815,14 +816,25 @@ class Component extends DCLogic {
           if (cur && !bullet && cur.y2 - r.y <= 12.5) { cur.text += ' ' + r.A; cur.y2 = r.y; }
           else { cur = { t: bullet ? 'sub' : 'pt', text: r.A.replace(/^[·•]\s*/, ''), y: r.y, y2: r.y, nums: null, com: '' }; cells.push(cur); }
         }
-        if (r.C) { if (cb && cb.y2 - r.y <= 12.5) { cb.text += ' ' + r.C; cb.y2 = r.y; } else { cb = { text: r.C, y: r.y, y2: r.y }; cBlocks.push(cb); } }
+        if (r.C) { if (cb && cb.y2 - r.y <= 12.5) { cb.text += ' ' + r.C; cb.y2 = r.y; cb.ys.push(r.y); cb.ls.push(r.C); } else { cb = { text: r.C, y: r.y, y2: r.y, ys: [r.y], ls: [r.C] }; cBlocks.push(cb); } }
         if (r.N.length) nRows.push(r);
       }
       const near = (y, pred) => { let b = null, bd = 1e9; cells.forEach(c => { if (!pred(c)) return; const d = Math.abs((c.y + c.y2) / 2 - y); if (d < bd) { bd = d; b = c; } }); return bd < 16 ? b : null; };
       nRows.forEach(r => { const c = near(r.y, c => c.t !== 'sec'); if (!c) return; const v = {};
         r.N.forEach(([x, s]) => { let col = null; (cols || []).forEach(([cx, n]) => { if (cx <= x + 6) col = n; }); if (col) v[col] = s; });
         c.nums = v; });
-      cBlocks.forEach(b => { const c = near((b.y + b.y2) / 2, c => c.t === 'pt') || near((b.y + b.y2) / 2, c => c.t !== 'sec'); if (c) c.com += (c.com ? ' ' : '') + b.text; });
+      // Comentario del técnico que viene partido entre páginas: las líneas de arriba que no pertenecen al primer renglón de esta página continúan el comentario del último punto de la página anterior.
+      if (pi > 0 && points.length && cells.length) {
+        const top = cells.reduce((a, c) => c.y > a.y ? c : a, cells[0]);
+        cBlocks.forEach(b => { let cut = null;
+          if (top.t === 'sec') cut = top.y + 4; else if ((b.y + b.y2) / 2 >= top.y - 16 && b.y > top.y + 8) cut = Math.max(top.y + 6, top.y + (top.y - b.y2) + 6);
+          if (cut === null) return;
+          const keep = [], cont = []; b.ls.forEach((t, k) => (b.ys[k] > cut ? cont : keep).push(t));
+          if (!cont.length) return;
+          const lp = points[points.length - 1]; lp.com += (lp.com ? ' ' : '') + cont.join(' ');
+          b.ys = b.ys.filter(y => y <= cut); b.text = keep.join(' '); if (!keep.length) b.dead = true; else b.y = b.ys[0]; });
+      }
+      cBlocks.forEach(b => { if (b.dead) return; const c = near((b.y + b.y2) / 2, c => c.t === 'pt') || near((b.y + b.y2) / 2, c => c.t !== 'sec'); if (c) c.com += (c.com ? ' ' : '') + b.text; });
       let firstPt = true;
       for (const c of cells) {
         if (c.t === 'sec') { section = c.v; continue; }
@@ -869,7 +881,10 @@ class Component extends DCLogic {
       parseMsg: 'PDF leído: ' + (vk ? b.m[vk].d : (h.vehiculoRaw || 'vehículo no reconocido')) + ' ' + (h.anio || '') + ' · OR ' + h.or + ' · ' + items.length + ' puntos (' + withHist + ' con precio del historial' + (fromPdf ? ', ' + fromPdf + ' con precios del PDF' : '') + ', ' + (items.length - withHist - fromPdf) + ' para llenar). Revisa y agrega complementos.' }));
   }
   pkgRules() {
-    return (this.state.settings.paquetes || '').split(/\n/).map(l => l.split('=')).filter(p => p.length === 2).map(([k, v]) => { const [r, m] = v.split('|'); const L = x => (x || '').split(/;/).map(t => t.trim()).filter(Boolean); return { k: this.toks(k), parts: L(r), ops: L(m) }; }).filter(r => r.k.length);
+    const parse = txt => (txt || '').split(/\n/).map(l => l.split('=')).filter(p => p.length === 2).map(([k, v]) => { const [r, m] = v.split('|'); const L = x => (x || '').split(/;/).map(t => t.trim()).filter(Boolean); return { k: this.toks(k), parts: L(r), ops: L(m) }; }).filter(r => r.k.length);
+    const mine = parse(this.state.settings.paquetes), id = r => [...r.k].sort().join(' '), have = new Set(mine.map(id));
+    // Los paquetes de fábrica nuevos se suman a los que ya tenga guardados esta computadora (sin pisar los editados).
+    return [...mine, ...parse(this.defS().paquetes).filter(r => !have.has(id(r)))];
   }
   // Paquete de renglones para un punto sin historial: regla de paquetes, o la pieza que el técnico pide cambiar en su comentario.
   pkgItem(vk, name, com) {
@@ -877,6 +892,11 @@ class Component extends DCLogic {
     this.pkgRules().forEach(r => { if (r.k.every(t => nt.includes(t)) && (!best || r.k.length > best.k.length)) best = r; });
     let parts = best ? best.parts : [], ops = best ? best.ops : [];
     if (!best) {
+      const fg = (name || '').trim().match(/^fuga\s+(?:de|del)\s+(.{3,60})$/i);
+      if (fg) { const x = fg[1].trim(), xl = x.charAt(0).toLowerCase() + x.slice(1), fluido = /aceite|refrigerante|l[ií]quido|combustible|gasolina|di[eé]sel|agua|gas\b|fluido/i.test(x);
+        parts = fluido ? [x] : [x, 'Empaque o sello', 'Sellador']; ops = ['Cambio de ' + xl]; }
+    }
+    if (!best && !parts.length) {
       const m = (com || '').match(/(?:cambiar|reemplazar|cambio\s+de|reemplazo\s+de)\s+(?:(?:la|el|los|las|ambos|ambas|en\s+ambos\s+lados|de)\s+)*([^.,;\n]{3,50}?)(?=\s+(?:por|que|ya|para|en|y)\b|[.,;\n]|$)/i);
       if (!m) return null;
       const piece = m[1].trim(); parts = [piece]; ops = ['Cambio de ' + piece.charAt(0).toLowerCase() + piece.slice(1)];
@@ -1305,6 +1325,7 @@ class Component extends DCLogic {
         hasTplOpts: !!(it.tpl && it.tpl.cands.length > 1), tplK: it.tpl ? String(it.tpl.k) : '0',
         tplOpts: it.tpl ? it.tpl.cands.map((c, k) => ({ v: String(k), label: st.serv.servicios[c].t + ' · ' + this.cap(st.serv.servicios[c].tipo) })) : [],
         onTpl: e => { const k = +e.target.value; this.setState(s => ({ quote: { ...s.quote, okP: null, okS: null, items: s.quote.items.map((x, n) => n === i ? this.itemFromTpl(x.tpl.cands, k, x.urg, x.nota, x.id) : x) } })); },
+        hasNota: !!(it.nota || '').trim(),
         srcText: it.src && it.src.tpl ? 'Plantilla oficial · ' + it.src.t : it.src && it.src.pdf ? 'Precios tomados del PDF' : it.src && it.src.est ? 'Estimado · ref. ' + it.src.est.model + ' OR ' + it.src.or + ' · rango Q' + it.src.est.min.toLocaleString('es-GT') + '–Q' + it.src.est.max.toLocaleString('es-GT') + ' en ' + it.src.est.n + ' vehículos ' + (it.src.est.sb ? 'de la misma marca' : 'de otras marcas') : it.src ? 'Ref. OR ' + it.src.or + ' · ' + this.fd(it.src.d) + ' · año ' + it.src.y + (it.src.adj ? ' · repuestos +' + it.src.adj + '%' : '') : 'Sin historial de “' + it.name + '” para ' + (q.vehiculo || 'este vehículo') + ' — ingresa costo de: ' + ((it.parts || []).filter(l => (l.desc || '').trim()).map(l => l.desc).join(', ') || 'los repuestos que lleve') + ', y horas en Mano de obra',
         srcBg: it.src && it.src.est ? '#fff2ef' : it.src && it.src.tpl ? '#FEED01' : it.src ? 'var(--color-neutral-200)' : 'var(--color-accent-100)', srcFg: it.src ? '#201e1d' : '#7c1405',
         histText: it.src ? 'Cotizado ' + it.src.n + ' veces · últimos: ' + (it.hist || []).map(h => this.fd(h[0]).slice(3) + ' Q' + h[1].toLocaleString('es-GT')).join(', ') : '',
