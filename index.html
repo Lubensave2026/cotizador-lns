@@ -172,10 +172,51 @@
           <h1 style="margin: 0; font-size: 32px; text-transform: uppercase;">Repuestos</h1>
         </div>
         <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+          <button class="btn btn-secondary" onClick="{{ toggleCons }}">Consultar precios</button>
           <button class="btn btn-secondary" onClick="{{ nuevoEst }}">Estimado rápido</button>
           <button class="btn btn-secondary" onClick="{{ nuevo }}">Nuevo presupuesto</button>
         </div>
       </div>
+      <sc-if value="{{ consOpen }}" hint-placeholder-val="{{ false }}">
+        <section style="display: flex; flex-direction: column; gap: 14px; border: 2px solid #000; padding: 18px; background: #fff;">
+          <div style="display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap;">
+            <h2 style="margin: 0; font-size: 18px; text-transform: uppercase;">Consultar precios del historial</h2>
+            <button class="btn btn-secondary" onClick="{{ toggleCons }}" style="font-size: 12px;">Cerrar</button>
+          </div>
+          <p style="margin: 0; font-size: 13px; color: #605d5d;">Sin crear presupuesto. Escribe el vehículo (marca y/o modelo) y la pieza u operación, por ejemplo “Hilux” y “pastillas de freno delanteras”. Precios con IVA.</p>
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px;">
+            <div class="field"><label>Vehículo</label><input class="input" value="{{ consVeh }}" onChange="{{ setConsVeh }}" placeholder="Ej. Toyota Hilux"></div>
+            <div class="field"><label>Pieza u operación</label><input class="input" value="{{ consPieza }}" onChange="{{ setConsPieza }}" placeholder="Ej. pastillas de freno delanteras"></div>
+          </div>
+          <sc-if value="{{ cons.msg }}" hint-placeholder-val="{{ false }}"><p style="margin: 0; font-size: 14px; font-weight: 600;">{{ cons.msg }}</p></sc-if>
+          <sc-if value="{{ cons.hasP }}" hint-placeholder-val="{{ false }}">
+            <div style="display: flex; flex-direction: column; gap: 8px;">
+              <span style="font-size: 12px; text-transform: uppercase; letter-spacing: 0.08em; font-weight: 700;">Repuestos · {{ cons.P.n }} registros</span>
+              <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); border-top: 2px solid #201e1d; border-bottom: 2px solid #201e1d;">
+                <div style="padding: 12px; display: flex; flex-direction: column;"><span style="font-size: 11px; text-transform: uppercase;">Más reciente</span><span style="font-size: 20px; font-weight: 800;">{{ cons.P.latest }}</span><span style="font-size: 12px; color: #605d5d;">{{ cons.P.latestD }}</span></div>
+                <div style="padding: 12px; display: flex; flex-direction: column;"><span style="font-size: 11px; text-transform: uppercase;">Más alto</span><span style="font-size: 20px; font-weight: 800;">{{ cons.P.max }}</span><span style="font-size: 12px; color: #605d5d;">{{ cons.P.maxD }}</span></div>
+                <div style="padding: 12px; display: flex; flex-direction: column;"><span style="font-size: 11px; text-transform: uppercase;">Promedio</span><span style="font-size: 20px; font-weight: 800;">{{ cons.P.avg }}</span><span style="font-size: 12px; color: #605d5d;">mín. {{ cons.P.min }}</span></div>
+              </div>
+              <sc-for list="{{ cons.P.rows }}" as="r" hint-placeholder-count="3">
+                <div style="display: grid; grid-template-columns: 84px minmax(0, 1fr) 96px; gap: 8px; font-size: 13px; padding: 6px 0; border-bottom: 1px solid var(--color-divider);"><span>{{ r.d }}</span><span>{{ r.desc }} · {{ r.veh }}</span><span style="text-align: right; font-weight: 700;">{{ r.amt }}</span></div>
+              </sc-for>
+            </div>
+          </sc-if>
+          <sc-if value="{{ cons.hasO }}" hint-placeholder-val="{{ false }}">
+            <div style="display: flex; flex-direction: column; gap: 8px;">
+              <span style="font-size: 12px; text-transform: uppercase; letter-spacing: 0.08em; font-weight: 700;">Mano de obra · {{ cons.O.n }} registros</span>
+              <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); border-top: 2px solid #201e1d; border-bottom: 2px solid #201e1d;">
+                <div style="padding: 12px; display: flex; flex-direction: column;"><span style="font-size: 11px; text-transform: uppercase;">Más reciente</span><span style="font-size: 20px; font-weight: 800;">{{ cons.O.latest }}</span><span style="font-size: 12px; color: #605d5d;">{{ cons.O.latestD }}</span></div>
+                <div style="padding: 12px; display: flex; flex-direction: column;"><span style="font-size: 11px; text-transform: uppercase;">Más alto</span><span style="font-size: 20px; font-weight: 800;">{{ cons.O.max }}</span><span style="font-size: 12px; color: #605d5d;">{{ cons.O.maxD }}</span></div>
+                <div style="padding: 12px; display: flex; flex-direction: column;"><span style="font-size: 11px; text-transform: uppercase;">Promedio</span><span style="font-size: 20px; font-weight: 800;">{{ cons.O.avg }}</span><span style="font-size: 12px; color: #605d5d;">mín. {{ cons.O.min }}</span></div>
+              </div>
+              <sc-for list="{{ cons.O.rows }}" as="r" hint-placeholder-count="3">
+                <div style="display: grid; grid-template-columns: 84px minmax(0, 1fr) 96px; gap: 8px; font-size: 13px; padding: 6px 0; border-bottom: 1px solid var(--color-divider);"><span>{{ r.d }}</span><span>{{ r.desc }} · {{ r.veh }}</span><span style="text-align: right; font-weight: 700;">{{ r.amt }}</span></div>
+              </sc-for>
+            </div>
+          </sc-if>
+        </section>
+      </sc-if>
       <sc-if value="{{ quote.estimado }}" hint-placeholder-val="{{ false }}">
         <div style="background: #000; color: #fff; padding: 14px 16px; display: flex; flex-direction: column; gap: 4px; border-left: 0; border-top: 4px solid #FFE500;">
           <span style="font-size: 15px; font-weight: 800; color: #FFE500;">Modo estimado rápido</span>
@@ -1114,6 +1155,22 @@ class Component extends DCLogic {
     if (await this.hash(pin) !== h) { window.alert('PIN incorrecto.'); return; }
     this.setState(s => ({ clientOnly: false, step: 2, savedFB: null, quote: { ...s.quote, okP: null, okS: null }, parseMsg: 'Editando el presupuesto guardado de la OT ' + this._tfOt + '. Al confirmar de nuevo se actualiza el mismo link del cliente.' }));
   }
+  // Consulta de precios del historial: más reciente, más alto y promedio (con IVA), sin crear presupuesto.
+  consultar() {
+    const st = this.state, tk = x => this.toks(x).map(w => w.length > 5 ? w.replace(/[AO]$/, '') : w), pz = tk(st.consPieza || ''), vt = tk(st.consVeh || '');
+    if (!this.recs || !pz.length) return { msg: 'Escribe la pieza u operación que quieres consultar.' };
+    const F = this.F(), run = filtroVeh => { const P = [], O = [];
+      for (const x of this.recs) { if (filtroVeh && vt.length && !vt.every(t => tk(x[5] || '').includes(t))) continue;
+        for (const l of (x[7] || [])) { const dk = tk(l[0]); if (!pz.every(t => dk.includes(t))) continue;
+          if (l[1] > 0 && !/^(CAMBIO|DESMONT|MONTAJE|REVISI|AJUSTE|REPARA|INSTALA|LIMPIEZA|RECTIFIC)/i.test(l[0])) P.push({ d: x[1], desc: l[0], veh: x[5], v: l[1] * F }); if (l[2] > 0) O.push({ d: x[1], desc: l[0], veh: x[5], v: l[2] * F }); } }
+      return { P, O }; };
+    let r = run(true), fb = false; if (!r.P.length && !r.O.length && vt.length) { r = run(false); fb = true; }
+    if (!r.P.length && !r.O.length) return { msg: 'No hay registros de “' + st.consPieza + '” en el historial.' };
+    const sum = L => { if (!L.length) return null; const byD = [...L].sort((a, b) => b.d.localeCompare(a.d) || b.v - a.v), hi = [...L].sort((a, b) => b.v - a.v || b.d.localeCompare(a.d))[0], lo = Math.min(...L.map(z => z.v)), avg = L.reduce((a, z) => a + z.v, 0) / L.length;
+      return { n: L.length, latest: this.fmt(byD[0].v), latestD: this.fd(byD[0].d) + ' · ' + byD[0].veh, max: this.fmt(hi.v), maxD: this.fd(hi.d) + ' · ' + hi.veh, avg: this.fmt(avg), min: this.fmt(lo), rows: byD.slice(0, 10).map(z => ({ d: this.fd(z.d), desc: z.desc, veh: z.veh, amt: this.fmt(z.v) })) }; };
+    const P = sum(r.P), O = sum(r.O);
+    return { msg: fb ? 'No hay registros para ese vehículo: se muestran los de todos los vehículos.' : (vt.length ? 'Solo vehículos que coinciden con “' + st.consVeh + '”.' : 'Todos los vehículos.'), hasP: !!P, P: P || {}, hasO: !!O, O: O || {} };
+  }
   // Devuelve a TallerFLOW (la pestaña que abrió el cotizador) el link del cliente para guardarlo en el historial de la orden.
   notifyTF(url, tipo) {
     try { if (this._tfOt && window.opener && !window.opener.closed) { window.opener.postMessage({ tipo: tipo === 'partes' ? 'lns-cotizacion-partes' : 'lns-cotizacion', ot: this._tfOt, url, total: this._tot || '', ts: Date.now() }, 'https://lubensave2026.github.io'); this.setState({ msg: (tipo === 'partes' ? 'Cotización de repuestos enviada a TallerFLOW' : 'Link enviado a TallerFLOW') + ' (OT ' + this._tfOt + ').' }); } } catch (e) {}
@@ -1204,6 +1261,7 @@ class Component extends DCLogic {
     const meta = base ? base.meta : { rows: 0, models: 0, from: '', to: '' };
     const locked = !(q.okP && q.okS);
     return {
+      consOpen: !!st.consOpen, toggleCons: () => this.setState(x => ({ consOpen: !x.consOpen })), consVeh: st.consVeh || '', consPieza: st.consPieza || '', setConsVeh: e => this.setState({ consVeh: e.target.value }), setConsPieza: e => this.setState({ consPieza: e.target.value }), cons: st.consOpen ? this.consultar() : {},
       cliPdf: st.clientOnly && !pr, canEdit: !!st.savedFB && st.clientOnly && !pr, editSaved: () => this.editSaved(),
       loading: st.loading, showChrome: !st.clientOnly && !pr,
       headerSub: q.or ? 'OR ' + q.or + ' · ' + (q.vehiculo || '') : 'Zona 10',
