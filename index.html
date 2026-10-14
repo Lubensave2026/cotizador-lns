@@ -619,7 +619,7 @@ class Component extends DCLogic {
       try {
         const d = this.dec(m[2]);
         if (m[1] === 'q') { this.setState({ clientOnly: true, step: 4, quote: d.q, settings: { ...this.defS(), ...d.s }, loading: false }); return; }
-        this._hashT = true; this.setState({ quote: d.q, settings: { ...this.defS(), ...d.s }, step: d.q.okP ? 3 : 2 });
+        this._hashT = true; if (d.q.okP) this._baseSnap = this.snapQ(d.q); this.setState({ quote: d.q, settings: { ...this.defS(), ...d.s }, step: d.q.okP ? 3 : 2 });
       } catch (e) { console.warn('link inválido', e); }
     } else {
       try { const saved = JSON.parse(localStorage.getItem('lns-cotizador-v2') || 'null'); if (saved) { const st = { ...this.defS(), ...(saved.settings || {}) }; let q = saved.quote;
@@ -1154,6 +1154,7 @@ class Component extends DCLogic {
     const h = this.state.pinHash;
     if (!h) { this.setState({ msg: 'Aún no hay PIN en este navegador: créalo en la Base de datos antes de editar.' }); return; }
     if (await this.hash(pin) !== h) { window.alert('PIN incorrecto.'); return; }
+    this._baseSnap = this.snapQ(this.state.quote);
     this.setState(s => ({ clientOnly: false, step: 2, savedFB: null, quote: { ...s.quote, okP: null, okS: null }, parseMsg: 'Editando el presupuesto guardado de la OT ' + this._tfOt + '. Al confirmar de nuevo se actualiza el mismo link del cliente.' }));
   }
   // Consulta de precios del historial: más reciente, más alto y promedio (con IVA), sin crear presupuesto.
@@ -1226,6 +1227,32 @@ class Component extends DCLogic {
   pushSettings() {
     clearTimeout(this._ajT);
     this._ajT = setTimeout(async () => { try { const db = await this.fbDb(); if (!db) return; await db.ref('cotizador/ajustes').set({ json: JSON.stringify(this.state.settings), ts: Date.now() }); } catch (e) { console.warn('pushSettings', e); } }, 1500);
+  }
+  // ===== Cambios del asesor sobre lo que dejó Partes: aviso a TallerFLOW (lns-cotizacion-modificada) =====
+  snapQ(q) {
+    const m = {};
+    (q.items || []).forEach(it => { m[it.id] = {
+      parts: (it.parts || []).filter(l => (l.desc || '').trim() || this.num(l.rep)).map(l => ({ k: this.norm(l.desc), rep: this.num(l.rep), q: this.num(l.q) || 1 })),
+      ops: (it.ops || []).filter(l => (l.desc || '').trim() || this.num(l.hrs)).map(l => ({ k: this.norm(l.desc), hrs: this.num(l.hrs), q: this.num(l.q) || 1 })) }; });
+    return m;
+  }
+  diffQ(a, q) {
+    const b = this.snapQ(q); let P = 0, O = 0;
+    const cmp = (A, B, f) => { const used = new Set(); let n = 0;
+      B.forEach(y => { const i = A.findIndex((x, j) => !used.has(j) && x.k === y.k); if (i < 0) { n++; return; } used.add(i); if (f(A[i], y)) n++; });
+      A.forEach((x, j) => { if (!used.has(j)) n++; }); return n; };
+    new Set([...Object.keys(a), ...Object.keys(b)]).forEach(id => { const x = a[id] || { parts: [], ops: [] }, y = b[id] || { parts: [], ops: [] };
+      P += cmp(x.parts, y.parts, (u, v) => u.rep !== v.rep || u.q !== v.q); O += cmp(x.ops, y.ops, (u, v) => u.hrs !== v.hrs || u.q !== v.q); });
+    return { P, O };
+  }
+  notifyMod(q) {
+    try {
+      if (!this._baseSnap || !this._tfOt) return;
+      const d = this.diffQ(this._baseSnap, q); if (!d.P && !d.O) return;
+      const t = []; if (d.P) t.push('Repuestos: ' + d.P + (d.P === 1 ? ' cambio' : ' cambios')); if (d.O) t.push('M/O: ' + d.O + (d.O === 1 ? ' cambio' : ' cambios'));
+      this._baseSnap = this.snapQ(q);
+      if (window.opener && !window.opener.closed) window.opener.postMessage({ tipo: 'lns-cotizacion-modificada', ot: this._tfOt, ts: Date.now(), resumen: t.join('; ') }, 'https://lubensave2026.github.io');
+    } catch (e) {}
   }
   // Devuelve a TallerFLOW (la pestaña que abrió el cotizador) el link del cliente para guardarlo en el historial de la orden.
   notifyTF(url, tipo) {
@@ -1369,12 +1396,12 @@ class Component extends DCLogic {
       addPunto: () => { if (!st.addName.trim()) return; this.setState(s => ({ addName: '', quote: { ...s.quote, items: [...s.quote.items, this.makeItem(vk, st.addName, 'amarillo')], okP: null, okS: null } })); },
       okPartesText: q.okP ? 'Confirmado ' + q.okP : 'Pendiente de confirmar',
       confirmPartesLabel: q.okP ? 'Ir a mano de obra →' : 'Confirmar repuestos ✓',
-      confirmPartes: () => { if (q.okP) this.setState({ step: 3 }); else { const stp = this.stamp(); this.setQ({ okP: stp }); this.notifyTF(location.href.split('#')[0] + '#t=' + this.enc({ q: { ...q, okP: stp, texto: '' }, s: S }), 'partes'); if (q.okS) { this.saveToHist(q); this.saveFB(q); } } },
+      confirmPartes: () => { if (q.okP) this.setState({ step: 3 }); else { const stp = this.stamp(); this._baseSnap = this.snapQ(q); this.setQ({ okP: stp }); this.notifyTF(location.href.split('#')[0] + '#t=' + this.enc({ q: { ...q, okP: stp, texto: '' }, s: S }), 'partes'); if (q.okS) { this.saveToHist(q); this.saveFB(q); } } },
       teamLabel: st.copied === 'team' ? 'Link copiado ✓' : 'Copiar link para asesor de servicio',
       copyTeamLink: () => this.copy(location.href.split('#')[0] + '#t=' + this.enc({ q: { ...q, texto: '' }, s: S }), 'team'),
       okServText: q.okS ? 'confirmado ' + q.okS : 'pendiente de confirmar',
       confirmServLabel: q.okS ? 'Ir a enviar al cliente →' : 'Confirmar mano de obra ✓',
-      confirmServ: () => { if (q.okS) this.setState({ step: 4 }); else { this.setQ({ okS: this.stamp() }); if (q.okP) { this.saveToHist(q); this.saveFB(q); } } },
+      confirmServ: () => { if (q.okS) this.setState({ step: 4 }); else { this.setQ({ okS: this.stamp() }); this.notifyMod(q); if (q.okP) { this.saveToHist(q); this.saveFB(q); } } },
       locked, lockMsg: !q.okP ? 'Falta que el asesor de partes confirme los repuestos.' : 'Falta que el asesor de servicio confirme la mano de obra.',
       copyLabel: st.copied === 'cli' ? 'Link copiado ✓' : 'Copiar link para cliente',
       copyLink: () => { const u = this.clientUrl(); this.copy(u, 'cli'); this.notifyTF(u); },
