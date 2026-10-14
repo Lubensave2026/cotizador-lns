@@ -618,7 +618,7 @@ class Component extends DCLogic {
     const m = h.match(/^#([qt])=(.+)$/);
     if (m) {
       try {
-        const d = this.dec(m[2]);
+        const d = await this.decAny(m[2]);
         if (m[1] === 'q') { this.setState({ clientOnly: true, step: 4, quote: d.q, settings: { ...this.defS(), ...d.s }, loading: false }); return; }
         this._hashT = true; if (d.q.okP) this._baseSnap = this.snapQ(d.q); this.setState({ quote: d.q, settings: { ...this.defS(), ...d.s }, step: d.q.okP ? 3 : 2 });
       } catch (e) { console.warn('link inválido', e); }
@@ -1283,6 +1283,27 @@ class Component extends DCLogic {
     const u = v.match(/https?:\/\/[^\s]+/i); if (!u) return /^[\w.-]+\.[a-z]{2,}(\/|$)/i.test(v) ? 'https://' + v : v;
     return u[0].split(/https?:\/\//i).filter(Boolean)[0] ? 'https://' + u[0].replace(/^https?:\/\//i, '').split(/https?:\/\//i)[0].replace(/:\/\/.*$/, '') : v;
   }
+  // ===== Link del asesor corto: JSON recortado + deflate (TallerFLOW solo acepta links de menos de 4000 caracteres) =====
+  b64u(bytes) { let t = ''; bytes.forEach(x => t += String.fromCharCode(x)); return btoa(t).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, ''); }
+  unb64u(str) { str = str.replace(/-/g, '+').replace(/_/g, '/'); return Uint8Array.from(atob(str), c => c.charCodeAt(0)); }
+  async encZ(o) {
+    const raw = new TextEncoder().encode(JSON.stringify(o));
+    if (typeof CompressionStream === 'undefined') return this.enc(o);
+    const cs = new CompressionStream('deflate-raw'), w = cs.writable.getWriter(); w.write(raw); w.close();
+    return 'z' + this.b64u(new Uint8Array(await new Response(cs.readable).arrayBuffer()));
+  }
+  async decAny(str) {
+    if (str[0] !== 'z') return this.dec(str);
+    const ds = new DecompressionStream('deflate-raw'), w = ds.writable.getWriter(); w.write(this.unb64u(str.slice(1))); w.close();
+    return JSON.parse(new TextDecoder().decode(await new Response(ds.readable).arrayBuffer()));
+  }
+  async teamUrl(q) {
+    const S = this.state.settings, keep = ['tarifa', 'tarifaDesde', 'iva', 'margen', 'pct', 'meses', 'r1', 'r2', 'r3', 'anos', 'usarPdf', 'tarifaFija'], sm = {};
+    keep.forEach(k => { if (S[k] !== undefined) sm[k] = S[k]; });
+    const slim = { ...q, texto: '', items: (q.items || []).map(({ hist, ...it }) => it) };
+    const base = this._tfOt ? location.origin + location.pathname + '?ot=' + encodeURIComponent(this._tfOt) : location.href.split('#')[0];
+    return base + '#t=' + await this.encZ({ q: slim, s: sm });
+  }
   // Devuelve a TallerFLOW (la pestaña que abrió el cotizador) el link del cliente para guardarlo en el historial de la orden.
   notifyTF(url, tipo) {
     try { if (this._tfOt && window.opener && !window.opener.closed) { window.opener.postMessage({ tipo: tipo === 'partes' ? 'lns-cotizacion-partes' : 'lns-cotizacion', ot: this._tfOt, url, total: this._tot || '', ts: Date.now() }, 'https://lubensave2026.github.io'); this.setState({ msg: (tipo === 'partes' ? 'Cotización de repuestos enviada a TallerFLOW' : 'Link enviado a TallerFLOW') + ' (OT ' + this._tfOt + ').' }); } } catch (e) {}
@@ -1426,9 +1447,9 @@ class Component extends DCLogic {
       addPunto: () => { if (!st.addName.trim()) return; this.setState(s => ({ addName: '', quote: { ...s.quote, items: [...s.quote.items, this.makeItem(vk, st.addName, 'amarillo')], okP: null, okS: null } })); },
       okPartesText: q.okP ? 'Confirmado ' + q.okP : 'Pendiente de confirmar',
       confirmPartesLabel: q.okP ? 'Ir a mano de obra →' : 'Confirmar repuestos ✓',
-      confirmPartes: () => { if (q.okP) this.setState({ step: 3 }); else { const stp = this.stamp(); this._baseSnap = this.snapQ(q); this.setQ({ okP: stp }); this.notifyTF(location.href.split('#')[0] + '#t=' + this.enc({ q: { ...q, okP: stp, texto: '' }, s: S }), 'partes'); if (q.okS) { this.saveToHist(q); this.saveFB(q); } } },
+      confirmPartes: () => { if (q.okP) this.setState({ step: 3 }); else { const stp = this.stamp(); this._baseSnap = this.snapQ(q); this.setQ({ okP: stp }); this.teamUrl({ ...q, okP: stp }).then(u => this.notifyTF(u, 'partes')); if (q.okS) { this.saveToHist(q); this.saveFB(q); } } },
       teamLabel: st.copied === 'team' ? 'Link copiado ✓' : 'Copiar link para asesor de servicio',
-      copyTeamLink: () => this.copy(location.href.split('#')[0] + '#t=' + this.enc({ q: { ...q, texto: '' }, s: S }), 'team'),
+      copyTeamLink: async () => { const u = await this.teamUrl(q); this.copy(u, 'team'); if (u.length > 3900) this.setState({ msg: 'Aviso: el link del asesor mide ' + u.length + ' caracteres; TallerFLOW solo acepta menos de 4000.' }); },
       okServText: q.okS ? 'confirmado ' + q.okS : 'pendiente de confirmar',
       confirmServLabel: q.okS ? 'Ir a enviar al cliente →' : 'Confirmar mano de obra ✓',
       confirmServ: () => { if (q.okS) this.setState({ step: 4 }); else { this.setQ({ okS: this.stamp() }); this.notifyMod(q); if (q.okP) { this.saveToHist(q); this.saveFB(q); } } },
