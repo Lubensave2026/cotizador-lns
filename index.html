@@ -189,6 +189,8 @@
             <h2 style="margin: 0; font-size: 18px; text-transform: uppercase;">Consultar precios del historial</h2>
             <div style="display: flex; gap: 8px;"><sc-if value="{{ hasConsAlgo }}" hint-placeholder-val="{{ false }}"><button class="btn btn-secondary" onClick="{{ clearConsTodo }}" style="font-size: 12px;">Limpiar todo</button></sc-if><button class="btn btn-secondary" onClick="{{ toggleCons }}" style="font-size: 12px;">Cerrar</button></div>
           </div>
+          <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap; font-size: 13px;"><span><strong>Historial de este equipo:</strong> {{ histCount }}</span><button class="btn btn-secondary" onClick="{{ sincronizarAhora }}" style="font-size: 12px;">Actualizar desde la nube</button></div>
+          <sc-if value="{{ histEstado }}" hint-placeholder-val="{{ false }}"><p style="margin: 0; font-size: 13px; font-weight: 600; color: #ae1800;">{{ histEstado }}</p></sc-if>
           <p style="margin: 0; font-size: 13px; color: #605d5d;">Sin crear presupuesto. Escribe el vehículo (marca y/o modelo) y la pieza u operación, por ejemplo “Hilux” y “pastillas de freno delanteras”. Precios con IVA.</p>
           <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px;">
             <div class="field" style="position: relative;"><label>Vehículo</label><input class="input" value="{{ consVeh }}" onChange="{{ setConsVeh }}" placeholder="Ej. Toyota Hilux" style="padding-right: 40px;"><sc-if value="{{ hasConsVeh }}" hint-placeholder-val="{{ false }}"><button onClick="{{ clearConsVeh }}" aria-label="Borrar vehículo" title="Borrar vehículo" style="position: absolute; right: 4px; bottom: 4px; width: 32px; height: 32px; border: none; background: transparent; font-size: 22px; line-height: 1; cursor: pointer; color: #605d5d;">×</button></sc-if></div>
@@ -1153,15 +1155,20 @@ class Component extends DCLogic {
   // ===== Persistencia en Firebase (mismo proyecto que TallerFLOW; ruta propia "cotizador/") =====
   loadScript(src) { return new Promise((res, rej) => { const sc = document.createElement('script'); sc.src = src; sc.onload = res; sc.onerror = () => rej(new Error('No cargó ' + src)); document.head.appendChild(sc); }); }
   fbDb() {
-    return this._fb || (this._fb = Promise.race([(async () => { try {
+    if (this._db) return Promise.resolve(this._db);
+    if (!this._fbP) this._fbP = (async () => { try {
       const V = 'https://www.gstatic.com/firebasejs/10.7.1/firebase-';
       await this.loadScript(V + 'app-compat.js'); await Promise.all(['database', 'auth', 'app-check'].map(n => this.loadScript(V + n + '-compat.js')));
       const app = firebase.apps.length ? firebase.app() : firebase.initializeApp({ apiKey: 'AIzaSyCfff5GO7qe0TCKvP9xyXrisd3d1J2Zz1c', authDomain: 'lube-n-save-flow.firebaseapp.com', databaseURL: 'https://lube-n-save-flow-default-rtdb.firebaseio.com', projectId: 'lube-n-save-flow', storageBucket: 'lube-n-save-flow.firebasestorage.app', messagingSenderId: '681579026677', appId: '1:681579026677:web:f73aaa32677b921be94dbc' });
       if (typeof firebase.appCheck === 'function') { try { firebase.appCheck().activate('6LepqIItAAAAAOfTtenc_iCxEGp4fGutjq04oi0r', true); } catch (e) {} }
       await firebase.auth().signInAnonymously();
       return firebase.database();
-    } catch (e) { console.warn('Firebase no disponible', e); return null; } })(), new Promise(r => setTimeout(() => r(null), 12000))]));
+    } catch (e) { console.warn('Firebase no disponible', e); return null; } })();
+    const p = this._fbP; p.then(v => { if (v) this._db = v; else if (this._fbP === p) this._fbP = null; });
+    return Promise.race([p, new Promise(r => setTimeout(() => r(null), 25000))]);
   }
+  // Lectura con tiempo límite: si Firebase no responde (App Check, red), no se queda colgada.
+  fbGet(db, path, ms) { return Promise.race([db.ref(path).once('value').then(sn => sn.val()), new Promise((res, rej) => setTimeout(() => rej(new Error('La nube no respondió (tiempo agotado)')), ms || 20000))]); }
   fbKey(ot) { return String(ot || '').trim().replace(/[^A-Za-z0-9_-]/g, '_'); }
   newCode() { const a = new Uint8Array(9); crypto.getRandomValues(a); return [...a].map(x => (x % 36).toString(36)).join(''); }
   clientPayload(q) { return { q: { ...q, texto: '', items: (q.items || []).map(({ hist, pk, tpl, foto, ...it }) => ({ ...it, ...(foto ? { foto } : {}), parts: (it.parts || []).map(({ costo, mg, mgOn, adj, base, ...l }) => l) })) }, s: { tarifa: this.state.settings.tarifa, iva: this.state.settings.iva } }; }
@@ -1184,12 +1191,12 @@ class Component extends DCLogic {
       const k = (new URLSearchParams(location.search).get('k') || '').trim(), key = this.fbKey(this._tfOt);
       const db = await this.fbDb(); if (!db) { if (k) window.alert('No se pudo cargar el presupuesto. Revisa tu conexión a internet e intenta de nuevo, o pide a Lube N Save que te lo envíe otra vez.'); return; }
       if (k) {
-        const snap = await db.ref('cotizador/presupuestos/' + key + '-' + k).once('value'), r = snap.val();
+        const r = await this.fbGet(db, 'cotizador/presupuestos/' + key + '-' + k);
         if (r && r.json) { const d = JSON.parse(r.json); this._k = k; this.setState({ clientOnly: true, step: 4, quote: d.q, settings: { ...this.defS(), ...d.s }, loading: false, savedFB: { ot: this._tfOt, k } }); }
         else { this.setState({ parseMsg: 'El código del presupuesto guardado no coincide con la OT ' + this._tfOt + '.' }); window.alert('No se encontró este presupuesto. Pide a Lube N Save que te envíe el link otra vez.'); }
         return;
       }
-      const ix = (await db.ref('cotizador/indice/' + key).once('value')).val();
+      const ix = (await this.fbGet(db, 'cotizador/indice/' + key));
       if (ix) this.setState(s => ({ parseMsg: 'Ya existe un presupuesto guardado para la OT ' + this._tfOt + '. Para verlo abre el link que quedó en el historial de la orden en TallerFLOW ("Cotización enviada al cliente").' }));
     } catch (e) { console.warn('fbOpen', e); }
   }
@@ -1223,16 +1230,17 @@ class Component extends DCLogic {
   async fbSync() {
     try {
       if (this.state.clientOnly || /^#[qt]=/.test(location.hash) || !this.recs) return;
-      const db = await this.fbDb(); if (!db) return;
-      const meta = (await db.ref('cotizador/historial/meta').once('value')).val();
+      const db = await this.fbDb(); if (!db) { if (!this.recs.length) this.setState({ histEstado: 'Sin conexión con Firebase: no se pudo traer el historial.' }); return; }
+      const meta = (await this.fbGet(db, 'cotizador/historial/meta'));
+      if (!meta && !this.recs.length) this.setState({ histEstado: 'No hay historial publicado en la nube todavía. El administrador debe publicarlo desde la Base.' });
       if (meta && meta.rev) {
-        const delta = (await db.ref('cotizador/historial/delta').once('value')).val() || {}, keys = Object.keys(delta).sort();
+        const delta = (await this.fbGet(db, 'cotizador/historial/delta')) || {}, keys = Object.keys(delta).sort();
         const sig = meta.rev + ':' + keys.map(k => { let x = 0; const t = String(delta[k]); for (let i = 0; i < t.length; i++) x = (x * 31 + t.charCodeAt(i)) | 0; return k + '@' + x; }).join(',');
         if ((await this.idbGet('histSig')) !== sig) {
           let recs = this.recs;
           if ((await this.idbGet('histRev')) !== meta.rev) {
             recs = [];
-            for (let i = 0; i < meta.chunks; i++) { const t = (await db.ref('cotizador/historial/chunks/' + meta.rev + '/' + i).once('value')).val(); recs.push(...JSON.parse(t)); }
+            for (let i = 0; i < meta.chunks; i++) { const t = (await this.fbGet(db, 'cotizador/historial/chunks/' + meta.rev + '/' + i)); recs.push(...JSON.parse(t)); }
             await this.idbSet(meta.rev, 'histRev');
           }
           const ds = keys.flatMap(k => { try { return JSON.parse(delta[k]); } catch (e) { return []; } }), ors = new Set(ds.map(x => x[0]));
@@ -1241,9 +1249,9 @@ class Component extends DCLogic {
           this.setState({ baseSrc: 'Historial compartido (nube) · ' + recs.length.toLocaleString('es-GT') + ' casos' });
         }
       }
-      const aj = (await db.ref('cotizador/ajustes').once('value')).val();
+      const aj = (await this.fbGet(db, 'cotizador/ajustes'));
       if (aj && aj.json) { const cs = JSON.parse(aj.json); this._ajTs = aj.ts; this.setState(st => ({ settings: { ...st.settings, ...cs } })); }
-    } catch (e) { console.warn('fbSync', e); }
+    } catch (e) { console.warn('fbSync', e); if (!this.recs || !this.recs.length) this.setState({ histEstado: 'No se pudo traer el historial de la nube: ' + e.message }); }
   }
   async publishHist() {
     try {
@@ -1251,7 +1259,7 @@ class Component extends DCLogic {
       if (!window.confirm('Publicar este historial (' + this.recs.length.toLocaleString('es-GT') + ' casos) en la nube? Reemplaza el historial compartido: todas las computadoras lo usarán.')) return;
       this.setState({ msg: 'Publicando historial en la nube…' });
       const db = await this.fbDb(); if (!db) { this.setState({ msg: 'No hay conexión con Firebase.' }); return; }
-      const rev = Date.now().toString(36), prev = ((await db.ref('cotizador/historial/meta').once('value')).val() || {}).rev || '', chunks = []; let cur = [], len = 0;
+      const rev = Date.now().toString(36), prev = ((await this.fbGet(db, 'cotizador/historial/meta')) || {}).rev || '', chunks = []; let cur = [], len = 0;
       for (const r of this.recs) { const l = JSON.stringify(r).length; if (len + l > 250000 && cur.length) { chunks.push(JSON.stringify(cur)); cur = []; len = 0; } cur.push(r); len += l; }
       if (cur.length) chunks.push(JSON.stringify(cur));
       for (let i = 0; i < chunks.length; i++) await db.ref('cotizador/historial/chunks/' + rev + '/' + i).set(chunks[i]);
@@ -1391,6 +1399,17 @@ class Component extends DCLogic {
   sigItems(q) { try { return JSON.stringify(this.clientPayload(q).q.items); } catch (e) { return ''; } }
   // Equipo del administrador: la pestaña Base solo existe en navegadores que abrieron una vez el link con el código secreto.
   adminHash() { return '9f2a55eb9abd8d40a26bc2387de86a878781fd9af2eec049a50382f5bb15cdeb'; }
+  // Diagnóstico y actualización manual del historial compartido (para equipos que no ven vehículos ni puntos).
+  async sincronizarAhora() {
+    this.setState({ histEstado: 'Buscando el historial en la nube…' });
+    try {
+      const db = await this.fbDb(); if (!db) { this.setState({ histEstado: 'Sin conexión con Firebase (internet o App Check). Revisa la conexión y vuelve a intentar.' }); return; }
+      const meta = (await this.fbGet(db, 'cotizador/historial/meta'));
+      if (!meta || !meta.rev) { this.setState({ histEstado: 'No hay historial publicado en la nube. El administrador debe abrir la Base y pulsar “Publicar historial en la nube”.' }); return; }
+      await this.idbSet(null, 'histRev'); await this.idbSet(null, 'histSig'); await this.fbSync();
+      this.setState({ histEstado: 'Historial actualizado: ' + (this.recs ? this.recs.length : 0).toLocaleString('es-GT') + ' casos.' });
+    } catch (e) { console.warn(e); this.setState({ histEstado: /permission/i.test(e.message) ? 'Firebase no permite leer cotizador/: falta la regla “cotizador” en las reglas de Firebase.' : 'Error: ' + e.message }); }
+  }
   // Devuelve a TallerFLOW (la pestaña que abrió el cotizador) el link del cliente para guardarlo en el historial de la orden.
   notifyTF(url, tipo) {
     try { if (this._tfOt && !this.state.quote.estimado && window.opener && !window.opener.closed) { window.opener.postMessage({ tipo: tipo === 'partes' ? 'lns-cotizacion-partes' : 'lns-cotizacion', ot: this._tfOt, url, total: this._tot || '', ts: Date.now() }, 'https://lubensave2026.github.io'); this.setState({ msg: (tipo === 'partes' ? 'Cotización de repuestos enviada a TallerFLOW' : 'Link enviado a TallerFLOW') + ' (OT ' + this._tfOt + ').' }); } } catch (e) {}
@@ -1483,7 +1502,8 @@ class Component extends DCLogic {
     const meta = base ? base.meta : { rows: 0, models: 0, from: '', to: '' };
     const locked = !(q.okP && q.okS);
     return {
-      showBaseTab: !!st.adminDev && !this._tfOt && !this._modo, consOpen: !!st.consOpen, toggleCons: () => this.setState(x => ({ consOpen: !x.consOpen })), consVeh: st.consVeh || '', consPieza: st.consPieza || '', setConsVeh: e => this.setState({ consVeh: e.target.value }), setConsPieza: e => this.setState({ consPieza: e.target.value }), hasConsVeh: !!(st.consVeh || '').trim(), hasConsPieza: !!(st.consPieza || '').trim(), clearConsVeh: () => this.setState({ consVeh: '' }), hasConsAlgo: !!((st.consVeh || '').trim() || (st.consPieza || '').trim()), clearConsTodo: () => this.setState({ consVeh: '', consPieza: '' }), clearConsPieza: () => this.setState({ consPieza: '' }), cons: st.consOpen ? this.consultar() : {},
+      showBaseTab: !!st.adminDev && !this._tfOt && !this._modo, histCount: this.recs ? this.recs.length.toLocaleString('es-GT') + ' casos' : 'cargando…', histEstado: st.histEstado || '', sincronizarAhora: () => this.sincronizarAhora(),
+      consOpen: !!st.consOpen, toggleCons: () => this.setState(x => ({ consOpen: !x.consOpen })), consVeh: st.consVeh || '', consPieza: st.consPieza || '', setConsVeh: e => this.setState({ consVeh: e.target.value }), setConsPieza: e => this.setState({ consPieza: e.target.value }), hasConsVeh: !!(st.consVeh || '').trim(), hasConsPieza: !!(st.consPieza || '').trim(), clearConsVeh: () => this.setState({ consVeh: '' }), hasConsAlgo: !!((st.consVeh || '').trim() || (st.consPieza || '').trim()), clearConsTodo: () => this.setState({ consVeh: '', consPieza: '' }), clearConsPieza: () => this.setState({ consPieza: '' }), cons: st.consOpen ? this.consultar() : {},
       publishHist: () => this.publishHist(),
       cliPdf: st.clientOnly && !pr, canEdit: st.clientOnly && !pr, editSaved: () => this.editSaved(),
       loading: st.loading, showChrome: !st.clientOnly && !pr,
