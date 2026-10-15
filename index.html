@@ -111,6 +111,7 @@
           <p style="margin: 0; font-size: 14px; text-wrap: pretty;">{{ histInfo }}</p>
           <div style="display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 12px; align-items: end;">
             <div class="field"><label>Conservar últimos (años)</label><input class="input" inputmode="numeric" value="{{ settings.anos }}" onChange="{{ setAnos }}"></div>
+            <div class="field"><label>Copias similares a conservar (de lo antiguo)</label><input class="input" inputmode="numeric" value="{{ settings.copias }}" onChange="{{ setCopias }}"></div>
             <p style="margin: 0; font-size: 13px; color: #605d5d; padding-bottom: 10px;">{{ purgeInfo }}</p>
           </div>
           <div style="display: flex; gap: 8px; flex-wrap: wrap;">
@@ -607,7 +608,7 @@
 </x-dc>
 <script type="text/x-dc" data-dc-script>
 class Component extends DCLogic {
-  defS() { return { usarPdf: true, anos: '3', margen: '50', tarifa: '600', tarifaFija: true, iva: '12', pct: '8', meses: '6', r1: '425', r2: '500', r3: '600',
+  defS() { return { usarPdf: true, anos: '3', copias: '3', margen: '50', tarifa: '600', tarifaFija: true, iva: '12', pct: '8', meses: '6', r1: '425', r2: '500', r3: '600',
     paquetes: 'FRENOS DELANTEROS = Pastillas de freno delanteras; Líquido de frenos; Rectificado de discos | Cambio de pastillas delanteras; Desmontaje de discos delanteros\nFRENOS TRASEROS = Pastillas de freno traseras; Líquido de frenos | Cambio de pastillas traseras; Desmontaje de discos traseros\nBALATAS TRASERAS = Balatas traseras; Líquido de frenos | Cambio de balatas traseras\nAMORTIGUADORES DELANTEROS = Amortiguadores delanteros; Bases de amortiguador | Cambio de amortiguadores delanteros\nAMORTIGUADORES TRASEROS = Amortiguadores traseros | Cambio de amortiguadores traseros\nBATERIA = Batería | Cambio de batería\nBUJIAS = Bujías | Cambio de bujías\nCLUTCH = Kit de clutch; Aceite de transmisión | Desmontaje de caja; Cambio de clutch\nCABEZALES DIRECCION = Cabezales de dirección | Cambio de cabezales de dirección; Alineación\nTERMINALES = Terminales de dirección | Cambio de terminales; Alineación\nROTULAS = Rótulas | Cambio de rótulas; Alineación\nBUJES BARRA ESTABILIZADORA = Bujes de barra estabilizadora | Cambio de bujes de barra estabilizadora\nBOMBA DE AGUA = Bomba de agua; Refrigerante | Cambio de bomba de agua\nTERMOSTATO = Termostato; Refrigerante | Cambio de termostato\nRADIADOR = Radiador; Refrigerante | Cambio de radiador\nFUGA REFRIGERANTE = Refrigerante | Cambio de refrigerante; Purgado de sistema de enfriamiento\nBRIDA AGUA = Brida de agua; Empaque de brida; Sellador | Cambio de brida de agua\nMANGUERA RADIADOR = Manguera de radiador; Refrigerante | Cambio de manguera de radiador; Purgado de sistema de enfriamiento\nFUGA ACEITE MOTOR = Empaque o sello; Sellador; Aceite de motor; Filtro de aceite | Cambio de empaque o sello; Cambio de aceite y filtro\nACEITE DIFERENCIAL = Aceite de diferencial; Empaque o sello de tapón | Cambio de aceite de diferencial\nACEITE TRANSMISION = Aceite de transmisión | Cambio de aceite de transmisión\nBANDA = Banda de accesorios | Cambio de banda de accesorios\nCORREA TIEMPO = Kit de distribución; Bomba de agua; Refrigerante | Cambio de kit de distribución\nLLANTAS = Llantas | Montaje y balanceo de llantas; Alineación\nESCOBILLAS = Escobillas limpiaparabrisas | Cambio de escobillas\nFILTRO AIRE ACONDICIONADO = Filtro de aire acondicionado | Cambio de filtro de aire acondicionado',
     kits: 'RADIADOR = Refrigerante; Abrazaderas; Wipe\nTUBERIA AC = Gas freón; Aceite para compresor\nCOMPRESOR AC = Gas freón; Aceite para compresor\nBOMBA DE AGUA = Refrigerante; Wipe\nTERMOSTATO = Refrigerante\nFRENOS = Líquido de frenos\nCARGADORES = Materiales auxiliares' }; }
   sample() {
@@ -651,9 +652,9 @@ class Component extends DCLogic {
     } catch (e) {}
     let recs = await this.idbGet('recs'), src = 'Base propia de este navegador';
     if (!recs) { recs = await (await fetch('historial-registros.json')).json(); src = 'Historial inicial ClearMechanic'; await this.idbSet(recs, 'recs'); }
-    const cut = this.lib.cutoffFor(new Date(), this.num(this.state.settings.anos) || 3), before = recs.length;
-    recs = recs.filter(x => x[1] >= cut);
-    if (recs.length < before) { await this.idbSet(recs, 'recs'); this.setState({ msg: 'Depuración trimestral: se eliminaron ' + (before - recs.length).toLocaleString('es-GT') + ' casos anteriores a ' + this.fd(cut) + '.' }); }
+    const before = recs.length;
+    const podadas = this.purgeRecs(recs); if (podadas.length < before) await this.respaldarAntesDeDepurar(recs); recs = podadas;
+    if (recs.length < before) { await this.idbSet(recs, 'recs'); this.setState({ msg: 'Depuración: se eliminaron ' + (before - recs.length).toLocaleString('es-GT') + ' casos antiguos que ya tenían copias similares (se conservaron los únicos o poco repetidos). Antes se descargó el respaldo "respaldo-antes-de-depurar"; guárdalo: se recupera con Restaurar respaldo.' }); }
     this.recs = recs; const base = this.lib.buildFromRecords(recs);
     let serv = await this.idbGet('serv'), servSrc = 'Plantilla cargada en este navegador';
     if (!serv) { try { serv = await (await fetch('servicios.json')).json(); servSrc = 'ESTIMADO SERVICIOS.xlsx (incluida)'; } catch (e) { serv = null; } }
@@ -759,9 +760,8 @@ class Component extends DCLogic {
       const nuevos = this.lib.parseRecords(this.lib.decode(await f.arrayBuffer()));
       if (!nuevos.length) throw new Error('No encontré filas tipo “Sub-punto”. ¿Es el reporte de Cotizaciones?');
       const ors = new Set(nuevos.map(x => x[0])), keep = this.recs.filter(x => !ors.has(x[0]));
-      const cut = this.lib.cutoffFor(new Date(), this.num(this.state.settings.anos) || 3);
-      const add = nuevos.filter(x => x[1] >= cut);
-      await this.setRecs([...keep, ...add]);
+      const add = nuevos;
+      const unidas = [...keep, ...add], podadas2 = this.purgeRecs(unidas); if (podadas2.length < unidas.length) await this.respaldarAntesDeDepurar([...this.recs, ...add]); await this.setRecs(podadas2);
       this.setState({ baseSrc: 'Base propia · último CSV ' + f.name, msg: 'Listo: ' + add.length.toLocaleString('es-GT') + ' casos del CSV integrados (' + ors.size + ' órdenes). Total ' + this.recs.length.toLocaleString('es-GT') + ' casos.' });
     } catch (err) { this.setState({ msg: 'Error: ' + err.message }); }
     e.target.value = '';
@@ -1336,6 +1336,27 @@ class Component extends DCLogic {
     [this.quoteStore()[or], this.backupStore()[or]].forEach(c => { if (c && c.items && this.opsScore(c) > this.opsScore(best)) best = c; });
     return best;
   }
+  // Depuración inteligente: lo reciente (dentro de los años configurados) siempre se conserva. De lo antiguo se conserva lo que no se ha repetido:
+  // por cada vehículo+punto se guardan, además de las copias recientes, las antiguas más nuevas hasta completar "copias similares" (3 por defecto).
+  purgeRecs(recs) {
+    const cut = this.lib.cutoffFor(new Date(), this.num(this.state.settings.anos) || 3), min = Math.max(1, Math.round(this.num(this.state.settings.copias)) || 3), g = {};
+    recs.forEach(x => { const k = x[3] + '|' + x[4]; const G = g[k] || (g[k] = { rec: 0, old: [] }); if (x[1] >= cut) G.rec++; else G.old.push(x); });
+    const keepOld = new Set();
+    Object.values(g).forEach(G => { G.old.sort((a, b) => b[1].localeCompare(a[1])).slice(0, Math.max(0, min - G.rec)).forEach(x => keepOld.add(x)); });
+    return recs.filter(x => x[1] >= cut || keepOld.has(x));
+  }
+  // Antes de cualquier depuración que borre casos: respaldo completo (archivo descargable + copia interna) por si se necesita consultar algo con más de 3 años.
+  async respaldarAntesDeDepurar(recs) {
+    const fecha = new Date().toISOString(), dia = fecha.slice(0, 10);
+    try {
+      const prev = (await this.idbGet('respaldosDepuracion')) || [];
+      await this.idbSet([{ fecha, n: recs.length, recs }, ...prev].slice(0, 2), 'respaldosDepuracion');
+    } catch (e) { console.warn('respaldo interno', e); }
+    try {
+      const blob = new Blob([JSON.stringify({ tipo: 'lns-historial', fecha, recs, settings: this.state.settings })], { type: 'application/json' });
+      const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'respaldo-antes-de-depurar-' + dia + '.json'; document.body.appendChild(a); a.click(); a.remove();
+    } catch (e) { console.warn('respaldo archivo', e); }
+  }
   // Devuelve a TallerFLOW (la pestaña que abrió el cotizador) el link del cliente para guardarlo en el historial de la orden.
   notifyTF(url, tipo) {
     try { if (this._tfOt && window.opener && !window.opener.closed) { window.opener.postMessage({ tipo: tipo === 'partes' ? 'lns-cotizacion-partes' : 'lns-cotizacion', ot: this._tfOt, url, total: this._tot || '', ts: Date.now() }, 'https://lubensave2026.github.io'); this.setState({ msg: (tipo === 'partes' ? 'Cotización de repuestos enviada a TallerFLOW' : 'Link enviado a TallerFLOW') + ' (OT ' + this._tfOt + ').' }); } } catch (e) {}
@@ -1476,9 +1497,9 @@ class Component extends DCLogic {
       nuevo: () => { if (q.items.length && !window.confirm('¿Descartar el presupuesto actual (' + (q.or || 'sin OR') + ')?')) return; this.setState({ quote: this.emptyQ(), parseMsg: '', pdfName: '' }); },
       nuevoEst: () => q.items.length && !window.confirm('¿Descartar el presupuesto actual (' + (q.or || 'sin OR') + ') para hacer un estimado?') ? null : this.setState({ quote: { ...this.emptyQ(), estimado: true, or: 'EST-' + new Date().toISOString().slice(2, 10).replace(/-/g, '') }, parseMsg: '', pdfName: '', step: 2 }),
       docLabel: q.estimado ? 'Estimado de referencia' : 'Presupuesto · OR ' + (q.or || ''),
-      setAnos: e => this.setS('anos', e.target.value), exportHist: () => this.exportHist(), importHist: e => this.importHist(e),
+      setAnos: e => this.setS('anos', e.target.value), setCopias: e => this.setS('copias', e.target.value), exportHist: () => this.exportHist(), importHist: e => this.importHist(e),
       histInfo: base ? (meta.recs || 0).toLocaleString('es-GT') + ' casos guardados, ' + (meta.own || 0).toLocaleString('es-GT') + ' creados en esta herramienta. Cada presupuesto confirmado por partes y servicio se agrega solo.' : '',
-      purgeInfo: (() => { if (!this.lib) return ''; const y = this.num(S.anos) || 3, now = new Date(), qn = new Date(now.getFullYear(), Math.floor(now.getMonth() / 3) * 3 + 3, 1); return 'Próxima depuración ' + qn.toLocaleDateString('es-GT') + ': borra lo anterior a ' + this.fd(this.lib.cutoffFor(qn, y)) + '.'; })(),
+      purgeInfo: (() => { if (!this.lib) return ''; const y = this.num(S.anos) || 3, now = new Date(), qn = new Date(now.getFullYear(), Math.floor(now.getMonth() / 3) * 3 + 3, 1); return 'Próxima depuración ' + qn.toLocaleDateString('es-GT') + ': de lo anterior a ' + this.fd(this.lib.cutoffFor(qn, y)) + ' solo se borra lo que ya tenga ' + (Math.round(this.num(S.copias)) || 3) + ' o más copias similares (mismo vehículo y punto); lo único o poco repetido se conserva.'; })(),
       addName: st.addName, setAddName: e => this.setState({ addName: e.target.value }),
       addPunto: () => { if (!st.addName.trim()) return; this.setState(s => ({ addName: '', quote: { ...s.quote, items: [...s.quote.items, this.makeItem(vk, st.addName, 'amarillo')], okP: null, okS: null } })); },
       okPartesText: q.okP ? 'Confirmado ' + q.okP : 'Pendiente de confirmar',
