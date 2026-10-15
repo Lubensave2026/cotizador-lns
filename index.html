@@ -621,7 +621,7 @@ class Component extends DCLogic {
   F() { return 1 + this.num(this.state.settings.iva) / 100; }
   r2(n) { return Math.round(n * 100) / 100; }
   emptyQ() { return { ivaIncl: true, link: '', or: '', cliente: '', tel: '', asesor: '', placa: '', km: '', vehiculo: '', anio: '', texto: '', items: [], okP: null, okS: null }; }
-  state = { step: 2, base: null, baseSrc: '', loading: true, msg: '', parseMsg: '', pdfName: '', settings: this.defS(), quote: { ...this.emptyQ(), texto: this.sample(), link: 'https://vehi.mobi/N8XwaN', ivaIncl: true }, clientOnly: false, printing: false, copied: '', addName: '', pinField: 1, pinHash: (() => { try { return localStorage.getItem('lns-pin') || ''; } catch (e) { return ''; } })(), baseOpen: (() => { try { return sessionStorage.getItem('lns-base-open') === '1' && !!localStorage.getItem('lns-pin'); } catch (e) { return false; } })(), pinChanging: false, pin1: '', pin2: '', pinMsg: '', open: {}, serv: null, servSrc: '' };
+  state = { adminDev: (() => { try { return localStorage.getItem('lns-admin-dev') === '9f2a55eb9abd8d40a26bc2387de86a878781fd9af2eec049a50382f5bb15cdeb'; } catch (e) { return false; } })(), step: 2, base: null, baseSrc: '', loading: true, msg: '', parseMsg: '', pdfName: '', settings: this.defS(), quote: { ...this.emptyQ(), texto: this.sample(), link: 'https://vehi.mobi/N8XwaN', ivaIncl: true }, clientOnly: false, printing: false, copied: '', addName: '', pinField: 1, pinHash: (() => { try { return localStorage.getItem('lns-pin') || ''; } catch (e) { return ''; } })(), baseOpen: (() => { try { return sessionStorage.getItem('lns-base-open') === '1' && !!localStorage.getItem('lns-pin'); } catch (e) { return false; } })(), pinChanging: false, pin1: '', pin2: '', pinMsg: '', open: {}, serv: null, servSrc: '' };
 
   componentWillUnmount() { window.removeEventListener('keydown', this._pinKey); }
   async componentDidMount() {
@@ -647,6 +647,9 @@ class Component extends DCLogic {
     try {
       const P = new URLSearchParams(location.search), keys = ['or', 'link', 'placa', 'vehiculo', 'anio', 'cliente', 'tel', 'km', 'asesor'];
       const pre = {}; keys.forEach(k => { const v = (P.get(k) || '').trim(); if (v) pre[k] = v; });
+      let adm = (P.get('admin') || '').trim(); if (P.has('admin') && (!adm || adm === '1')) adm = (window.prompt('Código de administrador:') || '').trim();
+      if (adm) { if (await this.hash(adm) === this.adminHash()) { try { localStorage.setItem('lns-admin-dev', this.adminHash()); } catch (e) {} this.setState({ adminDev: true, msg: 'Este equipo quedó autorizado como administrador: ya puedes abrir la pestaña Base.' }); }
+        try { const u = new URL(location.href); u.searchParams.delete('admin'); history.replaceState(null, '', u.toString()); } catch (e) {} }
       const ot = (P.get('ot') || '').trim(); if (ot) { pre.or = ot; this._tfOt = ot; } if (pre.link) pre.link = this.normLink(pre.link); const modo = (P.get('modo') || '').toLowerCase(); if (!ot && (modo === 'consulta' || modo === 'estimado')) { this._modo = modo; this._pre = true; this.setState(modo === 'consulta' ? { consOpen: true, step: 2, quote: this.emptyQ() } : { step: 2, quote: { ...this.emptyQ(), estimado: true, or: 'EST-' + new Date().toISOString().slice(2, 10).replace(/-/g, '') } }); }
       const saved = pre.or && !this._hashT ? (this.quoteStore()[pre.or] ? this.richest(this.quoteStore()[pre.or]) : (this.backupStore()[pre.or] || null)) : null;
       if (saved) { this._pre = true; this.setState({ step: saved.okP && saved.okS ? 4 : saved.okP ? 3 : 2, quote: { ...saved, ...pre, vehiculo: saved.vehiculo || pre.vehiculo, cliente: saved.cliente || pre.cliente }, parseMsg: 'Cotización de la OT ' + pre.or + ' recuperada.' }); throw 'done'; }
@@ -1386,6 +1389,8 @@ class Component extends DCLogic {
     } catch (e) { console.warn(e); this.setState({ msg: 'NUBE BLOQUEADA: ' + (/permission/i.test(e.message) ? 'las reglas de Firebase no permiten escribir en cotizador/ (falta agregar la regla).' : e.message) }); }
   }
   sigItems(q) { try { return JSON.stringify(this.clientPayload(q).q.items); } catch (e) { return ''; } }
+  // Equipo del administrador: la pestaña Base solo existe en navegadores que abrieron una vez el link con el código secreto.
+  adminHash() { return '9f2a55eb9abd8d40a26bc2387de86a878781fd9af2eec049a50382f5bb15cdeb'; }
   // Devuelve a TallerFLOW (la pestaña que abrió el cotizador) el link del cliente para guardarlo en el historial de la orden.
   notifyTF(url, tipo) {
     try { if (this._tfOt && !this.state.quote.estimado && window.opener && !window.opener.closed) { window.opener.postMessage({ tipo: tipo === 'partes' ? 'lns-cotizacion-partes' : 'lns-cotizacion', ot: this._tfOt, url, total: this._tot || '', ts: Date.now() }, 'https://lubensave2026.github.io'); this.setState({ msg: (tipo === 'partes' ? 'Cotización de repuestos enviada a TallerFLOW' : 'Link enviado a TallerFLOW') + ' (OT ' + this._tfOt + ').' }); } } catch (e) {}
@@ -1478,23 +1483,23 @@ class Component extends DCLogic {
     const meta = base ? base.meta : { rows: 0, models: 0, from: '', to: '' };
     const locked = !(q.okP && q.okS);
     return {
-      showBaseTab: !this._tfOt && !this._modo, consOpen: !!st.consOpen, toggleCons: () => this.setState(x => ({ consOpen: !x.consOpen })), consVeh: st.consVeh || '', consPieza: st.consPieza || '', setConsVeh: e => this.setState({ consVeh: e.target.value }), setConsPieza: e => this.setState({ consPieza: e.target.value }), hasConsVeh: !!(st.consVeh || '').trim(), hasConsPieza: !!(st.consPieza || '').trim(), clearConsVeh: () => this.setState({ consVeh: '' }), hasConsAlgo: !!((st.consVeh || '').trim() || (st.consPieza || '').trim()), clearConsTodo: () => this.setState({ consVeh: '', consPieza: '' }), clearConsPieza: () => this.setState({ consPieza: '' }), cons: st.consOpen ? this.consultar() : {},
+      showBaseTab: !!st.adminDev && !this._tfOt && !this._modo, consOpen: !!st.consOpen, toggleCons: () => this.setState(x => ({ consOpen: !x.consOpen })), consVeh: st.consVeh || '', consPieza: st.consPieza || '', setConsVeh: e => this.setState({ consVeh: e.target.value }), setConsPieza: e => this.setState({ consPieza: e.target.value }), hasConsVeh: !!(st.consVeh || '').trim(), hasConsPieza: !!(st.consPieza || '').trim(), clearConsVeh: () => this.setState({ consVeh: '' }), hasConsAlgo: !!((st.consVeh || '').trim() || (st.consPieza || '').trim()), clearConsTodo: () => this.setState({ consVeh: '', consPieza: '' }), clearConsPieza: () => this.setState({ consPieza: '' }), cons: st.consOpen ? this.consultar() : {},
       publishHist: () => this.publishHist(),
       cliPdf: st.clientOnly && !pr, canEdit: st.clientOnly && !pr, editSaved: () => this.editSaved(),
       loading: st.loading, showChrome: !st.clientOnly && !pr,
       headerSub: q.or ? 'OR ' + q.or + ' · ' + (q.vehiculo || '') : 'Zona 10',
-      isStep1: !st.loading && !pr && step === 1 && st.baseOpen, isStep2: !st.loading && !pr && step === 2, isStep3: !st.loading && !pr && step === 3, isStep4: !st.loading && !pr && step === 4 && !st.clientOnly,
+      isStep1: !st.loading && !pr && step === 1 && st.baseOpen && st.adminDev, isStep2: !st.loading && !pr && step === 2, isStep3: !st.loading && !pr && step === 3, isStep4: !st.loading && !pr && step === 4 && !st.clientOnly,
       showClient: !st.loading && step === 4,
       pageBg: pr ? '#fff' : '#f3f2f2', clientPad: pr ? '0' : st.clientOnly ? '0 0 24px' : '16px 24px 48px',
       tab1Bg: tab(1).bg, tab1Fg: tab(1).fg, tab2Bg: tab(2).bg, tab2Fg: tab(2).fg, tab3Bg: tab(3).bg, tab3Fg: tab(3).fg, tab4Bg: tab(4).bg, tab4Fg: tab(4).fg,
-      goStep1: () => this.setState({ step: 1 }), goStep2: () => this.setState({ step: 2 }), goStep3: () => this.setState(st => ({ step: 3, quote: this.withOps(st.quote) })), goStep4: () => this.setState({ step: 4 }),
+      goStep1: () => { if (st.adminDev) this.setState({ step: 1 }); }, goStep2: () => this.setState({ step: 2 }), goStep3: () => this.setState(st => ({ step: 3, quote: this.withOps(st.quote) })), goStep4: () => this.setState({ step: 4 }),
       okPartesMark: q.okP ? '✓' : '', okServMark: q.okS ? '✓' : '',
       meta: { ...meta, rowsFmt: (meta.rows || 0).toLocaleString('es-GT'), fromFmt: this.fd(meta.from), toFmt: this.fd(meta.to) },
       baseSrc: st.baseSrc, msg: st.msg, hasMsg: !!st.msg, onFile: e => this.onFile(e), settings: S,
       setTarifa: e => { const v = e.target.value; this.setState(s => ({ settings: { ...s.settings, tarifa: v, tarifaDesde: new Date().toISOString().slice(0, 10), r3: s.settings.tarifaDesde ? s.settings.r3 : s.settings.r3 } })); },
       tarifaDesdeFmt: S.tarifaDesde ? this.fd(S.tarifaDesde) : 'jul-2025',
       baseTabLabel: st.baseOpen ? 'Base' : 'Base · bloqueada',
-      isStep1Locked: !st.loading && !pr && step === 1 && !st.baseOpen,
+      isStep1Locked: !st.loading && !pr && step === 1 && !st.baseOpen && st.adminDev,
       pinNew: !st.pinHash || st.pinChanging, lockText: !st.pinHash ? 'Crea un PIN de 4 a 8 dígitos. Solo quien lo sepa podrá cambiar tarifas, márgenes, kits y cargar la base.' : st.pinChanging ? 'Escribe el PIN nuevo dos veces.' : 'Ingresa el PIN del jefe de taller.',
       unlockLabel: !st.pinHash ? 'Crear PIN y abrir' : st.pinChanging ? 'Guardar PIN nuevo' : 'Abrir Base',
       pin1: st.pin1, pin2: st.pin2,
