@@ -37,10 +37,12 @@
         </div>
       </div>
       <nav style="display: flex; flex: 1; min-width: 0; flex-wrap: wrap;">
+        <sc-if value="{{ showBaseTab }}" hint-placeholder-val="{{ true }}">
         <button onClick="{{ goStep1 }}" style="flex: 0.6; min-width: 120px; text-align: left; padding: 14px 18px; border: none; border-right: 2px solid #333; cursor: pointer; font: inherit; background: {{ tab1Bg }}; color: {{ tab1Fg }};">
           <div style="font-size: 11px; letter-spacing: 0.08em; opacity: 0.8;">00</div>
           <div style="font-weight: 800; font-size: 15px;">{{ baseTabLabel }}</div>
         </button>
+        </sc-if>
         <button onClick="{{ goStep2 }}" style="flex: 1; min-width: 160px; text-align: left; padding: 14px 18px; border: none; border-right: 2px solid #333; cursor: pointer; font: inherit; background: {{ tab2Bg }}; color: {{ tab2Fg }};">
           <div style="font-size: 11px; letter-spacing: 0.08em; opacity: 0.8;">01 · Asesor de partes</div>
           <div style="font-weight: 800; font-size: 15px;">Repuestos {{ okPartesMark }}</div>
@@ -1286,7 +1288,7 @@ class Component extends DCLogic {
   }
   notifyMod(q) {
     try {
-      if (!this._baseSnap || !this._tfOt) return;
+      if (!this._baseSnap || !this._tfOt || q.estimado) return;
       const d = this.diffQ(this._baseSnap, q); if (!d.P && !d.O) return;
       const t = []; if (d.P) t.push('Repuestos: ' + d.P + (d.P === 1 ? ' cambio' : ' cambios')); if (d.O) t.push('M/O: ' + d.O + (d.O === 1 ? ' cambio' : ' cambios'));
       this._baseSnap = this.snapQ(q);
@@ -1386,7 +1388,7 @@ class Component extends DCLogic {
   sigItems(q) { try { return JSON.stringify(this.clientPayload(q).q.items); } catch (e) { return ''; } }
   // Devuelve a TallerFLOW (la pestaña que abrió el cotizador) el link del cliente para guardarlo en el historial de la orden.
   notifyTF(url, tipo) {
-    try { if (this._tfOt && window.opener && !window.opener.closed) { window.opener.postMessage({ tipo: tipo === 'partes' ? 'lns-cotizacion-partes' : 'lns-cotizacion', ot: this._tfOt, url, total: this._tot || '', ts: Date.now() }, 'https://lubensave2026.github.io'); this.setState({ msg: (tipo === 'partes' ? 'Cotización de repuestos enviada a TallerFLOW' : 'Link enviado a TallerFLOW') + ' (OT ' + this._tfOt + ').' }); } } catch (e) {}
+    try { if (this._tfOt && !this.state.quote.estimado && window.opener && !window.opener.closed) { window.opener.postMessage({ tipo: tipo === 'partes' ? 'lns-cotizacion-partes' : 'lns-cotizacion', ot: this._tfOt, url, total: this._tot || '', ts: Date.now() }, 'https://lubensave2026.github.io'); this.setState({ msg: (tipo === 'partes' ? 'Cotización de repuestos enviada a TallerFLOW' : 'Link enviado a TallerFLOW') + ' (OT ' + this._tfOt + ').' }); } } catch (e) {}
   }
   copy(url, label) {
     (navigator.clipboard ? navigator.clipboard.writeText(url) : Promise.reject()).catch(() => window.prompt('Copia el link:', url));
@@ -1476,7 +1478,7 @@ class Component extends DCLogic {
     const meta = base ? base.meta : { rows: 0, models: 0, from: '', to: '' };
     const locked = !(q.okP && q.okS);
     return {
-      consOpen: !!st.consOpen, toggleCons: () => this.setState(x => ({ consOpen: !x.consOpen })), consVeh: st.consVeh || '', consPieza: st.consPieza || '', setConsVeh: e => this.setState({ consVeh: e.target.value }), setConsPieza: e => this.setState({ consPieza: e.target.value }), hasConsVeh: !!(st.consVeh || '').trim(), hasConsPieza: !!(st.consPieza || '').trim(), clearConsVeh: () => this.setState({ consVeh: '' }), hasConsAlgo: !!((st.consVeh || '').trim() || (st.consPieza || '').trim()), clearConsTodo: () => this.setState({ consVeh: '', consPieza: '' }), clearConsPieza: () => this.setState({ consPieza: '' }), cons: st.consOpen ? this.consultar() : {},
+      showBaseTab: !this._tfOt, consOpen: !!st.consOpen, toggleCons: () => this.setState(x => ({ consOpen: !x.consOpen })), consVeh: st.consVeh || '', consPieza: st.consPieza || '', setConsVeh: e => this.setState({ consVeh: e.target.value }), setConsPieza: e => this.setState({ consPieza: e.target.value }), hasConsVeh: !!(st.consVeh || '').trim(), hasConsPieza: !!(st.consPieza || '').trim(), clearConsVeh: () => this.setState({ consVeh: '' }), hasConsAlgo: !!((st.consVeh || '').trim() || (st.consPieza || '').trim()), clearConsTodo: () => this.setState({ consVeh: '', consPieza: '' }), clearConsPieza: () => this.setState({ consPieza: '' }), cons: st.consOpen ? this.consultar() : {},
       publishHist: () => this.publishHist(),
       cliPdf: st.clientOnly && !pr, canEdit: st.clientOnly && !pr, editSaved: () => this.editSaved(),
       loading: st.loading, showChrome: !st.clientOnly && !pr,
