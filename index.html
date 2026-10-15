@@ -1389,12 +1389,12 @@ class Component extends DCLogic {
     this.setState({ msg: 'Probando conexión con la nube…' });
     try {
       const db = await this.fbDb(); if (!db) { this.setState({ msg: 'NUBE NO DISPONIBLE: no hubo conexión con Firebase (internet, App Check o configuración).' }); return; }
-      const ref = db.ref('cotizador/prueba/' + this.newCode()), val = 'ok-' + Date.now();
+      const ref = db.ref('cotizador/presupuestos/_prueba-' + this.newCode()), val = 'ok-' + Date.now();
       await ref.set({ v: val, ts: Date.now() });
       const back = (await ref.once('value')).val();
       await ref.set(null);
-      this.setState({ msg: back && back.v === val ? 'NUBE OK: se pudo escribir, leer y borrar en cotizador/. Ya puedes activar el link corto.' : 'NUBE CON PROBLEMAS: se escribió pero no se pudo leer de vuelta.' });
-    } catch (e) { console.warn(e); this.setState({ msg: 'NUBE BLOQUEADA: ' + (/permission/i.test(e.message) ? 'las reglas de Firebase no permiten escribir en cotizador/ (falta agregar la regla).' : e.message) }); }
+      this.setState({ msg: back && back.v === val ? 'NUBE OK: se pudo escribir, leer y borrar en cotizador/presupuestos/. Ya puedes activar el link corto. (La prueba no revisa historial ni ajustes: esos se comprueban al publicar el historial.)' : 'NUBE CON PROBLEMAS: se escribió pero no se pudo leer de vuelta.' });
+    } catch (e) { console.warn(e); this.setState({ msg: 'NUBE BLOQUEADA: ' + (/permission/i.test(e.message) ? 'las reglas de Firebase no permiten escribir en cotizador/presupuestos/.' : e.message) }); }
   }
   sigItems(q) { try { return JSON.stringify(this.clientPayload(q).q.items); } catch (e) { return ''; } }
   // Equipo del administrador: la pestaña Base solo existe en navegadores que abrieron una vez el link con el código secreto.
