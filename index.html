@@ -647,7 +647,7 @@ class Component extends DCLogic {
     try {
       const P = new URLSearchParams(location.search), keys = ['or', 'link', 'placa', 'vehiculo', 'anio', 'cliente', 'tel', 'km', 'asesor'];
       const pre = {}; keys.forEach(k => { const v = (P.get(k) || '').trim(); if (v) pre[k] = v; });
-      const ot = (P.get('ot') || '').trim(); if (ot) { pre.or = ot; this._tfOt = ot; } if (pre.link) pre.link = this.normLink(pre.link);
+      const ot = (P.get('ot') || '').trim(); if (ot) { pre.or = ot; this._tfOt = ot; } if (pre.link) pre.link = this.normLink(pre.link); const modo = (P.get('modo') || '').toLowerCase(); if (!ot && (modo === 'consulta' || modo === 'estimado')) { this._modo = modo; this._pre = true; this.setState(modo === 'consulta' ? { consOpen: true, step: 2, quote: this.emptyQ() } : { step: 2, quote: { ...this.emptyQ(), estimado: true, or: 'EST-' + new Date().toISOString().slice(2, 10).replace(/-/g, '') } }); }
       const saved = pre.or && !this._hashT ? (this.quoteStore()[pre.or] ? this.richest(this.quoteStore()[pre.or]) : (this.backupStore()[pre.or] || null)) : null;
       if (saved) { this._pre = true; this.setState({ step: saved.okP && saved.okS ? 4 : saved.okP ? 3 : 2, quote: { ...saved, ...pre, vehiculo: saved.vehiculo || pre.vehiculo, cliente: saved.cliente || pre.cliente }, parseMsg: 'Cotización de la OT ' + pre.or + ' recuperada.' }); throw 'done'; }
       if (pre.or || pre.link) this._pre = true;
@@ -1478,7 +1478,7 @@ class Component extends DCLogic {
     const meta = base ? base.meta : { rows: 0, models: 0, from: '', to: '' };
     const locked = !(q.okP && q.okS);
     return {
-      showBaseTab: !this._tfOt, consOpen: !!st.consOpen, toggleCons: () => this.setState(x => ({ consOpen: !x.consOpen })), consVeh: st.consVeh || '', consPieza: st.consPieza || '', setConsVeh: e => this.setState({ consVeh: e.target.value }), setConsPieza: e => this.setState({ consPieza: e.target.value }), hasConsVeh: !!(st.consVeh || '').trim(), hasConsPieza: !!(st.consPieza || '').trim(), clearConsVeh: () => this.setState({ consVeh: '' }), hasConsAlgo: !!((st.consVeh || '').trim() || (st.consPieza || '').trim()), clearConsTodo: () => this.setState({ consVeh: '', consPieza: '' }), clearConsPieza: () => this.setState({ consPieza: '' }), cons: st.consOpen ? this.consultar() : {},
+      showBaseTab: !this._tfOt && !this._modo, consOpen: !!st.consOpen, toggleCons: () => this.setState(x => ({ consOpen: !x.consOpen })), consVeh: st.consVeh || '', consPieza: st.consPieza || '', setConsVeh: e => this.setState({ consVeh: e.target.value }), setConsPieza: e => this.setState({ consPieza: e.target.value }), hasConsVeh: !!(st.consVeh || '').trim(), hasConsPieza: !!(st.consPieza || '').trim(), clearConsVeh: () => this.setState({ consVeh: '' }), hasConsAlgo: !!((st.consVeh || '').trim() || (st.consPieza || '').trim()), clearConsTodo: () => this.setState({ consVeh: '', consPieza: '' }), clearConsPieza: () => this.setState({ consPieza: '' }), cons: st.consOpen ? this.consultar() : {},
       publishHist: () => this.publishHist(),
       cliPdf: st.clientOnly && !pr, canEdit: st.clientOnly && !pr, editSaved: () => this.editSaved(),
       loading: st.loading, showChrome: !st.clientOnly && !pr,
