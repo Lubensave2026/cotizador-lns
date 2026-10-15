@@ -197,12 +197,12 @@
             <div style="display: flex; flex-direction: column; gap: 8px;">
               <span style="font-size: 12px; text-transform: uppercase; letter-spacing: 0.08em; font-weight: 700;">Repuestos · {{ cons.P.n }} registros</span>
               <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); border-top: 2px solid #201e1d; border-bottom: 2px solid #201e1d;">
-                <div style="padding: 12px; display: flex; flex-direction: column;"><span style="font-size: 11px; text-transform: uppercase;">Más reciente</span><span style="font-size: 20px; font-weight: 800;">{{ cons.P.latest }}</span><span style="font-size: 12px; color: #605d5d;">{{ cons.P.latestD }}</span></div>
-                <div style="padding: 12px; display: flex; flex-direction: column;"><span style="font-size: 11px; text-transform: uppercase;">Más alto</span><span style="font-size: 20px; font-weight: 800;">{{ cons.P.max }}</span><span style="font-size: 12px; color: #605d5d;">{{ cons.P.maxD }}</span></div>
-                <div style="padding: 12px; display: flex; flex-direction: column;"><span style="font-size: 11px; text-transform: uppercase;">Promedio</span><span style="font-size: 20px; font-weight: 800;">{{ cons.P.avg }}</span><span style="font-size: 12px; color: #605d5d;">mín. {{ cons.P.min }}</span></div>
+                <div style="padding: 12px; display: flex; flex-direction: column;"><span style="font-size: 11px; text-transform: uppercase;">Más reciente</span><span style="font-size: 20px; font-weight: 800;">{{ cons.P.latest }}</span><span style="font-size: 12px; color: #605d5d;">{{ cons.P.latestD }}</span><span style="font-size: 13px; font-weight: 700;">{{ cons.P.latestH }}</span></div>
+                <div style="padding: 12px; display: flex; flex-direction: column;"><span style="font-size: 11px; text-transform: uppercase;">Más alto</span><span style="font-size: 20px; font-weight: 800;">{{ cons.P.max }}</span><span style="font-size: 12px; color: #605d5d;">{{ cons.P.maxD }}</span><span style="font-size: 13px; font-weight: 700;">{{ cons.P.maxH }}</span></div>
+                <div style="padding: 12px; display: flex; flex-direction: column;"><span style="font-size: 11px; text-transform: uppercase;">Promedio</span><span style="font-size: 20px; font-weight: 800;">{{ cons.P.avg }}</span><span style="font-size: 12px; color: #605d5d;">mín. {{ cons.P.min }}</span><span style="font-size: 13px; font-weight: 700;">{{ cons.P.avgH }}</span></div>
               </div>
               <sc-for list="{{ cons.P.rows }}" as="r" hint-placeholder-count="3">
-                <div style="display: grid; grid-template-columns: 84px minmax(0, 1fr) 96px; gap: 8px; font-size: 13px; padding: 6px 0; border-bottom: 1px solid var(--color-divider);"><span>{{ r.d }}</span><span>{{ r.desc }} · {{ r.veh }}</span><span style="text-align: right; font-weight: 700;">{{ r.amt }}</span></div>
+                <div style="display: grid; grid-template-columns: 84px minmax(0, 1fr) 64px 96px; gap: 8px; font-size: 13px; padding: 6px 0; border-bottom: 1px solid var(--color-divider);"><span>{{ r.d }}</span><span>{{ r.desc }} · {{ r.veh }}</span><span style="text-align: right; color: #605d5d;">{{ r.hrs }}</span><span style="text-align: right; font-weight: 700;">{{ r.amt }}</span></div>
               </sc-for>
             </div>
           </sc-if>
@@ -210,12 +210,12 @@
             <div style="display: flex; flex-direction: column; gap: 8px;">
               <span style="font-size: 12px; text-transform: uppercase; letter-spacing: 0.08em; font-weight: 700;">Mano de obra · {{ cons.O.n }} registros</span>
               <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); border-top: 2px solid #201e1d; border-bottom: 2px solid #201e1d;">
-                <div style="padding: 12px; display: flex; flex-direction: column;"><span style="font-size: 11px; text-transform: uppercase;">Más reciente</span><span style="font-size: 20px; font-weight: 800;">{{ cons.O.latest }}</span><span style="font-size: 12px; color: #605d5d;">{{ cons.O.latestD }}</span></div>
-                <div style="padding: 12px; display: flex; flex-direction: column;"><span style="font-size: 11px; text-transform: uppercase;">Más alto</span><span style="font-size: 20px; font-weight: 800;">{{ cons.O.max }}</span><span style="font-size: 12px; color: #605d5d;">{{ cons.O.maxD }}</span></div>
-                <div style="padding: 12px; display: flex; flex-direction: column;"><span style="font-size: 11px; text-transform: uppercase;">Promedio</span><span style="font-size: 20px; font-weight: 800;">{{ cons.O.avg }}</span><span style="font-size: 12px; color: #605d5d;">mín. {{ cons.O.min }}</span></div>
+                <div style="padding: 12px; display: flex; flex-direction: column;"><span style="font-size: 11px; text-transform: uppercase;">Más reciente</span><span style="font-size: 20px; font-weight: 800;">{{ cons.O.latest }}</span><span style="font-size: 12px; color: #605d5d;">{{ cons.O.latestD }}</span><span style="font-size: 13px; font-weight: 700;">{{ cons.O.latestH }}</span></div>
+                <div style="padding: 12px; display: flex; flex-direction: column;"><span style="font-size: 11px; text-transform: uppercase;">Más alto</span><span style="font-size: 20px; font-weight: 800;">{{ cons.O.max }}</span><span style="font-size: 12px; color: #605d5d;">{{ cons.O.maxD }}</span><span style="font-size: 13px; font-weight: 700;">{{ cons.O.maxH }}</span></div>
+                <div style="padding: 12px; display: flex; flex-direction: column;"><span style="font-size: 11px; text-transform: uppercase;">Promedio</span><span style="font-size: 20px; font-weight: 800;">{{ cons.O.avg }}</span><span style="font-size: 12px; color: #605d5d;">mín. {{ cons.O.min }}</span><span style="font-size: 13px; font-weight: 700;">{{ cons.O.avgH }}</span></div>
               </div>
               <sc-for list="{{ cons.O.rows }}" as="r" hint-placeholder-count="3">
-                <div style="display: grid; grid-template-columns: 84px minmax(0, 1fr) 96px; gap: 8px; font-size: 13px; padding: 6px 0; border-bottom: 1px solid var(--color-divider);"><span>{{ r.d }}</span><span>{{ r.desc }} · {{ r.veh }}</span><span style="text-align: right; font-weight: 700;">{{ r.amt }}</span></div>
+                <div style="display: grid; grid-template-columns: 84px minmax(0, 1fr) 64px 96px; gap: 8px; font-size: 13px; padding: 6px 0; border-bottom: 1px solid var(--color-divider);"><span>{{ r.d }}</span><span>{{ r.desc }} · {{ r.veh }}</span><span style="text-align: right; color: #605d5d;">{{ r.hrs }}</span><span style="text-align: right; font-weight: 700;">{{ r.amt }}</span></div>
               </sc-for>
             </div>
           </sc-if>
@@ -1203,12 +1203,12 @@ class Component extends DCLogic {
     const F = this.F(), run = filtroVeh => { const P = [], O = [];
       for (const x of this.recs) { if (filtroVeh && vt.length && !vt.every(t => tk(x[5] || '').includes(t))) continue;
         for (const l of (x[7] || [])) { const dk = tk(l[0]); if (!pz.every(t => dk.includes(t))) continue;
-          if (l[1] > 0 && !/^(CAMBIO|DESMONT|MONTAJE|REVISI|AJUSTE|REPARA|INSTALA|LIMPIEZA|RECTIFIC)/i.test(l[0])) P.push({ d: x[1], desc: l[0], veh: x[5], v: l[1] * F }); if (l[2] > 0) O.push({ d: x[1], desc: l[0], veh: x[5], v: l[2] * F }); } }
+          if (l[1] > 0 && !/^(CAMBIO|DESMONT|MONTAJE|REVISI|AJUSTE|REPARA|INSTALA|LIMPIEZA|RECTIFIC)/i.test(l[0])) P.push({ d: x[1], desc: l[0], veh: x[5], v: l[1] * F }); if (l[2] > 0) O.push({ d: x[1], desc: l[0], veh: x[5], v: l[2] * F, h: Math.round(l[2] / this.rateAt(x[1]) * 20) / 20 }); } }
       return { P, O }; };
     let r = run(true), fb = false; if (!r.P.length && !r.O.length && vt.length) { r = run(false); fb = true; }
     if (!r.P.length && !r.O.length) return { msg: 'No hay registros de “' + st.consPieza + '” en el historial.' };
-    const sum = L => { if (!L.length) return null; const byD = [...L].sort((a, b) => b.d.localeCompare(a.d) || b.v - a.v), hi = [...L].sort((a, b) => b.v - a.v || b.d.localeCompare(a.d))[0], lo = Math.min(...L.map(z => z.v)), avg = L.reduce((a, z) => a + z.v, 0) / L.length;
-      return { n: L.length, latest: this.fmt(byD[0].v), latestD: this.fd(byD[0].d) + ' · ' + byD[0].veh, max: this.fmt(hi.v), maxD: this.fd(hi.d) + ' · ' + hi.veh, avg: this.fmt(avg), min: this.fmt(lo), rows: byD.slice(0, 10).map(z => ({ d: this.fd(z.d), desc: z.desc, veh: z.veh, amt: this.fmt(z.v) })) }; };
+    const fh = h => h == null ? '' : h + ' h', sum = L => { if (!L.length) return null; const conH = L.filter(z => z.h != null); const byD = [...L].sort((a, b) => b.d.localeCompare(a.d) || b.v - a.v), hi = [...L].sort((a, b) => b.v - a.v || b.d.localeCompare(a.d))[0], lo = Math.min(...L.map(z => z.v)), avg = L.reduce((a, z) => a + z.v, 0) / L.length;
+      return { n: L.length, latest: this.fmt(byD[0].v), latestD: this.fd(byD[0].d) + ' · ' + byD[0].veh, latestH: fh(byD[0].h), max: this.fmt(hi.v), maxD: this.fd(hi.d) + ' · ' + hi.veh, maxH: fh(hi.h), avg: this.fmt(avg), min: this.fmt(lo), avgH: conH.length ? 'prom. ' + fh(Math.round(conH.reduce((a, z) => a + z.h, 0) / conH.length * 100) / 100) + ' · mín. ' + fh(Math.min(...conH.map(z => z.h))) + ' · máx. ' + fh(Math.max(...conH.map(z => z.h))) : '', rows: byD.slice(0, 10).map(z => ({ d: this.fd(z.d), desc: z.desc, veh: z.veh, hrs: fh(z.h), amt: this.fmt(z.v) })) }; };
     const P = sum(r.P), O = sum(r.O);
     return { msg: fb ? 'No hay registros para ese vehículo: se muestran los de todos los vehículos.' : (vt.length ? 'Solo vehículos que coinciden con “' + st.consVeh + '”.' : 'Todos los vehículos.'), hasP: !!P, P: P || {}, hasO: !!O, O: O || {} };
   }
