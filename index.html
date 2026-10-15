@@ -185,7 +185,7 @@
         <section style="display: flex; flex-direction: column; gap: 14px; border: 2px solid #000; padding: 18px; background: #fff;">
           <div style="display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap;">
             <h2 style="margin: 0; font-size: 18px; text-transform: uppercase;">Consultar precios del historial</h2>
-            <button class="btn btn-secondary" onClick="{{ toggleCons }}" style="font-size: 12px;">Cerrar</button>
+            <div style="display: flex; gap: 8px;"><sc-if value="{{ hasConsAlgo }}" hint-placeholder-val="{{ false }}"><button class="btn btn-secondary" onClick="{{ clearConsTodo }}" style="font-size: 12px;">Limpiar todo</button></sc-if><button class="btn btn-secondary" onClick="{{ toggleCons }}" style="font-size: 12px;">Cerrar</button></div>
           </div>
           <p style="margin: 0; font-size: 13px; color: #605d5d;">Sin crear presupuesto. Escribe el vehículo (marca y/o modelo) y la pieza u operación, por ejemplo “Hilux” y “pastillas de freno delanteras”. Precios con IVA.</p>
           <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px;">
@@ -1476,7 +1476,7 @@ class Component extends DCLogic {
     const meta = base ? base.meta : { rows: 0, models: 0, from: '', to: '' };
     const locked = !(q.okP && q.okS);
     return {
-      consOpen: !!st.consOpen, toggleCons: () => this.setState(x => ({ consOpen: !x.consOpen })), consVeh: st.consVeh || '', consPieza: st.consPieza || '', setConsVeh: e => this.setState({ consVeh: e.target.value }), setConsPieza: e => this.setState({ consPieza: e.target.value }), hasConsVeh: !!(st.consVeh || '').trim(), hasConsPieza: !!(st.consPieza || '').trim(), clearConsVeh: () => this.setState({ consVeh: '' }), clearConsPieza: () => this.setState({ consPieza: '' }), cons: st.consOpen ? this.consultar() : {},
+      consOpen: !!st.consOpen, toggleCons: () => this.setState(x => ({ consOpen: !x.consOpen })), consVeh: st.consVeh || '', consPieza: st.consPieza || '', setConsVeh: e => this.setState({ consVeh: e.target.value }), setConsPieza: e => this.setState({ consPieza: e.target.value }), hasConsVeh: !!(st.consVeh || '').trim(), hasConsPieza: !!(st.consPieza || '').trim(), clearConsVeh: () => this.setState({ consVeh: '' }), hasConsAlgo: !!((st.consVeh || '').trim() || (st.consPieza || '').trim()), clearConsTodo: () => this.setState({ consVeh: '', consPieza: '' }), clearConsPieza: () => this.setState({ consPieza: '' }), cons: st.consOpen ? this.consultar() : {},
       publishHist: () => this.publishHist(),
       cliPdf: st.clientOnly && !pr, canEdit: st.clientOnly && !pr, editSaved: () => this.editSaved(),
       loading: st.loading, showChrome: !st.clientOnly && !pr,
