@@ -669,6 +669,7 @@ class Component extends DCLogic {
   }
   quoteStore() { try { return JSON.parse(localStorage.getItem('lns-cotizaciones') || '{}'); } catch (e) { return {}; } }
   componentDidUpdate() {
+    this.precomprimirCliente();
     if (this.state.clientOnly || this.state.loading) return;
     if (this._lq !== this.state.quote || this._ls !== this.state.settings)
       try { this._lq = this.state.quote; this._ls = this.state.settings;
@@ -1156,7 +1157,7 @@ class Component extends DCLogic {
   }
   fbKey(ot) { return String(ot || '').trim().replace(/[^A-Za-z0-9_-]/g, '_'); }
   newCode() { const a = new Uint8Array(9); crypto.getRandomValues(a); return [...a].map(x => (x % 36).toString(36)).join(''); }
-  clientPayload(q) { return { q: { ...q, texto: '', items: (q.items || []).map(it => ({ ...it, parts: (it.parts || []).map(({ costo, mg, mgOn, ...l }) => l) })) }, s: { tarifa: this.state.settings.tarifa, iva: this.state.settings.iva } }; }
+  clientPayload(q) { return { q: { ...q, texto: '', items: (q.items || []).map(({ hist, pk, tpl, foto, ...it }) => ({ ...it, ...(foto ? { foto } : {}), parts: (it.parts || []).map(({ costo, mg, mgOn, adj, base, ...l }) => l) })) }, s: { tarifa: this.state.settings.tarifa, iva: this.state.settings.iva } }; }
   async saveFB(q) {
     try {
       if (!this._tfOt || q.estimado || !(q.items || []).length) return;
@@ -1357,6 +1358,7 @@ class Component extends DCLogic {
       const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'respaldo-antes-de-depurar-' + dia + '.json'; document.body.appendChild(a); a.click(); a.remove();
     } catch (e) { console.warn('respaldo archivo', e); }
   }
+  precomprimirCliente() { const q = this.state.quote; if (this._cz === q || !q.okP || !q.okS || this.state.clientOnly) return; this._cz = q; this.encZ(this.clientPayload(q)).then(z => { this._cliZ = { q, z }; }).catch(() => {}); }
   // Devuelve a TallerFLOW (la pestaña que abrió el cotizador) el link del cliente para guardarlo en el historial de la orden.
   notifyTF(url, tipo) {
     try { if (this._tfOt && window.opener && !window.opener.closed) { window.opener.postMessage({ tipo: tipo === 'partes' ? 'lns-cotizacion-partes' : 'lns-cotizacion', ot: this._tfOt, url, total: this._tot || '', ts: Date.now() }, 'https://lubensave2026.github.io'); this.setState({ msg: (tipo === 'partes' ? 'Cotización de repuestos enviada a TallerFLOW' : 'Link enviado a TallerFLOW') + ' (OT ' + this._tfOt + ').' }); } } catch (e) {}
@@ -1365,7 +1367,7 @@ class Component extends DCLogic {
     (navigator.clipboard ? navigator.clipboard.writeText(url) : Promise.reject()).catch(() => window.prompt('Copia el link:', url));
     this.setState({ copied: label }); setTimeout(() => this.setState({ copied: '' }), 2000);
   }
-  clientUrl() { const q = this.state.quote; const base = this._tfOt && this._k ? location.origin + location.pathname + '?ot=' + encodeURIComponent(this._tfOt) + '&k=' + this._k : location.href.split('#')[0]; return base + '#q=' + this.enc(this.clientPayload(q)); }
+  clientUrl() { const q = this.state.quote; const base = this._tfOt && this._k ? location.origin + location.pathname + '?ot=' + encodeURIComponent(this._tfOt) + '&k=' + this._k : location.href.split('#')[0]; const z = this._cliZ && this._cliZ.q === q ? this._cliZ.z : this.enc(this.clientPayload(q)); return base + '#q=' + z; }
   doPrint() {
     this.setState({ printing: true }, () => setTimeout(() => {
       const done = () => { this.setState({ printing: false }); window.removeEventListener('afterprint', done); };
@@ -1407,7 +1409,7 @@ class Component extends DCLogic {
         incOpen: false, incLabel: 'Ver desglose ▾',
         onInc: () => this.setState({ modal: it.id }),
         hasTplOpts: !!(it.tpl && it.tpl.cands.length > 1), tplK: it.tpl ? String(it.tpl.k) : '0',
-        tplOpts: it.tpl ? it.tpl.cands.map((c, k) => ({ v: String(k), label: st.serv.servicios[c].t + ' · ' + this.cap(st.serv.servicios[c].tipo) })) : [],
+        tplOpts: it.tpl && st.serv ? it.tpl.cands.map((c, k) => ({ v: String(k), label: st.serv.servicios[c].t + ' · ' + this.cap(st.serv.servicios[c].tipo) })) : [],
         onTpl: e => { const k = +e.target.value; this.setState(s => ({ quote: { ...s.quote, okP: null, okS: null, items: s.quote.items.map((x, n) => n === i ? this.itemFromTpl(x.tpl.cands, k, x.urg, x.nota, x.id) : x) } })); },
         hasNota: !!(it.nota || '').trim(),
         srcText: it.src && it.src.tpl ? 'Plantilla oficial · ' + it.src.t : it.src && it.src.pdf ? 'Precios tomados del PDF' : it.src && it.src.est ? 'Estimado · ref. ' + it.src.est.model + ' OR ' + it.src.or + ' · rango Q' + it.src.est.min.toLocaleString('es-GT') + '–Q' + it.src.est.max.toLocaleString('es-GT') + ' en ' + it.src.est.n + ' vehículos ' + (it.src.est.sb ? 'de la misma marca' : 'de otras marcas') : it.src ? 'Ref. OR ' + it.src.or + ' · ' + this.fd(it.src.d) + ' · año ' + it.src.y + (it.src.adj ? ' · repuestos +' + it.src.adj + '%' : '') : 'Sin historial de “' + it.name + '” para ' + (q.vehiculo || 'este vehículo') + ' — ingresa costo de: ' + ((it.parts || []).filter(l => (l.desc || '').trim()).map(l => l.desc).join(', ') || 'los repuestos que lleve') + ', y horas en Mano de obra',
