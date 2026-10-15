@@ -189,8 +189,8 @@
           </div>
           <p style="margin: 0; font-size: 13px; color: #605d5d;">Sin crear presupuesto. Escribe el vehículo (marca y/o modelo) y la pieza u operación, por ejemplo “Hilux” y “pastillas de freno delanteras”. Precios con IVA.</p>
           <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px;">
-            <div class="field"><label>Vehículo</label><input class="input" value="{{ consVeh }}" onChange="{{ setConsVeh }}" placeholder="Ej. Toyota Hilux"></div>
-            <div class="field"><label>Pieza u operación</label><input class="input" value="{{ consPieza }}" onChange="{{ setConsPieza }}" placeholder="Ej. pastillas de freno delanteras"></div>
+            <div class="field" style="position: relative;"><label>Vehículo</label><input class="input" value="{{ consVeh }}" onChange="{{ setConsVeh }}" placeholder="Ej. Toyota Hilux" style="padding-right: 40px;"><sc-if value="{{ hasConsVeh }}" hint-placeholder-val="{{ false }}"><button onClick="{{ clearConsVeh }}" aria-label="Borrar vehículo" title="Borrar vehículo" style="position: absolute; right: 4px; bottom: 4px; width: 32px; height: 32px; border: none; background: transparent; font-size: 22px; line-height: 1; cursor: pointer; color: #605d5d;">×</button></sc-if></div>
+            <div class="field" style="position: relative;"><label>Pieza u operación</label><input class="input" value="{{ consPieza }}" onChange="{{ setConsPieza }}" placeholder="Ej. pastillas de freno delanteras" style="padding-right: 40px;"><sc-if value="{{ hasConsPieza }}" hint-placeholder-val="{{ false }}"><button onClick="{{ clearConsPieza }}" aria-label="Borrar pieza u operación" title="Borrar pieza u operación" style="position: absolute; right: 4px; bottom: 4px; width: 32px; height: 32px; border: none; background: transparent; font-size: 22px; line-height: 1; cursor: pointer; color: #605d5d;">×</button></sc-if></div>
           </div>
           <sc-if value="{{ cons.msg }}" hint-placeholder-val="{{ false }}"><p style="margin: 0; font-size: 14px; font-weight: 600;">{{ cons.msg }}</p></sc-if>
           <sc-if value="{{ cons.hasP }}" hint-placeholder-val="{{ false }}">
@@ -1476,7 +1476,7 @@ class Component extends DCLogic {
     const meta = base ? base.meta : { rows: 0, models: 0, from: '', to: '' };
     const locked = !(q.okP && q.okS);
     return {
-      consOpen: !!st.consOpen, toggleCons: () => this.setState(x => ({ consOpen: !x.consOpen })), consVeh: st.consVeh || '', consPieza: st.consPieza || '', setConsVeh: e => this.setState({ consVeh: e.target.value }), setConsPieza: e => this.setState({ consPieza: e.target.value }), cons: st.consOpen ? this.consultar() : {},
+      consOpen: !!st.consOpen, toggleCons: () => this.setState(x => ({ consOpen: !x.consOpen })), consVeh: st.consVeh || '', consPieza: st.consPieza || '', setConsVeh: e => this.setState({ consVeh: e.target.value }), setConsPieza: e => this.setState({ consPieza: e.target.value }), hasConsVeh: !!(st.consVeh || '').trim(), hasConsPieza: !!(st.consPieza || '').trim(), clearConsVeh: () => this.setState({ consVeh: '' }), clearConsPieza: () => this.setState({ consPieza: '' }), cons: st.consOpen ? this.consultar() : {},
       publishHist: () => this.publishHist(),
       cliPdf: st.clientOnly && !pr, canEdit: st.clientOnly && !pr, editSaved: () => this.editSaved(),
       loading: st.loading, showChrome: !st.clientOnly && !pr,
