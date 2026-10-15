@@ -117,6 +117,7 @@
           <div style="display: flex; gap: 8px; flex-wrap: wrap;">
             <button class="btn btn-secondary" onClick="{{ exportHist }}">Descargar respaldo</button>
             <button class="btn btn-secondary" onClick="{{ publishHist }}">Publicar historial en la nube</button>
+            <button class="btn btn-secondary" onClick="{{ probarNube }}">Probar conexión con la nube</button>
             <label class="btn btn-secondary" style="cursor: pointer;"><span>Restaurar respaldo</span><input type="file" accept=".json" onChange="{{ importHist }}" style="display: none;"></label>
           </div>
           <label style="display: flex; align-items: center; gap: 10px; padding: 14px 16px; background: #000; color: #FFE500; font-weight: 800; cursor: pointer; width: fit-content;">
@@ -134,6 +135,7 @@
             <div class="field"><label>Alza anual repuestos %</label><input class="input" inputmode="decimal" value="{{ settings.pct }}" onChange="{{ setPct }}"></div>
             <div class="field"><label>Aplicar si el precio tiene más de (meses)</label><input class="input" inputmode="decimal" value="{{ settings.meses }}" onChange="{{ setMeses }}"></div>
           </div>
+          <label style="display: flex; gap: 8px; align-items: center; font-size: 14px; cursor: pointer;"><input type="checkbox" checked="{{ settings.linkCorto }}" onChange="{{ setLinkCorto }}" style="width: 18px; height: 18px; accent-color: #000;"> Link corto para el cliente (usa la nube; activar solo después de “Probar conexión con la nube”)</label>
           <label style="display: flex; gap: 8px; align-items: center; font-size: 14px; cursor: pointer;"><input type="checkbox" checked="{{ settings.usarPdf }}" onChange="{{ setUsarPdf }}" style="width: 18px; height: 18px; accent-color: #000;"> Si el PDF ya trae precios, usar los del PDF (si no, siempre historial)</label>
           <span style="font-size: 13px; font-weight: 600;">Tarifa histórica (para convertir la M.O. antigua a horas)</span>
           <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px;">
@@ -608,7 +610,7 @@
 </x-dc>
 <script type="text/x-dc" data-dc-script>
 class Component extends DCLogic {
-  defS() { return { usarPdf: true, anos: '3', copias: '3', margen: '50', tarifa: '600', tarifaFija: true, iva: '12', pct: '8', meses: '6', r1: '425', r2: '500', r3: '600',
+  defS() { return { linkCorto: false, usarPdf: true, anos: '3', copias: '3', margen: '50', tarifa: '600', tarifaFija: true, iva: '12', pct: '8', meses: '6', r1: '425', r2: '500', r3: '600',
     paquetes: 'FRENOS DELANTEROS = Pastillas de freno delanteras; Líquido de frenos; Rectificado de discos | Cambio de pastillas delanteras; Desmontaje de discos delanteros\nFRENOS TRASEROS = Pastillas de freno traseras; Líquido de frenos | Cambio de pastillas traseras; Desmontaje de discos traseros\nBALATAS TRASERAS = Balatas traseras; Líquido de frenos | Cambio de balatas traseras\nAMORTIGUADORES DELANTEROS = Amortiguadores delanteros; Bases de amortiguador | Cambio de amortiguadores delanteros\nAMORTIGUADORES TRASEROS = Amortiguadores traseros | Cambio de amortiguadores traseros\nBATERIA = Batería | Cambio de batería\nBUJIAS = Bujías | Cambio de bujías\nCLUTCH = Kit de clutch; Aceite de transmisión | Desmontaje de caja; Cambio de clutch\nCABEZALES DIRECCION = Cabezales de dirección | Cambio de cabezales de dirección; Alineación\nTERMINALES = Terminales de dirección | Cambio de terminales; Alineación\nROTULAS = Rótulas | Cambio de rótulas; Alineación\nBUJES BARRA ESTABILIZADORA = Bujes de barra estabilizadora | Cambio de bujes de barra estabilizadora\nBOMBA DE AGUA = Bomba de agua; Refrigerante | Cambio de bomba de agua\nTERMOSTATO = Termostato; Refrigerante | Cambio de termostato\nRADIADOR = Radiador; Refrigerante | Cambio de radiador\nFUGA REFRIGERANTE = Refrigerante | Cambio de refrigerante; Purgado de sistema de enfriamiento\nBRIDA AGUA = Brida de agua; Empaque de brida; Sellador | Cambio de brida de agua\nMANGUERA RADIADOR = Manguera de radiador; Refrigerante | Cambio de manguera de radiador; Purgado de sistema de enfriamiento\nFUGA ACEITE MOTOR = Empaque o sello; Sellador; Aceite de motor; Filtro de aceite | Cambio de empaque o sello; Cambio de aceite y filtro\nACEITE DIFERENCIAL = Aceite de diferencial; Empaque o sello de tapón | Cambio de aceite de diferencial\nACEITE TRANSMISION = Aceite de transmisión | Cambio de aceite de transmisión\nBANDA = Banda de accesorios | Cambio de banda de accesorios\nCORREA TIEMPO = Kit de distribución; Bomba de agua; Refrigerante | Cambio de kit de distribución\nLLANTAS = Llantas | Montaje y balanceo de llantas; Alineación\nESCOBILLAS = Escobillas limpiaparabrisas | Cambio de escobillas\nFILTRO AIRE ACONDICIONADO = Filtro de aire acondicionado | Cambio de filtro de aire acondicionado',
     kits: 'RADIADOR = Refrigerante; Abrazaderas; Wipe\nTUBERIA AC = Gas freón; Aceite para compresor\nCOMPRESOR AC = Gas freón; Aceite para compresor\nBOMBA DE AGUA = Refrigerante; Wipe\nTERMOSTATO = Refrigerante\nFRENOS = Líquido de frenos\nCARGADORES = Materiales auxiliares' }; }
   sample() {
@@ -1158,7 +1160,8 @@ class Component extends DCLogic {
   fbKey(ot) { return String(ot || '').trim().replace(/[^A-Za-z0-9_-]/g, '_'); }
   newCode() { const a = new Uint8Array(9); crypto.getRandomValues(a); return [...a].map(x => (x % 36).toString(36)).join(''); }
   clientPayload(q) { return { q: { ...q, texto: '', items: (q.items || []).map(({ hist, pk, tpl, foto, ...it }) => ({ ...it, ...(foto ? { foto } : {}), parts: (it.parts || []).map(({ costo, mg, mgOn, adj, base, ...l }) => l) })) }, s: { tarifa: this.state.settings.tarifa, iva: this.state.settings.iva } }; }
-  async saveFB(q) {
+  saveFB(q) { return (this._savingFB = this.saveFB0(q)); }
+  async saveFB0(q) {
     try {
       if (!this._tfOt || q.estimado || !(q.items || []).length) return;
       this._k = this._k || this.newCode();
@@ -1166,6 +1169,7 @@ class Component extends DCLogic {
       const key = this.fbKey(this._tfOt);
       await db.ref('cotizador/presupuestos/' + key + '-' + this._k).set({ ot: String(this._tfOt), cliente: q.cliente || '', vehiculo: q.vehiculo || '', placa: q.placa || '', ts: Date.now(), estado: 'completo', json: JSON.stringify(this.clientPayload(q)) });
       await db.ref('cotizador/indice/' + key).set({ ts: Date.now(), estado: 'completo' });
+      this._cloudSig = this.sigItems(q); this._cloudKey = key + '-' + this._k;
       this.setState({ msg: 'Presupuesto de la OT ' + this._tfOt + ' guardado en la nube.' });
     } catch (e) { console.warn(e); this.setState({ msg: 'No se pudo guardar en la nube: ' + e.message }); }
   }
@@ -1173,11 +1177,11 @@ class Component extends DCLogic {
     try {
       if (!this._tfOt || /^#[qt]=/.test(location.hash)) return;
       const k = (new URLSearchParams(location.search).get('k') || '').trim(), key = this.fbKey(this._tfOt);
-      const db = await this.fbDb(); if (!db) return;
+      const db = await this.fbDb(); if (!db) { if (k) window.alert('No se pudo cargar el presupuesto. Revisa tu conexión a internet e intenta de nuevo, o pide a Lube N Save que te lo envíe otra vez.'); return; }
       if (k) {
         const snap = await db.ref('cotizador/presupuestos/' + key + '-' + k).once('value'), r = snap.val();
         if (r && r.json) { const d = JSON.parse(r.json); this._k = k; this.setState({ clientOnly: true, step: 4, quote: d.q, settings: { ...this.defS(), ...d.s }, loading: false, savedFB: { ot: this._tfOt, k } }); }
-        else this.setState({ parseMsg: 'El código del presupuesto guardado no coincide con la OT ' + this._tfOt + '.' });
+        else { this.setState({ parseMsg: 'El código del presupuesto guardado no coincide con la OT ' + this._tfOt + '.' }); window.alert('No se encontró este presupuesto. Pide a Lube N Save que te envíe el link otra vez.'); }
         return;
       }
       const ix = (await db.ref('cotizador/indice/' + key).once('value')).val();
@@ -1367,6 +1371,19 @@ class Component extends DCLogic {
       if (document.title !== nuevo) document.title = nuevo;
     } catch (e) {}
   }
+  // Prueba de escritura/lectura/borrado en cotizador/prueba: confirma que la regla "cotizador" está abierta en Firebase.
+  async probarNube() {
+    this.setState({ msg: 'Probando conexión con la nube…' });
+    try {
+      const db = await this.fbDb(); if (!db) { this.setState({ msg: 'NUBE NO DISPONIBLE: no hubo conexión con Firebase (internet, App Check o configuración).' }); return; }
+      const ref = db.ref('cotizador/prueba/' + this.newCode()), val = 'ok-' + Date.now();
+      await ref.set({ v: val, ts: Date.now() });
+      const back = (await ref.once('value')).val();
+      await ref.set(null);
+      this.setState({ msg: back && back.v === val ? 'NUBE OK: se pudo escribir, leer y borrar en cotizador/. Ya puedes activar el link corto.' : 'NUBE CON PROBLEMAS: se escribió pero no se pudo leer de vuelta.' });
+    } catch (e) { console.warn(e); this.setState({ msg: 'NUBE BLOQUEADA: ' + (/permission/i.test(e.message) ? 'las reglas de Firebase no permiten escribir en cotizador/ (falta agregar la regla).' : e.message) }); }
+  }
+  sigItems(q) { try { return JSON.stringify(this.clientPayload(q).q.items); } catch (e) { return ''; } }
   // Devuelve a TallerFLOW (la pestaña que abrió el cotizador) el link del cliente para guardarlo en el historial de la orden.
   notifyTF(url, tipo) {
     try { if (this._tfOt && window.opener && !window.opener.closed) { window.opener.postMessage({ tipo: tipo === 'partes' ? 'lns-cotizacion-partes' : 'lns-cotizacion', ot: this._tfOt, url, total: this._tot || '', ts: Date.now() }, 'https://lubensave2026.github.io'); this.setState({ msg: (tipo === 'partes' ? 'Cotización de repuestos enviada a TallerFLOW' : 'Link enviado a TallerFLOW') + ' (OT ' + this._tfOt + ').' }); } } catch (e) {}
@@ -1375,7 +1392,7 @@ class Component extends DCLogic {
     (navigator.clipboard ? navigator.clipboard.writeText(url) : Promise.reject()).catch(() => window.prompt('Copia el link:', url));
     this.setState({ copied: label }); setTimeout(() => this.setState({ copied: '' }), 2000);
   }
-  clientUrl() { const q = this.state.quote; const base = this._tfOt && this._k ? location.origin + location.pathname + '?ot=' + encodeURIComponent(this._tfOt) + '&k=' + this._k : location.href.split('#')[0]; const z = this._cliZ && this._cliZ.q === q ? this._cliZ.z : this.enc(this.clientPayload(q)); return base + '#q=' + z; }
+  clientUrl() { const q = this.state.quote; if (this.state.settings.linkCorto && this._tfOt && this._k && this._cloudSig && this._cloudSig === this.sigItems(q)) return location.origin + location.pathname + '?ot=' + encodeURIComponent(this._tfOt) + '&k=' + this._k; const base = this._tfOt && this._k ? location.origin + location.pathname + '?ot=' + encodeURIComponent(this._tfOt) + '&k=' + this._k : location.href.split('#')[0]; const z = this._cliZ && this._cliZ.q === q ? this._cliZ.z : this.enc(this.clientPayload(q)); return base + '#q=' + z; }
   doPrint() {
     this.setState({ printing: true }, () => setTimeout(() => {
       const done = () => { this.setState({ printing: false }); window.removeEventListener('afterprint', done); };
@@ -1488,7 +1505,7 @@ class Component extends DCLogic {
       changePin: () => this.setState({ baseOpen: false, pinChanging: true, pin1: '', pin2: '' }), setMargen: e => this.setS('margen', e.target.value), setIva: e => this.setS('iva', e.target.value), setPct: e => this.setS('pct', e.target.value), setMeses: e => this.setS('meses', e.target.value),
       setR1: e => this.setS('r1', e.target.value), setR2: e => this.setS('r2', e.target.value), setR3: e => this.setS('r3', e.target.value),
       onPdf: e => this.onPdf(e), tarifaIvaFmt: this.fmt(T * (1 + IVA)), onServFile: e => this.onServFile(e), servSrc: st.servSrc || '—', servCount: st.serv ? st.serv.servicios.length : 0,
-      tablaText: st.serv ? Object.entries(st.serv.tabla).map(([k, v]) => this.cap(k) + ' ' + v.l.length).join(', ') : '—', demoPdf: e => { e.preventDefault(); e.stopPropagation(); this.loadDemoPdf(); }, setUsarPdf: e => this.setS('usarPdf', e.target.checked), setKits: e => this.setS('kits', e.target.value), setPaquetes: e => this.setS('paquetes', e.target.value), setAsesor: e => this.setQ({ asesor: e.target.value }),
+      tablaText: st.serv ? Object.entries(st.serv.tabla).map(([k, v]) => this.cap(k) + ' ' + v.l.length).join(', ') : '—', demoPdf: e => { e.preventDefault(); e.stopPropagation(); this.loadDemoPdf(); }, setUsarPdf: e => this.setS('usarPdf', e.target.checked), setLinkCorto: e => this.setS('linkCorto', e.target.checked), probarNube: () => this.probarNube(), setKits: e => this.setS('kits', e.target.value), setPaquetes: e => this.setS('paquetes', e.target.value), setAsesor: e => this.setQ({ asesor: e.target.value }),
       hasAsesor: !!(q.asesor || '').trim(), pdfLabel: st.pdfName ? 'Cambiar PDF (' + st.pdfName + ')' : 'Elegir PDF', armar: () => this.armar(),
       parseMsg: st.parseMsg, hasParseMsg: !!st.parseMsg,
       buscar: st.buscar || '', setBuscar: e => this.setState({ buscar: e.target.value }), clearBuscar: () => this.setState({ buscar: '' }), hasBuscar: !!(st.buscar || '').trim(),
@@ -1522,7 +1539,7 @@ class Component extends DCLogic {
       confirmServ: () => { if (q.okS) this.setState({ step: 4 }); else { this.setQ({ okS: this.stamp() }); this.notifyMod(q); if (q.okP) { this.saveToHist(q); this.saveFB(q); } } },
       locked, lockMsg: !q.okP ? 'Falta que el asesor de partes confirme los repuestos.' : 'Falta que el asesor de servicio confirme la mano de obra.',
       copyLabel: st.copied === 'cli' ? 'Link copiado ✓' : 'Copiar link para cliente',
-      copyLink: () => { const u = this.clientUrl(); this.copy(u, 'cli'); this.notifyTF(u); },
+      copyLink: async () => { if (S.linkCorto && this._savingFB) await Promise.race([this._savingFB, new Promise(r => setTimeout(r, 4000))]); const u = this.clientUrl(); this.copy(u, 'cli'); this.notifyTF(u); },
       sendWa: () => { const tel = (q.tel || '').replace(/\D/g, ''); const msg = 'Lube N Save Zona 10' + String.fromCharCode(10) + 'Presupuesto No. ' + q.or + ' · ' + q.vehiculo + (q.placa ? ' · ' + q.placa : '') + String.fromCharCode(10) + 'Elija qué trabajos realizar aquí: ' + (this._cu = this.clientUrl()); this.notifyTF(this._cu);
         window.open('https://wa.me/' + (tel ? (tel.length === 8 ? '502' + tel : tel) : '') + '?text=' + encodeURIComponent(msg), '_blank'); },
       doPrint: () => this.doPrint(),
