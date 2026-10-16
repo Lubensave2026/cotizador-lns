@@ -664,8 +664,8 @@ class Component extends DCLogic {
     if (m) {
       try {
         const d = await this.decAny(m[2]);
-        if (m[1] === 'q') { this.setState({ clientOnly: true, step: 4, quote: d.q, settings: { ...this.defS(), ...d.s }, loading: false }); return; }
-        this._hashT = true; d.q = this.withOps(this.richest(d.q)); if (d.q.okP) this._baseSnap = this.snapQ(d.q); this.setState({ quote: d.q, settings: { ...this.defS(), ...d.s }, step: d.q.okP ? 3 : 2 });
+        if (m[1] === 'q') { d.q = this.limpiarQuote(d.q); this.setState({ clientOnly: true, step: 4, quote: d.q, settings: { ...this.defS(), ...d.s }, loading: false }); return; }
+        this._hashT = true; d.q = this.withOps(this.richest(this.limpiarQuote(d.q))); if (d.q.okP) this._baseSnap = this.snapQ(d.q); this.setState({ quote: d.q, settings: { ...this.defS(), ...d.s }, step: d.q.okP ? 3 : 2 });
       } catch (e) { console.warn('link inválido', e); }
     } else {
       try { const saved = JSON.parse(localStorage.getItem('lns-cotizador-v2') || 'null'); if (saved) { const st = { ...this.defS(), ...(saved.settings || {}) }; let q = saved.quote;
@@ -818,7 +818,7 @@ class Component extends DCLogic {
       for (let p = 1; p <= doc.numPages; p++) {
         const tc = await (await doc.getPage(p)).getTextContent();
         const rows = {};
-        tc.items.forEach(it => { if (!it.str) return; const y = Math.round(it.transform[5] * 2) / 2; (rows[y] = rows[y] || []).push(it); });
+        tc.items.forEach(it0 => { const it = { ...it0, str: this.glifos(it0.str) }; if (!it.str) return; const y = Math.round(it.transform[5] * 2) / 2; (rows[y] = rows[y] || []).push(it); });
         pages.push(Object.keys(rows).map(Number).sort((a, b) => b - a).map(y => {
           const its = rows[y].sort((a, b) => a.transform[4] - b.transform[4]);
           const r = { y, full: '', A: '', C: '', N: [] }; let last = null, lastAll = null;
@@ -1115,7 +1115,7 @@ class Component extends DCLogic {
   }
   armar() { this._real = true; try { this.armar0(); } finally { this._real = false; } }
   armar0() {
-    const text = this.state.quote.texto || ''; if (!this.state.base || !text.trim()) return;
+    const text = this.glifos(this.state.quote.texto || ''); if (!this.state.base || !text.trim()) return;
     if (/Puntos\s+(Urgentes|Sugeridos)/i.test(text)) { this.fromPdf(this.parseText(text)); return; }
     if (this.state.quote.estimado) this.setQ({ estimado: false });
     const { q: dq, vk: dvk } = this.detect(text);
@@ -1220,7 +1220,7 @@ class Component extends DCLogic {
       const db = await this.fbDb(); if (!db) { if (k) fallo('No se pudo cargar el presupuesto. Revisa tu conexión a internet e intenta de nuevo, o pide a Lube N Save que te lo envíe otra vez.'); return; }
       if (k) {
         const r = await this.fbGet(db, 'cotizador/presupuestos/' + key + '-' + k);
-        if (r && r.json) { const d = JSON.parse(r.json); this._k = k; this.setState({ clientOnly: true, step: 4, quote: d.q, settings: { ...this.defS(), ...d.s }, loading: false, cargaNube: false, savedFB: { ot: this._tfOt, k } }); }
+        if (r && r.json) { const d = JSON.parse(r.json); this._k = k; d.q = this.limpiarQuote(d.q); this.setState({ clientOnly: true, step: 4, quote: d.q, settings: { ...this.defS(), ...d.s }, loading: false, cargaNube: false, savedFB: { ot: this._tfOt, k } }); }
         else fallo('No se encontró este presupuesto. Pide a Lube N Save que te envíe el link otra vez.');
         return;
       }
@@ -1440,6 +1440,13 @@ class Component extends DCLogic {
   }
   // Al confirmar repuestos y mano de obra: guardar en la nube y dejar el link del cliente en la orden de TallerFLOW, sin depender de que alguien lo copie.
   async avisarLinkCliente(q) { try { await Promise.race([this.saveFB(q), new Promise(r => setTimeout(r, 12000))]); await new Promise(r => setTimeout(r, 600)); this.notifyTF(this.clientUrl()); } catch (e) {} }
+  // Glifos de la fuente de iconos del PDF de ClearMechanic: paréntesis y guion salen como caracteres privados (cuadro vacío). Se convierten; los demás se quitan.
+  glifos(t) { return String(t == null ? '' : t).replace(//g, '(').replace(//g, ')').replace(//g, '-').replace(/[-]/g, ''); }
+  limpiarQuote(q) {
+    if (!q || !q.items) return q;
+    const g = x => this.glifos(x);
+    return { ...q, items: q.items.map(it => ({ ...it, name: g(it.name), nota: g(it.nota), parts: (it.parts || []).map(l => ({ ...l, desc: g(l.desc) })), ops: (it.ops || []).map(l => ({ ...l, desc: g(l.desc) })) })) };
+  }
   // Devuelve a TallerFLOW (la pestaña que abrió el cotizador) el link del cliente para guardarlo en el historial de la orden.
   notifyTF(url, tipo) {
     try { if (this._tfOt && !this.state.quote.estimado && window.opener && !window.opener.closed) { window.opener.postMessage({ tipo: tipo === 'partes' ? 'lns-cotizacion-partes' : 'lns-cotizacion', ot: this._tfOt, url, total: this._tot || '', ts: Date.now() }, 'https://lubensave2026.github.io'); this.setState({ msg: (tipo === 'partes' ? 'Cotización de repuestos enviada a TallerFLOW' : 'Link enviado a TallerFLOW') + ' (OT ' + this._tfOt + ').' }); } } catch (e) {}
