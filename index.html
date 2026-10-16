@@ -568,6 +568,32 @@
         </div>
       </sc-if>
       <p style="font-size: 12px; color: #605d5d; padding: 16px 0; margin: 0;">Precios en quetzales con IVA incluido. Mano de obra a tarifa flat rate. Presupuesto válido por 15 días; repuestos sujetos a disponibilidad.</p>
+      <sc-if value="{{ teamView }}" hint-placeholder-val="{{ false }}"><button class="btn btn-secondary" onClick="{{ toggleListados }}" style="margin: 0 0 12px; font-size: 13px;">{{ listadosLabel }}</button></sc-if>
+      <sc-if value="{{ showListadosCli }}" hint-placeholder-val="{{ false }}">
+        <p style="margin: 0 0 8px; font-size: 13px; background: #f3f2f2; padding: 8px 10px; border-left: 3px solid #FFE500;">Marca “Sí, realizar” o “Ahora no” en cada trabajo según lo que el cliente aprobó. Los listados de abajo se actualizan con esa selección.</p>
+        <section style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 0; border-top: 2px solid #201e1d; border-bottom: 2px solid #201e1d; background: #fff;">
+        <div style="grid-column: 1 / -1; padding: 12px 16px; border-bottom: 1px solid var(--color-divider); display: flex; flex-direction: column; gap: 2px;">
+          <span style="font-size: 15px; font-weight: 800; text-transform: uppercase;">Listados para TallerFLOW · OT {{ quote.or }}</span>
+          <span style="font-size: 13px; color: #605d5d;">Solo lo marcado “Sí, realizar” · {{ exp.countText }}. Texto separado por tabulación, sin encabezados: copia y pega directo en TallerFLOW.</span>
+        </div>
+        <div style="padding: 14px 16px; display: flex; flex-direction: column; gap: 8px; border-right: 1px solid var(--color-divider);">
+          <div style="display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap;">
+            <span style="font-size: 12px; text-transform: uppercase; letter-spacing: 0.08em; font-weight: 600;">Repuestos y subcontratos · {{ exp.nP }}</span>
+            <button class="btn" onClick="{{ exp.copyP }}" disabled="{{ exp.noP }}" style="background: #000; color: #FFE500; font-weight: 800;" style-hover="background: #2d2b2b;">{{ exp.copyPLabel }}</button>
+          </div>
+          <span style="font-size: 11px; color: #605d5d;">Cantidad ⇥ Descripción ⇥ Especificación</span>
+          <textarea class="input" readonly="{{ true }}" value="{{ exp.txtP }}" style="min-height: 140px; font-family: ui-monospace, Menlo, monospace; font-size: 12px; white-space: pre; tab-size: 6; background: #f8f4f4;"></textarea>
+        </div>
+        <div style="padding: 14px 16px; display: flex; flex-direction: column; gap: 8px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap;">
+            <span style="font-size: 12px; text-transform: uppercase; letter-spacing: 0.08em; font-weight: 600;">Mano de obra · {{ exp.nO }}</span>
+            <button class="btn" onClick="{{ exp.copyO }}" disabled="{{ exp.noO }}" style="background: #000; color: #FFE500; font-weight: 800;" style-hover="background: #2d2b2b;">{{ exp.copyOLabel }}</button>
+          </div>
+          <span style="font-size: 11px; color: #605d5d;">Tipo de operación ⇥ Descripción ⇥ Horas</span>
+          <textarea class="input" readonly="{{ true }}" value="{{ exp.txtO }}" style="min-height: 140px; font-family: ui-monospace, Menlo, monospace; font-size: 12px; white-space: pre; tab-size: 6; background: #f8f4f4;"></textarea>
+        </div>
+      </section>
+      </sc-if>
       <sc-if value="{{ cliPdf }}" hint-placeholder-val="{{ false }}"><button class="btn" onClick="{{ doPrint }}" style="margin: 0 0 12px; background: #000; color: #FFE500; font-weight: 800;">Descargar PDF</button></sc-if>
       <sc-if value="{{ canEdit }}" hint-placeholder-val="{{ false }}"><button class="btn btn-secondary" onClick="{{ editSaved }}" style="margin: 0 0 24px; font-size: 12px;">Editar presupuesto (equipo · PIN)</button></sc-if>
     </div>
@@ -1509,7 +1535,7 @@ class Component extends DCLogic {
       showBaseTab: !!st.adminDev && !this._tfOt && !this._modo, histCount: this.recs ? this.recs.length.toLocaleString('es-GT') + ' casos' : 'cargando…', histEstado: st.histEstado || '', sincronizarAhora: () => this.sincronizarAhora(),
       consOpen: !!st.consOpen, toggleCons: () => this.setState(x => ({ consOpen: !x.consOpen })), consVeh: st.consVeh || '', consPieza: st.consPieza || '', setConsVeh: e => this.setState({ consVeh: e.target.value }), setConsPieza: e => this.setState({ consPieza: e.target.value }), hasConsVeh: !!(st.consVeh || '').trim(), hasConsPieza: !!(st.consPieza || '').trim(), clearConsVeh: () => this.setState({ consVeh: '' }), hasConsAlgo: !!((st.consVeh || '').trim() || (st.consPieza || '').trim()), clearConsTodo: () => this.setState({ consVeh: '', consPieza: '' }), clearConsPieza: () => this.setState({ consPieza: '' }), cons: st.consOpen ? this.consultar() : {},
       publishHist: () => this.publishHist(),
-      cliPdf: st.clientOnly && !pr, canEdit: st.clientOnly && !pr, editSaved: () => this.editSaved(),
+      teamView: !!(window.opener || st.adminDev) && st.clientOnly && !pr, showListadosCli: !!(window.opener || st.adminDev) && st.clientOnly && !pr && !!st.showListados, listadosLabel: st.showListados ? 'Ocultar listados para TallerFLOW' : 'Listados para TallerFLOW (equipo)', toggleListados: () => this.setState(x => ({ showListados: !x.showListados })), cliPdf: st.clientOnly && !pr, canEdit: st.clientOnly && !pr, editSaved: () => this.editSaved(),
       loading: st.loading || (st.cargaNube && !st.clientOnly), loadMsg: st.cargaError || (st.cargaNube ? 'Cargando presupuesto…' : 'Cargando historial…'), showChrome: !st.clientOnly && !pr && !st.cargaNube,
       headerSub: q.or ? 'OR ' + q.or + ' · ' + (q.vehiculo || '') : 'Zona 10',
       isStep1: !(st.loading || (st.cargaNube && !st.clientOnly)) && !pr && step === 1 && st.baseOpen && st.adminDev, isStep2: !(st.loading || (st.cargaNube && !st.clientOnly)) && !pr && step === 2, isStep3: !(st.loading || (st.cargaNube && !st.clientOnly)) && !pr && step === 3, isStep4: !(st.loading || (st.cargaNube && !st.clientOnly)) && !pr && step === 4 && !st.clientOnly,
