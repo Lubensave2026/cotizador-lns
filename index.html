@@ -60,7 +60,7 @@
   </sc-if>
 
   <sc-if value="{{ loading }}" hint-placeholder-val="{{ false }}">
-    <div style="padding: 48px 24px; font-size: 15px;">Cargando historial…</div>
+    <div style="padding: 48px 24px; font-size: 15px;">{{ loadMsg }}</div>
   </sc-if>
 
   <!-- ============ 00 BASE ============ -->
@@ -137,7 +137,7 @@
             <div class="field"><label>Alza anual repuestos %</label><input class="input" inputmode="decimal" value="{{ settings.pct }}" onChange="{{ setPct }}"></div>
             <div class="field"><label>Aplicar si el precio tiene más de (meses)</label><input class="input" inputmode="decimal" value="{{ settings.meses }}" onChange="{{ setMeses }}"></div>
           </div>
-          <label style="display: flex; gap: 8px; align-items: center; font-size: 14px; cursor: pointer;"><input type="checkbox" checked="{{ settings.linkCorto }}" onChange="{{ setLinkCorto }}" style="width: 18px; height: 18px; accent-color: #000;"> Link corto para el cliente (usa la nube; activar solo después de “Probar conexión con la nube”)</label>
+          <label style="display: flex; gap: 8px; align-items: center; font-size: 14px; cursor: pointer;"><input type="checkbox" checked="{{ settings.cortoNube }}" onChange="{{ setCortoNube }}" style="width: 18px; height: 18px; accent-color: #000;"> Link corto para el cliente (usa la nube; activar solo después de “Probar conexión con la nube”)</label>
           <label style="display: flex; gap: 8px; align-items: center; font-size: 14px; cursor: pointer;"><input type="checkbox" checked="{{ settings.usarPdf }}" onChange="{{ setUsarPdf }}" style="width: 18px; height: 18px; accent-color: #000;"> Si el PDF ya trae precios, usar los del PDF (si no, siempre historial)</label>
           <span style="font-size: 13px; font-weight: 600;">Tarifa histórica (para convertir la M.O. antigua a horas)</span>
           <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px;">
@@ -614,7 +614,7 @@
 </x-dc>
 <script type="text/x-dc" data-dc-script>
 class Component extends DCLogic {
-  defS() { return { linkCorto: false, usarPdf: true, anos: '3', copias: '3', margen: '50', tarifa: '600', tarifaFija: true, iva: '12', pct: '8', meses: '6', r1: '425', r2: '500', r3: '600',
+  defS() { return { cortoNube: true, usarPdf: true, anos: '3', copias: '3', margen: '50', tarifa: '600', tarifaFija: true, iva: '12', pct: '8', meses: '6', r1: '425', r2: '500', r3: '600',
     paquetes: 'FRENOS DELANTEROS = Pastillas de freno delanteras; Líquido de frenos; Rectificado de discos | Cambio de pastillas delanteras; Desmontaje de discos delanteros\nFRENOS TRASEROS = Pastillas de freno traseras; Líquido de frenos | Cambio de pastillas traseras; Desmontaje de discos traseros\nBALATAS TRASERAS = Balatas traseras; Líquido de frenos | Cambio de balatas traseras\nAMORTIGUADORES DELANTEROS = Amortiguadores delanteros; Bases de amortiguador | Cambio de amortiguadores delanteros\nAMORTIGUADORES TRASEROS = Amortiguadores traseros | Cambio de amortiguadores traseros\nBATERIA = Batería | Cambio de batería\nBUJIAS = Bujías | Cambio de bujías\nCLUTCH = Kit de clutch; Aceite de transmisión | Desmontaje de caja; Cambio de clutch\nCABEZALES DIRECCION = Cabezales de dirección | Cambio de cabezales de dirección; Alineación\nTERMINALES = Terminales de dirección | Cambio de terminales; Alineación\nROTULAS = Rótulas | Cambio de rótulas; Alineación\nBUJES BARRA ESTABILIZADORA = Bujes de barra estabilizadora | Cambio de bujes de barra estabilizadora\nBOMBA DE AGUA = Bomba de agua; Refrigerante | Cambio de bomba de agua\nTERMOSTATO = Termostato; Refrigerante | Cambio de termostato\nRADIADOR = Radiador; Refrigerante | Cambio de radiador\nFUGA REFRIGERANTE = Refrigerante | Cambio de refrigerante; Purgado de sistema de enfriamiento\nBRIDA AGUA = Brida de agua; Empaque de brida; Sellador | Cambio de brida de agua\nMANGUERA RADIADOR = Manguera de radiador; Refrigerante | Cambio de manguera de radiador; Purgado de sistema de enfriamiento\nFUGA ACEITE MOTOR = Empaque o sello; Sellador; Aceite de motor; Filtro de aceite | Cambio de empaque o sello; Cambio de aceite y filtro\nACEITE DIFERENCIAL = Aceite de diferencial; Empaque o sello de tapón | Cambio de aceite de diferencial\nACEITE TRANSMISION = Aceite de transmisión | Cambio de aceite de transmisión\nBANDA = Banda de accesorios | Cambio de banda de accesorios\nCORREA TIEMPO = Kit de distribución; Bomba de agua; Refrigerante | Cambio de kit de distribución\nLLANTAS = Llantas | Montaje y balanceo de llantas; Alineación\nESCOBILLAS = Escobillas limpiaparabrisas | Cambio de escobillas\nFILTRO AIRE ACONDICIONADO = Filtro de aire acondicionado | Cambio de filtro de aire acondicionado',
     kits: 'RADIADOR = Refrigerante; Abrazaderas; Wipe\nTUBERIA AC = Gas freón; Aceite para compresor\nCOMPRESOR AC = Gas freón; Aceite para compresor\nBOMBA DE AGUA = Refrigerante; Wipe\nTERMOSTATO = Refrigerante\nFRENOS = Líquido de frenos\nCARGADORES = Materiales auxiliares' }; }
   sample() {
@@ -623,7 +623,7 @@ class Component extends DCLogic {
   F() { return 1 + this.num(this.state.settings.iva) / 100; }
   r2(n) { return Math.round(n * 100) / 100; }
   emptyQ() { return { ivaIncl: true, link: '', or: '', cliente: '', tel: '', asesor: '', placa: '', km: '', vehiculo: '', anio: '', texto: '', items: [], okP: null, okS: null }; }
-  state = { adminDev: (() => { try { return localStorage.getItem('lns-admin-dev') === '9f2a55eb9abd8d40a26bc2387de86a878781fd9af2eec049a50382f5bb15cdeb'; } catch (e) { return false; } })(), step: 2, base: null, baseSrc: '', loading: true, msg: '', parseMsg: '', pdfName: '', settings: this.defS(), quote: { ...this.emptyQ(), texto: this.sample(), link: 'https://vehi.mobi/N8XwaN', ivaIncl: true }, clientOnly: false, printing: false, copied: '', addName: '', pinField: 1, pinHash: (() => { try { return localStorage.getItem('lns-pin') || ''; } catch (e) { return ''; } })(), baseOpen: (() => { try { return sessionStorage.getItem('lns-base-open') === '1' && !!localStorage.getItem('lns-pin'); } catch (e) { return false; } })(), pinChanging: false, pin1: '', pin2: '', pinMsg: '', open: {}, serv: null, servSrc: '' };
+  state = { cargaNube: (() => { try { const P = new URLSearchParams(location.search); return !!((P.get('k') || '').trim() && (P.get('ot') || P.get('presupuesto')) && !location.hash); } catch (e) { return false; } })(), cargaError: '', adminDev: (() => { try { return localStorage.getItem('lns-admin-dev') === '9f2a55eb9abd8d40a26bc2387de86a878781fd9af2eec049a50382f5bb15cdeb'; } catch (e) { return false; } })(), step: 2, base: null, baseSrc: '', loading: true, msg: '', parseMsg: '', pdfName: '', settings: this.defS(), quote: { ...this.emptyQ(), texto: this.sample(), link: 'https://vehi.mobi/N8XwaN', ivaIncl: true }, clientOnly: false, printing: false, copied: '', addName: '', pinField: 1, pinHash: (() => { try { return localStorage.getItem('lns-pin') || ''; } catch (e) { return ''; } })(), baseOpen: (() => { try { return sessionStorage.getItem('lns-base-open') === '1' && !!localStorage.getItem('lns-pin'); } catch (e) { return false; } })(), pinChanging: false, pin1: '', pin2: '', pinMsg: '', open: {}, serv: null, servSrc: '' };
 
   componentWillUnmount() { window.removeEventListener('keydown', this._pinKey); }
   async componentDidMount() {
@@ -652,7 +652,7 @@ class Component extends DCLogic {
       let adm = (P.get('admin') || '').trim(); if (P.has('admin') && (!adm || adm === '1')) adm = (window.prompt('Código de administrador:') || '').trim();
       if (adm) { if (await this.hash(adm) === this.adminHash()) { try { localStorage.setItem('lns-admin-dev', this.adminHash()); } catch (e) {} this.setState({ adminDev: true, msg: 'Este equipo quedó autorizado como administrador: ya puedes abrir la pestaña Base.' }); }
         try { const u = new URL(location.href); u.searchParams.delete('admin'); history.replaceState(null, '', u.toString()); } catch (e) {} }
-      const ot = (P.get('ot') || '').trim(); if (ot) { pre.or = ot; this._tfOt = ot; } if (pre.link) pre.link = this.normLink(pre.link); const modo = (P.get('modo') || '').toLowerCase(); if (!ot && (modo === 'consulta' || modo === 'estimado' || modo === 'equipo')) { this._modo = modo; this._pre = true; this.setState(modo !== 'estimado' ? { consOpen: true, step: 2, quote: this.emptyQ() } : { step: 2, quote: { ...this.emptyQ(), estimado: true, or: 'EST-' + new Date().toISOString().slice(2, 10).replace(/-/g, '') } }); }
+      const ot = (P.get('ot') || P.get('presupuesto') || '').trim(); if (ot) { pre.or = ot; this._tfOt = ot; } if (pre.link) pre.link = this.normLink(pre.link); const modo = (P.get('modo') || '').toLowerCase(); if (!ot && (modo === 'consulta' || modo === 'estimado' || modo === 'equipo')) { this._modo = modo; this._pre = true; this.setState(modo !== 'estimado' ? { consOpen: true, step: 2, quote: this.emptyQ() } : { step: 2, quote: { ...this.emptyQ(), estimado: true, or: 'EST-' + new Date().toISOString().slice(2, 10).replace(/-/g, '') } }); }
       const saved = pre.or && !this._hashT ? (this.quoteStore()[pre.or] ? this.richest(this.quoteStore()[pre.or]) : (this.backupStore()[pre.or] || null)) : null;
       if (saved) { this._pre = true; this.setState({ step: saved.okP && saved.okS ? 4 : saved.okP ? 3 : 2, quote: { ...saved, ...pre, vehiculo: saved.vehiculo || pre.vehiculo, cliente: saved.cliente || pre.cliente }, parseMsg: 'Cotización de la OT ' + pre.or + ' recuperada.' }); throw 'done'; }
       if (pre.or || pre.link) this._pre = true;
@@ -1186,19 +1186,21 @@ class Component extends DCLogic {
     } catch (e) { console.warn(e); this.setState({ msg: 'No se pudo guardar en la nube: ' + e.message }); }
   }
   async fbOpen() {
+    const fallo = m => this.setState({ cargaError: m });
     try {
       if (!this._tfOt || /^#[qt]=/.test(location.hash)) return;
       const k = (new URLSearchParams(location.search).get('k') || '').trim(), key = this.fbKey(this._tfOt);
-      const db = await this.fbDb(); if (!db) { if (k) window.alert('No se pudo cargar el presupuesto. Revisa tu conexión a internet e intenta de nuevo, o pide a Lube N Save que te lo envíe otra vez.'); return; }
+      if (k) this._clientLink = true;
+      const db = await this.fbDb(); if (!db) { if (k) fallo('No se pudo cargar el presupuesto. Revisa tu conexión a internet e intenta de nuevo, o pide a Lube N Save que te lo envíe otra vez.'); return; }
       if (k) {
         const r = await this.fbGet(db, 'cotizador/presupuestos/' + key + '-' + k);
-        if (r && r.json) { const d = JSON.parse(r.json); this._k = k; this.setState({ clientOnly: true, step: 4, quote: d.q, settings: { ...this.defS(), ...d.s }, loading: false, savedFB: { ot: this._tfOt, k } }); }
-        else { this.setState({ parseMsg: 'El código del presupuesto guardado no coincide con la OT ' + this._tfOt + '.' }); window.alert('No se encontró este presupuesto. Pide a Lube N Save que te envíe el link otra vez.'); }
+        if (r && r.json) { const d = JSON.parse(r.json); this._k = k; this.setState({ clientOnly: true, step: 4, quote: d.q, settings: { ...this.defS(), ...d.s }, loading: false, cargaNube: false, savedFB: { ot: this._tfOt, k } }); }
+        else fallo('No se encontró este presupuesto. Pide a Lube N Save que te envíe el link otra vez.');
         return;
       }
       const ix = (await this.fbGet(db, 'cotizador/indice/' + key));
       if (ix) this.setState(s => ({ parseMsg: 'Ya existe un presupuesto guardado para la OT ' + this._tfOt + '. Para verlo abre el link que quedó en el historial de la orden en TallerFLOW ("Cotización enviada al cliente").' }));
-    } catch (e) { console.warn('fbOpen', e); }
+    } catch (e) { console.warn('fbOpen', e); if (this.state.cargaNube) fallo('No se pudo cargar el presupuesto: ' + e.message + '. Intenta de nuevo en un momento.'); }
   }
   async editSaved() {
     const pin = window.prompt('PIN del equipo para editar este presupuesto:'); if (pin === null) return;
@@ -1229,7 +1231,7 @@ class Component extends DCLogic {
   // Cambios posteriores: cotizador/historial/delta/{OR} (texto JSON con los renglones de esa OR).
   async fbSync() {
     try {
-      if (this.state.clientOnly || /^#[qt]=/.test(location.hash) || !this.recs) return;
+      if (this.state.clientOnly || this._clientLink || this.state.cargaNube || /^#[qt]=/.test(location.hash) || !this.recs) return;
       const db = await this.fbDb(); if (!db) { if (!this.recs.length) this.setState({ histEstado: 'Sin conexión con Firebase: no se pudo traer el historial.' }); return; }
       const meta = (await this.fbGet(db, 'cotizador/historial/meta'));
       if (!meta && !this.recs.length) this.setState({ histEstado: 'No hay historial publicado en la nube todavía. El administrador debe publicarlo desde la Base.' });
@@ -1418,7 +1420,7 @@ class Component extends DCLogic {
     (navigator.clipboard ? navigator.clipboard.writeText(url) : Promise.reject()).catch(() => window.prompt('Copia el link:', url));
     this.setState({ copied: label }); setTimeout(() => this.setState({ copied: '' }), 2000);
   }
-  clientUrl() { const q = this.state.quote; if (this.state.settings.linkCorto && this._tfOt && this._k && this._cloudSig && this._cloudSig === this.sigItems(q)) return location.origin + location.pathname + '?ot=' + encodeURIComponent(this._tfOt) + '&k=' + this._k; const base = this._tfOt && this._k ? location.origin + location.pathname + '?ot=' + encodeURIComponent(this._tfOt) + '&k=' + this._k : location.href.split('#')[0]; const z = this._cliZ && this._cliZ.q === q ? this._cliZ.z : this.enc(this.clientPayload(q)); return base + '#q=' + z; }
+  clientUrl() { const q = this.state.quote; if (this.state.settings.cortoNube && this._tfOt && this._k && this._cloudSig && this._cloudSig === this.sigItems(q)) return location.origin + location.pathname + '?presupuesto=' + encodeURIComponent(this._tfOt) + (q.vehiculo ? '&vehiculo=' + encodeURIComponent(String(q.vehiculo).trim().replace(/\s+/g, '-')) : '') + (q.placa ? '&placas=' + encodeURIComponent(String(q.placa).trim().replace(/\s+/g, '-')) : '') + '&k=' + this._k; const base = this._tfOt && this._k ? location.origin + location.pathname + '?ot=' + encodeURIComponent(this._tfOt) + '&k=' + this._k : location.href.split('#')[0]; const z = this._cliZ && this._cliZ.q === q ? this._cliZ.z : this.enc(this.clientPayload(q)); return base + '#q=' + z; }
   doPrint() {
     this.setState({ printing: true }, () => setTimeout(() => {
       const done = () => { this.setState({ printing: false }); window.removeEventListener('afterprint', done); };
@@ -1506,10 +1508,10 @@ class Component extends DCLogic {
       consOpen: !!st.consOpen, toggleCons: () => this.setState(x => ({ consOpen: !x.consOpen })), consVeh: st.consVeh || '', consPieza: st.consPieza || '', setConsVeh: e => this.setState({ consVeh: e.target.value }), setConsPieza: e => this.setState({ consPieza: e.target.value }), hasConsVeh: !!(st.consVeh || '').trim(), hasConsPieza: !!(st.consPieza || '').trim(), clearConsVeh: () => this.setState({ consVeh: '' }), hasConsAlgo: !!((st.consVeh || '').trim() || (st.consPieza || '').trim()), clearConsTodo: () => this.setState({ consVeh: '', consPieza: '' }), clearConsPieza: () => this.setState({ consPieza: '' }), cons: st.consOpen ? this.consultar() : {},
       publishHist: () => this.publishHist(),
       cliPdf: st.clientOnly && !pr, canEdit: st.clientOnly && !pr, editSaved: () => this.editSaved(),
-      loading: st.loading, showChrome: !st.clientOnly && !pr,
+      loading: st.loading || (st.cargaNube && !st.clientOnly), loadMsg: st.cargaError || (st.cargaNube ? 'Cargando presupuesto…' : 'Cargando historial…'), showChrome: !st.clientOnly && !pr && !st.cargaNube,
       headerSub: q.or ? 'OR ' + q.or + ' · ' + (q.vehiculo || '') : 'Zona 10',
-      isStep1: !st.loading && !pr && step === 1 && st.baseOpen && st.adminDev, isStep2: !st.loading && !pr && step === 2, isStep3: !st.loading && !pr && step === 3, isStep4: !st.loading && !pr && step === 4 && !st.clientOnly,
-      showClient: !st.loading && step === 4,
+      isStep1: !(st.loading || (st.cargaNube && !st.clientOnly)) && !pr && step === 1 && st.baseOpen && st.adminDev, isStep2: !(st.loading || (st.cargaNube && !st.clientOnly)) && !pr && step === 2, isStep3: !(st.loading || (st.cargaNube && !st.clientOnly)) && !pr && step === 3, isStep4: !(st.loading || (st.cargaNube && !st.clientOnly)) && !pr && step === 4 && !st.clientOnly,
+      showClient: !(st.loading || (st.cargaNube && !st.clientOnly)) && step === 4,
       pageBg: pr ? '#fff' : '#f3f2f2', clientPad: pr ? '0' : st.clientOnly ? '0 0 24px' : '16px 24px 48px',
       tab1Bg: tab(1).bg, tab1Fg: tab(1).fg, tab2Bg: tab(2).bg, tab2Fg: tab(2).fg, tab3Bg: tab(3).bg, tab3Fg: tab(3).fg, tab4Bg: tab(4).bg, tab4Fg: tab(4).fg,
       goStep1: () => { if (st.adminDev) this.setState({ step: 1 }); }, goStep2: () => this.setState({ step: 2 }), goStep3: () => this.setState(st => ({ step: 3, quote: this.withOps(st.quote) })), goStep4: () => this.setState({ step: 4 }),
@@ -1519,7 +1521,7 @@ class Component extends DCLogic {
       setTarifa: e => { const v = e.target.value; this.setState(s => ({ settings: { ...s.settings, tarifa: v, tarifaDesde: new Date().toISOString().slice(0, 10), r3: s.settings.tarifaDesde ? s.settings.r3 : s.settings.r3 } })); },
       tarifaDesdeFmt: S.tarifaDesde ? this.fd(S.tarifaDesde) : 'jul-2025',
       baseTabLabel: st.baseOpen ? 'Base' : 'Base · bloqueada',
-      isStep1Locked: !st.loading && !pr && step === 1 && !st.baseOpen && st.adminDev,
+      isStep1Locked: !(st.loading || (st.cargaNube && !st.clientOnly)) && !pr && step === 1 && !st.baseOpen && st.adminDev,
       pinNew: !st.pinHash || st.pinChanging, lockText: !st.pinHash ? 'Crea un PIN de 4 a 8 dígitos. Solo quien lo sepa podrá cambiar tarifas, márgenes, kits y cargar la base.' : st.pinChanging ? 'Escribe el PIN nuevo dos veces.' : 'Ingresa el PIN del jefe de taller.',
       unlockLabel: !st.pinHash ? 'Crear PIN y abrir' : st.pinChanging ? 'Guardar PIN nuevo' : 'Abrir Base',
       pin1: st.pin1, pin2: st.pin2,
@@ -1532,7 +1534,7 @@ class Component extends DCLogic {
       changePin: () => this.setState({ baseOpen: false, pinChanging: true, pin1: '', pin2: '' }), setMargen: e => this.setS('margen', e.target.value), setIva: e => this.setS('iva', e.target.value), setPct: e => this.setS('pct', e.target.value), setMeses: e => this.setS('meses', e.target.value),
       setR1: e => this.setS('r1', e.target.value), setR2: e => this.setS('r2', e.target.value), setR3: e => this.setS('r3', e.target.value),
       onPdf: e => this.onPdf(e), tarifaIvaFmt: this.fmt(T * (1 + IVA)), onServFile: e => this.onServFile(e), servSrc: st.servSrc || '—', servCount: st.serv ? st.serv.servicios.length : 0,
-      tablaText: st.serv ? Object.entries(st.serv.tabla).map(([k, v]) => this.cap(k) + ' ' + v.l.length).join(', ') : '—', demoPdf: e => { e.preventDefault(); e.stopPropagation(); this.loadDemoPdf(); }, setUsarPdf: e => this.setS('usarPdf', e.target.checked), setLinkCorto: e => this.setS('linkCorto', e.target.checked), probarNube: () => this.probarNube(), setKits: e => this.setS('kits', e.target.value), setPaquetes: e => this.setS('paquetes', e.target.value), setAsesor: e => this.setQ({ asesor: e.target.value }),
+      tablaText: st.serv ? Object.entries(st.serv.tabla).map(([k, v]) => this.cap(k) + ' ' + v.l.length).join(', ') : '—', demoPdf: e => { e.preventDefault(); e.stopPropagation(); this.loadDemoPdf(); }, setUsarPdf: e => this.setS('usarPdf', e.target.checked), setCortoNube: e => this.setS('cortoNube', e.target.checked), probarNube: () => this.probarNube(), setKits: e => this.setS('kits', e.target.value), setPaquetes: e => this.setS('paquetes', e.target.value), setAsesor: e => this.setQ({ asesor: e.target.value }),
       hasAsesor: !!(q.asesor || '').trim(), pdfLabel: st.pdfName ? 'Cambiar PDF (' + st.pdfName + ')' : 'Elegir PDF', armar: () => this.armar(),
       parseMsg: st.parseMsg, hasParseMsg: !!st.parseMsg,
       buscar: st.buscar || '', setBuscar: e => this.setState({ buscar: e.target.value }), clearBuscar: () => this.setState({ buscar: '' }), hasBuscar: !!(st.buscar || '').trim(),
@@ -1566,7 +1568,7 @@ class Component extends DCLogic {
       confirmServ: () => { if (q.okS) this.setState({ step: 4 }); else { this.setQ({ okS: this.stamp() }); this.notifyMod(q); if (q.okP) { this.saveToHist(q); this.saveFB(q); } } },
       locked, lockMsg: !q.okP ? 'Falta que el asesor de partes confirme los repuestos.' : 'Falta que el asesor de servicio confirme la mano de obra.',
       copyLabel: st.copied === 'cli' ? 'Link copiado ✓' : 'Copiar link para cliente',
-      copyLink: async () => { if (S.linkCorto && this._savingFB) await Promise.race([this._savingFB, new Promise(r => setTimeout(r, 4000))]); const u = this.clientUrl(); this.copy(u, 'cli'); this.notifyTF(u); },
+      copyLink: async () => { if (S.cortoNube && this._savingFB) await Promise.race([this._savingFB, new Promise(r => setTimeout(r, 4000))]); const u = this.clientUrl(); this.copy(u, 'cli'); this.notifyTF(u); },
       sendWa: () => { const tel = (q.tel || '').replace(/\D/g, ''); const msg = 'Lube N Save Zona 10' + String.fromCharCode(10) + 'Presupuesto No. ' + q.or + ' · ' + q.vehiculo + (q.placa ? ' · ' + q.placa : '') + String.fromCharCode(10) + 'Elija qué trabajos realizar aquí: ' + (this._cu = this.clientUrl()); this.notifyTF(this._cu);
         window.open('https://wa.me/' + (tel ? (tel.length === 8 ? '502' + tel : tel) : '') + '?text=' + encodeURIComponent(msg), '_blank'); },
       doPrint: () => this.doPrint(),
