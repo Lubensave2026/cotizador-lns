@@ -704,7 +704,7 @@ class Component extends DCLogic {
   }
   quoteStore() { try { return JSON.parse(localStorage.getItem('lns-cotizaciones') || '{}'); } catch (e) { return {}; } }
   componentDidUpdate() {
-    this.precomprimirCliente(); this.actualizarTitulo();
+    this.precomprimirCliente(); this.actualizarTitulo(); this.programarBorrador();
     if (this.state.clientOnly || this.state.loading) return;
     if (this._lq !== this.state.quote || this._ls !== this.state.settings)
       try { this._lq = this.state.quote; this._ls = this.state.settings;
@@ -1227,6 +1227,7 @@ class Component extends DCLogic {
       const ix = (await this.fbGet(db, 'cotizador/indice/' + key));
       if (ix) this.setState(s => ({ parseMsg: 'Ya existe un presupuesto guardado para la OT ' + this._tfOt + '. Para verlo abre el link que quedó en el historial de la orden en TallerFLOW ("Cotización enviada al cliente").' }));
     } catch (e) { console.warn('fbOpen', e); if (this.state.cargaNube) fallo('No se pudo cargar el presupuesto: ' + e.message + '. Intenta de nuevo en un momento.'); }
+    finally { if (this._tfOt && !this._clientLink && !/^#q=/.test(location.hash)) { if (!/^#t=/.test(location.hash)) await this.ofrecerBorrador(); this._draftChecked = true; } }
   }
   async editSaved() {
     const pin = window.prompt('PIN del equipo para editar este presupuesto:'); if (pin === null) return;
@@ -1439,13 +1440,49 @@ class Component extends DCLogic {
     } catch (e) { console.warn(e); this.setState({ histEstado: /permission/i.test(e.message) ? 'Firebase no permite leer cotizador/: falta la regla “cotizador” en las reglas de Firebase.' : 'Error: ' + e.message }); }
   }
   // Al confirmar repuestos y mano de obra: guardar en la nube y dejar el link del cliente en la orden de TallerFLOW, sin depender de que alguien lo copie.
-  async avisarLinkCliente(q) { try { await Promise.race([this.saveFB(q), new Promise(r => setTimeout(r, 12000))]); await new Promise(r => setTimeout(r, 600)); this.notifyTF(this.clientUrl()); } catch (e) {} }
+  async avisarLinkCliente(q) { try { await Promise.race([this.saveFB(q), new Promise(r => setTimeout(r, 12000))]); this.borrarBorrador(); await new Promise(r => setTimeout(r, 600)); this.notifyTF(this.clientUrl()); } catch (e) {} }
   // Glifos de la fuente de iconos del PDF de ClearMechanic: paréntesis y guion salen como caracteres privados (cuadro vacío). Se convierten; los demás se quitan.
   glifos(t) { return String(t == null ? '' : t).replace(//g, '(').replace(//g, ')').replace(//g, '-').replace(/[-]/g, ''); }
   limpiarQuote(q) {
     if (!q || !q.items) return q;
     const g = x => this.glifos(x);
     return { ...q, items: q.items.map(it => ({ ...it, name: g(it.name), nota: g(it.nota), parts: (it.parts || []).map(l => ({ ...l, desc: g(l.desc) })), ops: (it.ops || []).map(l => ({ ...l, desc: g(l.desc) })) })) };
+  }
+  // ===== Borrador en la nube: cotizador/borradores/{OT} (un borrador por orden; la última escritura gana) =====
+  sigDraft(q) { try { return JSON.stringify([q.items, q.okP, q.okS, this.state.step]); } catch (e) { return ''; } }
+  programarBorrador() {
+    if (!this._tfOt || this._clientLink || this.state.clientOnly || !this._draftChecked) return;
+    const q = this.state.quote; if (q.estimado || !(q.items || []).length || (q.okP && q.okS)) return;
+    if (this.sigDraft(q) === this._drSig) return;
+    clearTimeout(this._drT); this._drT = setTimeout(() => this.guardarBorrador(), 5000);
+  }
+  async guardarBorrador() {
+    try {
+      const q = this.state.quote, sig = this.sigDraft(q); if (!this._tfOt || sig === this._drSig || q.estimado || (q.okP && q.okS)) return;
+      const json = JSON.stringify({ q: { ...q, texto: '', items: (q.items || []).map(({ hist, ...it }) => it) } });
+      if (json.length > 140000) { console.warn('borrador demasiado grande'); return; }
+      const db = await this.fbDb(); if (!db) return;
+      await Promise.race([db.ref('cotizador/borradores/' + this.fbKey(this._tfOt)).set({ ot: String(this._tfOt), ts: Date.now(), paso: this.state.step, cliente: q.cliente || '', vehiculo: q.vehiculo || '', placa: q.placa || '', json }), new Promise((_, rej) => setTimeout(() => rej(new Error('tiempo agotado')), 15000))]);
+      this._drSig = sig;
+    } catch (e) { console.warn('borrador', e); }
+  }
+  async borrarBorrador() {
+    try { clearTimeout(this._drT); this._drSig = ''; if (!this._tfOt) return; const db = await this.fbDb(); if (db) await db.ref('cotizador/borradores/' + this.fbKey(this._tfOt)).set(null); } catch (e) { console.warn('borrar borrador', e); }
+  }
+  async ofrecerBorrador() {
+    try {
+      const db = await this.fbDb(); if (!db) return;
+      const r = await this.fbGet(db, 'cotizador/borradores/' + this.fbKey(this._tfOt));
+      if (!r || !r.json || !r.ts || Date.now() - r.ts > 30 * 864e5) return;
+      const d = JSON.parse(r.json); if (!d.q || !(d.q.items || []).length) return;
+      const q = this.state.quote, localT = ((this.quoteStore()[q.or] || {})._t) || 0;
+      if ((q.items || []).length && r.ts <= localT + 60000) return;
+      const fecha = new Date(r.ts).toLocaleString('es-GT', { dateStyle: 'short', timeStyle: 'short' });
+      if (!window.confirm('Hay un borrador de esta orden guardado el ' + fecha + ' (' + d.q.items.length + ' puntos). ¿Quieres continuar con ese borrador?')) return;
+      const nq = this.withOps(this.limpiarQuote(d.q)); this._drSig = '';
+      this.setState({ quote: nq, step: r.paso || 2, parseMsg: 'Borrador recuperado de la nube (guardado ' + fecha + ').' });
+      this._drSig = this.sigDraft(nq);
+    } catch (e) { console.warn('ofrecerBorrador', e); }
   }
   // Devuelve a TallerFLOW (la pestaña que abrió el cotizador) el link del cliente para guardarlo en el historial de la orden.
   notifyTF(url, tipo) {
@@ -1585,7 +1622,7 @@ class Component extends DCLogic {
       vehBorder: q.vehiculo && !M ? '#ec3013' : 'var(--color-divider)',
       vehMsg: !q.vehiculo ? '' : !M && q.estimado ? 'Sin historial propio para ' + q.vehiculo + ': se estimará con vehículos similares.' : M ? 'Historial: ' + Object.keys(M.p).length + ' puntos cotizados para ' + M.d + '.' : 'Sin historial con ese nombre. Elige una opción de la lista y presiona “Armar presupuesto” otra vez.',
       vehMsgColor: q.vehiculo && !M ? '#ae1800' : '#605d5d',
-      nuevo: () => { if (q.items.length && !window.confirm('¿Descartar el presupuesto actual (' + (q.or || 'sin OR') + ')?')) return; this.setState({ quote: this.emptyQ(), parseMsg: '', pdfName: '' }); },
+      nuevo: () => { if (q.items.length && !window.confirm('¿Descartar el presupuesto actual (' + (q.or || 'sin OR') + ')?')) return; this.setState({ quote: this.emptyQ(), parseMsg: '', pdfName: '' }); if (this._tfOt) this.borrarBorrador(); },
       nuevoEst: () => q.items.length && !window.confirm('¿Descartar el presupuesto actual (' + (q.or || 'sin OR') + ') para hacer un estimado?') ? null : this.setState({ quote: { ...this.emptyQ(), estimado: true, or: 'EST-' + new Date().toISOString().slice(2, 10).replace(/-/g, '') }, parseMsg: '', pdfName: '', step: 2 }),
       docLabel: q.estimado ? 'Estimado de referencia' : 'Presupuesto · OR ' + (q.or || ''),
       setAnos: e => this.setS('anos', e.target.value), setCopias: e => this.setS('copias', e.target.value), exportHist: () => this.exportHist(), importHist: e => this.importHist(e),
