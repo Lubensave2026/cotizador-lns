@@ -429,6 +429,7 @@
       <div style="max-width: 1180px; margin: 0 auto; padding: 12px 24px; display: flex; align-items: center; gap: 20px; flex-wrap: wrap;">
         <span style="font-size: 14px;">M.O. {{ sum.moAllFmt }} · Repuestos {{ sum.repAllFmt }}</span>
         <span style="font-size: 22px; font-weight: 800; color: #FFE500;">{{ sum.totAllFmt }}</span>
+        <span style="font-size: 12px; color: #bab6b6;">Urgentes {{ sum.urgAllFmt }} · Sugeridos {{ sum.sugAllFmt }}</span>
         <span style="font-size: 13px; color: #bab6b6;">IVA incluido · {{ okServText }}</span>
         <button class="btn" onClick="{{ confirmServ }}" style="margin-left: auto; background: #FFE500; color: #000; font-weight: 800; min-width: 240px; justify-content: flex-start;" style-hover="background: #fff;">{{ confirmServLabel }}</button>
       </div>
@@ -522,6 +523,10 @@
             <div style="display: flex; justify-content: space-between; gap: 12px; padding: 10px 20px; border-bottom: 1px solid #333; font-size: 14px;"><span>{{ it.name }}</span><span style="white-space: nowrap;">{{ it.totFmt }}</span></div>
           </sc-for>
           <div style="padding: 12px 20px; font-size: 13px; color: #d7d3d3;">Todos los precios incluyen IVA.</div>
+          <div style="padding: 4px 20px 12px; display: flex; flex-direction: column; gap: 4px; font-size: 12px; color: #d7d3d3;">
+            <sc-if value="{{ sum.hasUrg }}" hint-placeholder-val="{{ false }}"><div style="display: flex; justify-content: space-between; gap: 12px;"><span><span style="display: inline-block; width: 8px; height: 8px; background: #ec3013; margin-right: 6px;"></span>Puntos urgentes (rojo)</span><span style="white-space: nowrap;">{{ sum.urgFmt }}</span></div></sc-if>
+            <sc-if value="{{ sum.hasSug }}" hint-placeholder-val="{{ false }}"><div style="display: flex; justify-content: space-between; gap: 12px;"><span><span style="display: inline-block; width: 8px; height: 8px; background: #FFE500; margin-right: 6px;"></span>Puntos sugeridos (amarillo)</span><span style="white-space: nowrap;">{{ sum.sugFmt }}</span></div></sc-if>
+          </div>
           <div style="padding: 16px 20px; background: #FFE500; color: #000; display: flex; flex-direction: column; gap: 2px;">
             <span style="font-size: 12px; text-transform: uppercase; letter-spacing: 0.08em;">Total a pagar</span>
             <span style="font-size: 34px; font-weight: 800;">{{ sum.totFmt }}</span>
@@ -1569,7 +1574,10 @@ class Component extends DCLogic {
     modal = null; if (mi) modal = detail(mi);
     const onItems = items.filter(i => i.on !== false);
     const sub = onItems.reduce((a, i) => a + i.tot, 0), subAll = items.reduce((a, i) => a + i.tot, 0);
-    const sum = { countAll: items.length, totFmt: this.fmt(sub), totAllFmt: this.fmt(subAll),
+    const esRojo = i => (i.urg || 'rojo') === 'rojo', suma = L => L.reduce((a, i) => a + i.tot, 0);
+    const rojosOn = onItems.filter(esRojo), amarOn = onItems.filter(i => !esRojo(i)), rojosAll = items.filter(esRojo), amarAll = items.filter(i => !esRojo(i));
+    const sum = { urgFmt: this.fmt(suma(rojosOn)), sugFmt: this.fmt(suma(amarOn)), hasUrg: rojosAll.length > 0, hasSug: amarAll.length > 0, urgAllFmt: this.fmt(suma(rojosAll)), sugAllFmt: this.fmt(suma(amarAll)), urgAllN: rojosAll.length, sugAllN: amarAll.length,
+      countAll: items.length, totFmt: this.fmt(sub), totAllFmt: this.fmt(subAll),
       repAllFmt: this.fmt(items.reduce((a, i) => a + i.rep, 0)), moAllFmt: this.fmt(items.reduce((a, i) => a + i.mo, 0)) };
     const step = st.clientOnly ? 4 : st.step, pr = st.printing;
     const tab = n => ({ bg: step === n ? YEL : '#000', fg: step === n ? '#000' : '#fff' });
