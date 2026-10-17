@@ -1264,7 +1264,8 @@ class Component extends DCLogic {
   async fbSync() {
     try {
       if (this.state.clientOnly || this._clientLink || this.state.cargaNube || /^#[qt]=/.test(location.hash) || !this.recs) return;
-      const db = await this.fbDb(); if (!db) { if (!this.recs.length) this.setState({ histEstado: 'Sin conexión con Firebase: no se pudo traer el historial.' }); return; }
+      if (!this.recs.length) this.setState({ histEstado: 'Descargando historial de la nube… (unos segundos)' });
+      const db = await this.fbDb(); if (!db) { if (!this.recs.length) { this.setState({ histEstado: 'Sin conexión con Firebase: no se pudo traer el historial. Reintentando…' }); this._syncTry = (this._syncTry || 0) + 1; if (this._syncTry <= 4) setTimeout(() => this.fbSync(), 8000 * this._syncTry); } return; }
       const meta = (await this.fbGet(db, 'cotizador/historial/meta'));
       if (!meta && !this.recs.length) this.setState({ histEstado: 'No hay historial publicado en la nube todavía. El administrador debe publicarlo desde la Base.' });
       if (meta && meta.rev) {
@@ -1285,7 +1286,8 @@ class Component extends DCLogic {
       }
       const aj = (await this.fbGet(db, 'cotizador/ajustes'));
       if (aj && aj.json) { const cs = JSON.parse(aj.json); this._ajTs = aj.ts; this.setState(st => ({ settings: { ...st.settings, ...cs } })); }
-    } catch (e) { console.warn('fbSync', e); if (!this.recs || !this.recs.length) this.setState({ histEstado: 'No se pudo traer el historial de la nube: ' + e.message }); }
+      if (this.state.histEstado && /^Descargando/.test(this.state.histEstado)) this.setState({ histEstado: '' });
+    } catch (e) { console.warn('fbSync', e); if (!this.recs || !this.recs.length) { this.setState({ histEstado: 'No se pudo traer el historial de la nube: ' + e.message + '. Reintentando…' }); this._syncTry = (this._syncTry || 0) + 1; if (this._syncTry <= 4) setTimeout(() => this.fbSync(), 8000 * this._syncTry); } }
   }
   async publishHist() {
     try {
