@@ -573,7 +573,7 @@
         </div>
       </sc-if>
       <p style="font-size: 12px; color: #605d5d; padding: 16px 0; margin: 0;">Precios en quetzales con IVA incluido. Mano de obra a tarifa flat rate. Presupuesto válido por 15 días; repuestos sujetos a disponibilidad.</p>
-      <sc-if value="{{ teamView }}" hint-placeholder-val="{{ false }}"><button class="btn btn-secondary" onClick="{{ toggleListados }}" style="margin: 0 0 12px; font-size: 13px;">{{ listadosLabel }}</button></sc-if>
+      <sc-if value="{{ teamView }}" hint-placeholder-val="{{ false }}"><div style="display: flex; gap: 8px; flex-wrap: wrap; margin: 0 0 12px;"><button class="btn btn-secondary" onClick="{{ toggleListados }}" style="font-size: 13px;">{{ listadosLabel }}</button><button class="btn btn-secondary" onClick="{{ enviarResultado }}" style="font-size: 13px;">Enviar resultado a TallerFLOW</button></div><sc-if value="{{ hasMsg }}" hint-placeholder-val="{{ false }}"><p style="margin: 0 0 12px; font-size: 13px; padding: 8px 10px; background: #fff; border-left: 3px solid #FFE500;">{{ msg }}</p></sc-if></sc-if>
       <sc-if value="{{ showListadosCli }}" hint-placeholder-val="{{ false }}">
         <p style="margin: 0 0 8px; font-size: 13px; background: #f3f2f2; padding: 8px 10px; border-left: 3px solid #FFE500;">Marca “Sí, realizar” o “Ahora no” en cada trabajo según lo que el cliente aprobó. Los listados de abajo se actualizan con esa selección.</p>
         <section style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 0; border-top: 2px solid #201e1d; border-bottom: 2px solid #201e1d; background: #fff;">
@@ -1498,6 +1498,18 @@ class Component extends DCLogic {
     try { const kN = (tipo || 'cli') + '|' + url; if (this._lastNotif === kN) return; /* mismo link ya avisado: no repetir en la bitácora de TallerFLOW */
       if (this._tfOt && !this.state.quote.estimado && window.opener && !window.opener.closed) { this._lastNotif = kN; window.opener.postMessage({ tipo: tipo === 'partes' ? 'lns-cotizacion-partes' : 'lns-cotizacion', ot: this._tfOt, url, total: this._tot || '', ts: Date.now() }, 'https://lubensave2026.github.io'); this.setState({ msg: (tipo === 'partes' ? 'Cotización de repuestos enviada a TallerFLOW' : 'Link enviado a TallerFLOW') + ' (OT ' + this._tfOt + ').' }); } } catch (e) {}
   }
+  // Aviso de que el presupuesto salio al cliente: solo al copiar el link, una vez por link.
+  notifyEnviada(url) {
+    try { const kN = 'env|' + url; if (this._lastEnv === kN) return;
+      if (this._tfOt && !this.state.quote.estimado && window.opener && !window.opener.closed) { this._lastEnv = kN; window.opener.postMessage({ tipo: 'lns-cotizacion-enviada', ot: this._tfOt, url, ts: Date.now() }, 'https://lubensave2026.github.io'); this.setState({ msg: 'Aviso de envío al cliente registrado en TallerFLOW (OT ' + this._tfOt + ').' }); } } catch (e) {}
+  }
+  // Resultado de la autorizacion del cliente (boton manual del equipo): cotizado, autorizado y pendiente.
+  enviarResultado() {
+    const r = this._res; if (!r) return; const f = n => this.fmt(n);
+    const txt = 'Cotizado ' + f(r.cotizado) + ' · Autorizado ' + f(r.autorizado) + ' · Pendiente ' + f(r.pendiente) + ' (urgentes autorizados ' + f(r.urgenteAutorizado) + ' de ' + f(r.urgenteCotizado) + '; sugeridos autorizados ' + f(r.sugeridoAutorizado) + ' de ' + f(r.sugeridoCotizado) + ')';
+    try { if (this._tfOt && window.opener && !window.opener.closed) { window.opener.postMessage({ tipo: 'lns-cotizacion-resultado', ot: String(this._tfOt), ...r, ts: Date.now() }, 'https://lubensave2026.github.io'); this.setState({ msg: 'Resultado enviado a TallerFLOW: ' + txt }); return; } } catch (e) {}
+    this.setState({ msg: 'Resultado: ' + txt + '. (No hay conexión con TallerFLOW: abre el Cotizador desde la orden para enviarlo.)' });
+  }
   copy(url, label) {
     (navigator.clipboard ? navigator.clipboard.writeText(url) : Promise.reject()).catch(() => window.prompt('Copia el link:', url));
     this.setState({ copied: label }); setTimeout(() => this.setState({ copied: '' }), 2000);
@@ -1581,6 +1593,7 @@ class Component extends DCLogic {
     const sub = onItems.reduce((a, i) => a + i.tot, 0), subAll = items.reduce((a, i) => a + i.tot, 0);
     const esRojo = i => (i.urg || 'rojo') === 'rojo', suma = L => L.reduce((a, i) => a + i.tot, 0);
     const rojosOn = onItems.filter(esRojo), amarOn = onItems.filter(i => !esRojo(i)), rojosAll = items.filter(esRojo), amarAll = items.filter(i => !esRojo(i));
+    this._res = { cotizado: subAll, autorizado: sub, pendiente: subAll - sub, urgenteCotizado: suma(rojosAll), urgenteAutorizado: suma(rojosOn), sugeridoCotizado: suma(amarAll), sugeridoAutorizado: suma(amarOn), puntos: items.length, puntosAutorizados: onItems.length };
     const sum = { urgFmt: this.fmt(suma(rojosOn)), sugFmt: this.fmt(suma(amarOn)), hasUrg: rojosAll.length > 0, hasSug: amarAll.length > 0, urgAllFmt: this.fmt(suma(rojosAll)), sugAllFmt: this.fmt(suma(amarAll)), urgAllN: rojosAll.length, sugAllN: amarAll.length,
       countAll: items.length, totFmt: this.fmt(sub), totAllFmt: this.fmt(subAll),
       repAllFmt: this.fmt(items.reduce((a, i) => a + i.rep, 0)), moAllFmt: this.fmt(items.reduce((a, i) => a + i.mo, 0)) };
@@ -1592,7 +1605,7 @@ class Component extends DCLogic {
       showBaseTab: !!st.adminDev && !this._tfOt && !this._modo, histCount: this.recs ? this.recs.length.toLocaleString('es-GT') + ' casos' : 'cargando…', histEstado: st.histEstado || '', sincronizarAhora: () => this.sincronizarAhora(),
       consOpen: !!st.consOpen, toggleCons: () => this.setState(x => ({ consOpen: !x.consOpen })), consVeh: st.consVeh || '', consPieza: st.consPieza || '', setConsVeh: e => this.setState({ consVeh: e.target.value }), setConsPieza: e => this.setState({ consPieza: e.target.value }), hasConsVeh: !!(st.consVeh || '').trim(), hasConsPieza: !!(st.consPieza || '').trim(), clearConsVeh: () => this.setState({ consVeh: '' }), hasConsAlgo: !!((st.consVeh || '').trim() || (st.consPieza || '').trim()), clearConsTodo: () => this.setState({ consVeh: '', consPieza: '' }), clearConsPieza: () => this.setState({ consPieza: '' }), cons: st.consOpen ? this.consultar() : {},
       publishHist: () => this.publishHist(),
-      teamView: this.esEquipo() && st.clientOnly && !pr, showListadosCli: this.esEquipo() && st.clientOnly && !pr && !!st.showListados, listadosLabel: st.showListados ? 'Ocultar listados para TallerFLOW' : 'Listados para TallerFLOW (equipo)', toggleListados: () => this.setState(x => ({ showListados: !x.showListados })), cliPdf: st.clientOnly && !pr, canEdit: st.clientOnly && !pr && !!st.adminDev, editSaved: () => this.editSaved(),
+      teamView: this.esEquipo() && st.clientOnly && !pr, showListadosCli: this.esEquipo() && st.clientOnly && !pr && !!st.showListados, listadosLabel: st.showListados ? 'Ocultar listados para TallerFLOW' : 'Listados para TallerFLOW (equipo)', enviarResultado: () => this.enviarResultado(), toggleListados: () => this.setState(x => ({ showListados: !x.showListados })), cliPdf: st.clientOnly && !pr, canEdit: st.clientOnly && !pr && !!st.adminDev, editSaved: () => this.editSaved(),
       loading: st.loading || (st.cargaNube && !st.clientOnly), loadMsg: st.cargaError || (st.cargaNube ? 'Cargando presupuesto…' : 'Cargando historial…'), showChrome: !st.clientOnly && !pr && !st.cargaNube,
       headerSub: q.or ? 'OR ' + q.or + ' · ' + (q.vehiculo || '') : 'Zona 10',
       isStep1: !(st.loading || (st.cargaNube && !st.clientOnly)) && !pr && step === 1 && st.baseOpen && st.adminDev, isStep2: !(st.loading || (st.cargaNube && !st.clientOnly)) && !pr && step === 2, isStep3: !(st.loading || (st.cargaNube && !st.clientOnly)) && !pr && step === 3, isStep4: !(st.loading || (st.cargaNube && !st.clientOnly)) && !pr && step === 4 && !st.clientOnly,
@@ -1653,7 +1666,7 @@ class Component extends DCLogic {
       confirmServ: () => { if (q.okS) this.setState({ step: 4 }); else { this.setQ({ okS: this.stamp() }); this.notifyMod(q); if (q.okP) { this.saveToHist(q); this.avisarLinkCliente(q); } } },
       locked, lockMsg: !q.okP ? 'Falta que el asesor de partes confirme los repuestos.' : 'Falta que el asesor de servicio confirme la mano de obra.',
       copyLabel: st.copied === 'cli' ? 'Link copiado ✓' : 'Copiar link para cliente',
-      copyLink: async () => { if (S.cortoNube && this._savingFB) await Promise.race([this._savingFB, new Promise(r => setTimeout(r, 4000))]); const u = this.clientUrl(); this.copy(u, 'cli'); this.notifyTF(u); },
+      copyLink: async () => { if (S.cortoNube && this._savingFB) await Promise.race([this._savingFB, new Promise(r => setTimeout(r, 4000))]); const u = this.clientUrl(); this.copy(u, 'cli'); this.notifyEnviada(u); },
       sendWa: () => { const tel = (q.tel || '').replace(/\D/g, ''); const msg = 'Lube N Save Zona 10' + String.fromCharCode(10) + 'Presupuesto No. ' + q.or + ' · ' + q.vehiculo + (q.placa ? ' · ' + q.placa : '') + String.fromCharCode(10) + 'Elija qué trabajos realizar aquí: ' + (this._cu = this.clientUrl()); this.notifyTF(this._cu);
         window.open('https://wa.me/' + (tel ? (tel.length === 8 ? '502' + tel : tel) : '') + '?text=' + encodeURIComponent(msg), '_blank'); },
       doPrint: () => this.doPrint(),
