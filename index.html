@@ -922,18 +922,92 @@ class Component extends DCLogic {
         if (!it.ops.length) { const h = this.makeItem(vk, p.name, p.urg, p.com); if (h.ops.length && h.ops.some(o => o.hrs)) it.ops = h.ops; }
         // Sin horas ni historial: dejar las operaciones creadas (paquete o "Cambio de…") para que el asesor solo ponga las horas.
         if (!it.ops.length) { const k2 = this.pkgItem(vk, p.name, p.com); it.ops = k2 && k2.ops.length ? k2.ops : [{ desc: this.verboDe(p.com) + ' de ' + p.name.charAt(0).toLowerCase() + p.name.slice(1), hrs: '' }]; }
-        return it;
+        return it.parts.length ? it : this.enriquecer(vk, it, p, 'sinParts');
       }
       const it = this.makeItem(vk, p.name, p.urg, p.com);
-      if (!it.src && p.subs.length) it.parts = p.subs.map(x => ({ desc: this.cap(x.desc), rep: '' }));
-      else if (!it.src && (pk = this.pkgItem(vk, p.name, p.com))) { it.parts = pk.parts; it.ops = pk.ops; }
-      else if (!it.src) { const nm = this.cap(p.name), cambio = /reemplaz|cambi/i.test((p.com || '') + ' ' + p.name); it.parts = [{ desc: nm, rep: '' }]; it.ops = [{ desc: this.verboDe(p.com) + ' de ' + nm.charAt(0).toLowerCase() + nm.slice(1), hrs: '' }]; }
+      if (it.src && it.src.est) return this.enriquecer(vk, it, p, 'est');
+      if (!it.src && p.subs.length) { it.parts = p.subs.map(x => ({ desc: this.cap(x.desc), rep: '' })); return this.enriquecer(vk, it, p, 'sub'); }
+      else if (!it.src && (pk = this.pkgItem(vk, p.name, p.com))) { it.parts = pk.parts; it.ops = pk.ops; return this.enriquecer(vk, it, p, 'pkg'); }
+      else if (!it.src) { const nm = this.cap(p.name), cambio = /reemplaz|cambi/i.test((p.com || '') + ' ' + p.name); it.parts = [{ desc: nm, rep: '' }]; it.ops = [{ desc: this.verboDe(p.com) + ' de ' + nm.charAt(0).toLowerCase() + nm.slice(1), hrs: '' }]; return this.enriquecer(vk, it, p, 'nombre'); }
       return it;
     });
     const withEst = items.filter(i => i.src && i.src.est).length, withHist = items.filter(i => i.src && !i.src.pdf && !i.src.est).length, fromPdf = items.filter(i => i.src && i.src.pdf).length;
     this.setState(s => ({ quote: { ...this.emptyQ(), link: h.link || (s.quote.link === 'https://vehi.mobi/N8XwaN' ? '' : s.quote.link), or: h.or, cliente: h.cliente, tel: h.tel, placa: h.placa, km: h.km, asesor: h.asesor || '', anio: h.anio || '',
       vehiculo: vk ? b.m[vk].d : (h.vehiculoRaw || ''), items },
       parseMsg: 'PDF leído: ' + (vk ? b.m[vk].d : (h.vehiculoRaw || 'vehículo no reconocido')) + ' ' + (h.anio || '') + ' · OR ' + h.or + ' · ' + items.length + ' puntos (' + withHist + ' con precio del historial' + (withEst ? ', ' + withEst + ' estimados con otros vehículos (revisar)' : '') + (fromPdf ? ', ' + fromPdf + ' con precios del PDF' : '') + ', ' + (items.length - withHist - withEst - fromPdf) + ' para llenar). Revisa y agrega complementos.' }));
+  }
+  // ===== Armado automático de renglones: repuestos y operaciones a partir del nombre del punto y del comentario del técnico =====
+  // Entiende cantidades ("2 latas de gas"), varias piezas ("carga de gas y aceite UV"), "rótula con juego", "ambos" y el contexto de A/C.
+  lineasDeTexto(name, com, usarNombre) {
+    const nrm = t => String(t || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+    const NUM = { un: 1, una: 1, uno: 1, dos: 2, tres: 3, cuatro: 4, cinco: 5, seis: 6, siete: 7, ocho: 8 };
+    const UNI = { lata: 'lata', latas: 'lata', litro: 'litro', litros: 'litro', lt: 'litro', lts: 'litro', galon: 'galón', galones: 'galón', botella: 'botella', botellas: 'botella', pieza: 'pieza', piezas: 'pieza', pza: 'pieza', pzas: 'pieza', juego: 'juego', juegos: 'juego', kit: 'kit', kits: 'kit', par: 'par', pares: 'par', cuarto: 'cuarto', cuartos: 'cuarto', tubo: 'tubo', tubos: 'tubo' };
+    const VERBO = '(?:cotizar|cotizaci[oó]n\\s+de|cambiar|cambio\\s+de|reemplazar|reemplazo\\s+de|sustituir|instalar|colocar|agregar|a[ñn]adir|rellenar|recargar|recarga\\s+de|carga\\s+de|cargar|rectificar|realizar|hacer)';
+    const RXV = new RegExp('^\\s*(?:de\\s+)?(' + VERBO + ')\\b\\s*', 'i'), RXV1 = new RegExp('\\b' + VERBO + '\\b', 'i');
+    const CAUSA = /^(.{3,45}?)\s+con\s+(?:juego|fuga|fugas|desgaste|ruido|holgura|da[ñn]o|golpe|roto|rota|rotos|rotas|fisura|grieta|vencid[oa]s?|p[eé]rdida)\b/i;
+    const IGNORA = /^(presenta|tiene|tienen|est[aá]n?|se\s|muy|ya\b|desgast|contamin|en\s+ambos|revisi[oó]n|revisar|diagn[oó]stico|inspecci[oó]n|mano de obra|ambos lados|ambos|ambas|nada|todo|lo necesario|esto|eso|ese|esta|este)\b/i;
+    const ctxAC = /\ba\s*\/\s*c\b|\bac\b|aire acond/i.test((name || '') + ' ' + (com || ''));
+    const tipoV = v => /rectific/i.test(v) ? 'rectificado' : /carg/i.test(v) ? 'carga' : /cambi|reempl|sustit|instal|coloc/i.test(v) ? 'cambio' : '';
+    const sing = w => w.length > 3 ? w.replace(/(es|s)$/, '') : w;
+    const tk = t => nrm(t).replace(/[^a-z0-9 ]/g, ' ').split(/\s+/).filter(w => w.length > 1 && !/^(de|del|la|el|los|las|un|una|para|con|por|en|derech[oa]|izquierd[oa])$/.test(w)).map(sing);
+    const arreglar = d => this.cap(d).replace(/\buv\b/gi, 'UV').replace(/\ba\/c\b/gi, 'A/C').replace(/\bgas\b(?!\s*fre)/i, ctxAC ? 'gas freón' : 'gas');
+    const piezas = [];
+    const agregar = (txt, verbo, qdef) => {
+      let t = String(txt || '').trim().replace(/^(?:de|del|la|el|los|las)\s+/i, '').replace(/\s+(?:por|que|ya|para|porque|debido|pues|y\s+se)\b.*$/i, '').replace(/[()"]/g, '').trim();
+      const mv = t.match(RXV); if (mv) { verbo = tipoV(mv[1]) || verbo; t = t.slice(mv[0].length).replace(/^(?:de|del)\s+/i, ''); }
+      let q = qdef || 1;
+      if (/^(?:ambos|ambas|los\s+dos|las\s+dos)\s+/i.test(t)) { t = t.replace(/^(?:ambos|ambas|los\s+dos|las\s+dos)\s+/i, ''); q = 2; }
+      const mq = t.match(/^(\d{1,2}|un|una|uno|dos|tres|cuatro|cinco|seis|siete|ocho)\s+(.+)$/i);
+      if (mq) { q = /^\d/.test(mq[1]) ? parseInt(mq[1], 10) : NUM[mq[1].toLowerCase()]; t = mq[2]; }
+      if (/\s+(?:en\s+)?ambos\s+lados$|\s+ambas$|\s+ambos$/i.test(t)) { t = t.replace(/\s+(?:en\s+)?ambos\s+lados$|\s+ambas$|\s+ambos$/i, ''); q = Math.max(q, 2); }
+      t = t.replace(/\s+(?:derech[oa]|izquierd[oa])$/i, '');
+      let unidad = ''; const mu = t.match(/^([a-zñ]+)\s+(?:de\s+)?(.+)$/i); if (mu && UNI[nrm(mu[1])]) { unidad = UNI[nrm(mu[1])]; t = mu[2]; }
+      t = t.replace(/^(?:de|del|la|el|los|las)\s+/i, '').trim(); if (t.length < 3 || t.length > 50 || IGNORA.test(t)) return;
+      const noun = arreglar(t), nl = noun.charAt(0).toLowerCase() + noun.slice(1);
+      piezas.push({ desc: unidad ? this.cap(unidad) + ' de ' + nl : noun, noun, q, key: tk(t), explicit: !!(mq || unidad), verbo });
+    };
+    // 1) del nombre del punto (si es una pieza y no un diagnóstico)
+    if (usarNombre && name && !/^(sistema|revisi[oó]n|fuga|servicio|diagn|inspecc|nivel|estado|prueba|luces?|ruido|vibraci|alineaci|balanceo|frenos?)\b/i.test(name.trim()))
+      agregar(name.trim(), 'cambio', /\b(ambos|ambas|par|pares)\b/i.test(name) || /^(amortiguador|muleta|r[oó]tula|terminal|cabezal|buje|base|resorte|brazo|rodamiento|maza|balero|llanta|foco|mangueta)\w*s\b/i.test(name.trim()) ? 2 : 1);
+    const nNom = piezas.length;
+    // 2) del comentario del técnico, por frases
+    String(com || '').split(/[.;\n]+|,\s*(?=\S)/).map(x => x.trim()).filter(Boolean).forEach(cl => {
+      const m = cl.match(RXV1);
+      if (m) { let obj = cl.slice(m.index), verbo = '';
+        const m1 = obj.match(RXV); if (m1) { verbo = tipoV(m1[1]); obj = obj.slice(m1[0].length); }
+        for (let g = 0; g < 4; g++) { const m2 = obj.match(RXV); if (!m2) break; verbo = tipoV(m2[1]) || verbo; obj = obj.slice(m2[0].length); }
+        obj.split(/\s*(?:\by\b|\be\b|\+|,)\s*/i).forEach(x => agregar(x, verbo));
+      } else { const c = cl.match(CAUSA); if (c) agregar(c[1], 'cambio'); }
+    });
+    // 3) juntar duplicados: si una pieza contiene a la otra son la misma (queda la más completa y la mayor cantidad)
+    const out = [];
+    piezas.forEach(p => {
+      const dup = out.find(o => o.key.length && p.key.length && (p.key.every(w => o.key.includes(w)) || o.key.every(w => p.key.includes(w))));
+      if (dup) { if (p.key.length > dup.key.length || (p.explicit && !dup.explicit)) { dup.desc = p.desc; dup.noun = p.noun; dup.key = p.key; } dup.q = Math.max(dup.q, p.q); dup.verbo = p.verbo || dup.verbo; } else out.push({ ...p });
+    });
+    // 4) A/C con gas: lleva aceite para compresor
+    if (ctxAC && out.some(p => /\bgas\b/i.test(p.noun)) && !out.some(p => /compresor/i.test(p.noun))) out.push({ desc: 'Aceite para compresor', noun: 'Aceite para compresor', q: 1, key: ['aceite', 'compresor'], verbo: '' });
+    const lc = x => x.charAt(0).toLowerCase() + x.slice(1);
+    return { delComentario: piezas.length - nNom, parts: out.filter(p => p.verbo !== 'rectificado').map(({ desc, noun, q }) => ({ desc, noun, q })),
+      ops: out.map(p => ({ desc: (p.verbo === 'rectificado' ? 'Rectificado de ' : p.verbo === 'carga' ? 'Carga de ' : 'Cambio de ') + lc(p.noun) })) };
+  }
+  // Completa un punto con los renglones que se deducen del nombre y del comentario del técnico (con precio y horas del historial cuando existen).
+  // tipo: 'sinParts' (PDF sin repuestos / nada), 'est' (estimado de otro vehículo), 'sub' (renglones listados por el técnico), 'pkg' (paquete de fábrica).
+  enriquecer(vk, it, p, tipo) {
+    try {
+      const gen = this.lineasDeTexto(p.name, p.com, tipo === 'sinParts' || tipo === 'est');
+      if (!gen.parts.length && !gen.ops.length) return it;
+      const cubre = (L, d) => { const k = this.toks(d).join(' '); return k && (L || []).some(l => { const h = this.toks(l.desc).join(' '); return h && (h.includes(k) || k.includes(h)); }); };
+      const linea = g => { let pr = this.priceFor(vk, g.desc, null); if (!pr.rep && g.noun && g.noun !== g.desc) pr = this.priceFor(vk, g.noun, null); const u = pr.rep || 0; return { desc: g.desc, rep: u ? String(this.r2(u * g.q)) : '', q: String(g.q), ...(u ? { base: u * g.q, adj: 0 } : {}) }; };
+      const blank = (it.parts || []).every(l => !(l.desc || '').trim() && !l.rep);
+      if (tipo === 'sinParts' || tipo === 'nombre' || (tipo === 'est' && gen.delComentario)) { if (gen.parts.length) it.parts = gen.parts.map(linea); }
+      else if (blank) { if (gen.parts.length) it.parts = gen.parts.map(linea); }
+      else it.parts = [...it.parts, ...gen.parts.filter(g => !cubre(it.parts, g.desc)).map(linea)];
+      const conH = (it.ops || []).filter(o => (o.desc || '').trim() || this.num(o.hrs));
+      const extra = (conH.some(o => this.num(o.hrs)) ? [] : gen.ops).filter(o => !cubre(conH, o.desc)).map(o => { const h = this.priceFor(vk, o.desc, null).hrs; return { desc: this.cap(o.desc).replace(/\buv\b/gi, 'UV').replace(/\ba\/c\b/gi, 'A/C'), hrs: h ? String(h) : '' }; });
+      const nuevas = [...conH, ...extra]; if (nuevas.length) it.ops = nuevas;
+    } catch (e) { console.warn('enriquecer', e); }
+    return it;
   }
   pkgRules() {
     const parse = txt => (txt || '').split(/\n/).map(l => l.split('=')).filter(p => p.length === 2).map(([k, v]) => { const [r, m] = v.split('|'); const L = x => (x || '').split(/;/).map(t => t.trim()).filter(Boolean); return { k: this.toks(k), parts: L(r), ops: L(m) }; }).filter(r => r.k.length);
