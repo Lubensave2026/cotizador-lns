@@ -762,13 +762,14 @@ class Component extends DCLogic {
     const F = this.F(), hoy = new Date().toISOString().slice(0, 10), or = String(q.or || ('LNS-' + Date.now())).trim();
     const vk = this.vehKeyOf(q.vehiculo) || (() => { const t = this.norm(q.vehiculo).split(' '); return t[0] + '|' + t.slice(1).join(' '); })();
     const vd = this.state.base.m[vk] ? this.state.base.m[vk].d : (q.vehiculo || '').trim();
-    const add = q.items.map(it => { const lines = [];
-      (it.parts || []).forEach(l => { const v = this.num(l.rep); if ((l.desc || '').trim() && v) lines.push([l.desc.trim(), this.r2(v / F), 0]); });
-      (it.ops || []).forEach(l => { const h = this.num(l.hrs); if ((l.desc || '').trim() && h) lines.push([l.desc.trim(), 0, this.r2(h * this.rateAt(hoy))]); });
+    let omit = 0;
+    const add = q.items.map(it => { const lines = [], e0 = new Set(it.e0 || []);
+      (it.parts || []).forEach(l => { const v = this.num(l.rep); if ((l.desc || '').trim() && v) { if (e0.has('p|' + l.desc.trim() + '|' + l.rep)) omit++; else lines.push([l.desc.trim(), this.r2(v / F), 0]); } });
+      (it.ops || []).forEach(l => { const h = this.num(l.hrs); if ((l.desc || '').trim() && h) { if (e0.has('o|' + l.desc.trim() + '|' + l.hrs)) omit++; else lines.push([l.desc.trim(), 0, this.r2(h * this.rateAt(hoy))]); } });
       return lines.length ? [or, hoy, String(q.anio || ''), vk, this.norm(it.name), vd, it.name, lines, 'lns'] : null; }).filter(Boolean);
     if (!add.length) return;
     await this.setRecs([...this.recs.filter(x => x[0] !== or), ...add]); this.pushDelta(or, add);
-    this.setState({ msg: 'OR ' + or + ' guardada en el historial (' + add.length + ' puntos).' });
+    this.setState({ msg: 'OR ' + or + ' guardada en el historial (' + add.length + ' puntos)' + (omit ? '; ' + omit + ' líneas estimadas con precios de otros vehículos no se guardaron porque no se les puso precio propio' : '') + '.' });
   }
   exportHist() {
     const blob = new Blob([JSON.stringify({ tipo: 'lns-historial', fecha: new Date().toISOString(), recs: this.recs, settings: this.state.settings })], { type: 'application/json' });
@@ -947,6 +948,7 @@ class Component extends DCLogic {
       else if (!it.src) { const nm = this.cap(p.name), cambio = /reemplaz|cambi/i.test((p.com || '') + ' ' + p.name); it.parts = [{ desc: nm, rep: '' }]; it.ops = [{ desc: this.verboDe(p.com) + ' de ' + nm.charAt(0).toLowerCase() + nm.slice(1), hrs: '' }]; return this.enriquecer(vk, it, p, 'nombre'); }
       return it;
     });
+    items.forEach(it => { if (it.src && it.src.est) it.e0 = [...new Set([...(it.e0 || []), ...this.lineKeys(it)])]; });
     const withEst = items.filter(i => i.src && i.src.est).length, withHist = items.filter(i => i.src && !i.src.pdf && !i.src.est).length, fromPdf = items.filter(i => i.src && i.src.pdf).length;
     this.setState(s => ({ quote: { ...this.emptyQ(), link: h.link || (s.quote.link === 'https://vehi.mobi/N8XwaN' ? '' : s.quote.link), or: h.or, cliente: h.cliente, tel: h.tel, placa: h.placa, km: h.km, asesor: h.asesor || '', anio: h.anio || '',
       vehiculo: vk ? b.m[vk].d : (h.vehiculoRaw || ''), items },
@@ -1016,13 +1018,13 @@ class Component extends DCLogic {
       const gen = this.lineasDeTexto(p.name, p.com, true);
       if (!gen.parts.length && !gen.ops.length) return it;
       const cubre = (L, d) => { const k = this.toks(d).join(' '); return k && (L || []).some(l => { const h = this.toks(l.desc).join(' '); return h && (h.includes(k) || k.includes(h)); }); };
-      const linea = g => { let pr = this.priceFor(vk, g.desc, null); if (!pr.rep && g.noun && g.noun !== g.desc) pr = this.priceFor(vk, g.noun, null); const u = pr.rep || 0; return { desc: g.desc, rep: u ? String(this.r2(u * g.q)) : '', q: String(g.q), ...(u ? { base: u * g.q, adj: 0 } : {}) }; };
+      const linea = g => { let pr = this.priceFor(vk, g.desc, null); if (!pr.rep && g.noun && g.noun !== g.desc) pr = this.priceFor(vk, g.noun, null); const u = pr.rep || 0; if (u && !pr.own) (it.e0 = it.e0 || []).push('p|' + g.desc.trim() + '|' + this.r2(u * g.q)); return { desc: g.desc, rep: u ? String(this.r2(u * g.q)) : '', q: String(g.q), ...(u ? { base: u * g.q, adj: 0 } : {}) }; };
       const blank = (it.parts || []).every(l => !(l.desc || '').trim() && !l.rep);
       if (tipo === 'sinParts' || tipo === 'nombre' || (tipo === 'est' && gen.delComentario)) { if (gen.parts.length) it.parts = gen.parts.map(linea); }
       else if (blank) { if (gen.parts.length) it.parts = gen.parts.map(linea); }
       else it.parts = [...it.parts, ...gen.parts.filter(g => !cubre(it.parts, g.desc)).map(linea)];
       const conH = (it.ops || []).filter(o => (o.desc || '').trim() || this.num(o.hrs));
-      const extra = (conH.some(o => this.num(o.hrs)) ? [] : gen.ops).filter(o => !cubre(conH, o.desc)).map(o => { const h = this.priceFor(vk, o.desc, null).hrs; return { desc: this.cap(o.desc).replace(/\buv\b/gi, 'UV').replace(/\ba\/c\b/gi, 'A/C'), hrs: h ? String(h) : '' }; });
+      const extra = (conH.some(o => this.num(o.hrs)) ? [] : gen.ops).filter(o => !cubre(conH, o.desc)).map(o => { const pr = this.priceFor(vk, o.desc, null), h = pr.hrs, d = this.cap(o.desc).replace(/\buv\b/gi, 'UV').replace(/\ba\/c\b/gi, 'A/C'); if (h && !pr.own) (it.e0 = it.e0 || []).push('o|' + d.trim() + '|' + h); return { desc: d, hrs: h ? String(h) : '' }; });
       const nuevas = [...conH, ...extra]; if (nuevas.length) it.ops = nuevas;
     } catch (e) { console.warn('enriquecer', e); }
     return it;
@@ -1146,6 +1148,8 @@ class Component extends DCLogic {
         if (ka && vt.includes(ka)) { const tg = this.norm(b).split(' '), r = this.tplCands(null, tipo, [tg[0], tg.slice(1).join(' ')]); if (r.length) { r.alt = b.trim().toUpperCase(); return r; } } } }
     return out;
   }
+  // Llaves de las líneas de un punto (descripción + precio u horas): sirven para reconocer qué líneas siguen siendo una estimación sin tocar.
+  lineKeys(it) { return [...(it.parts || []).filter(l => (l.desc || '').trim() && this.num(l.rep)).map(l => 'p|' + l.desc.trim() + '|' + l.rep), ...(it.ops || []).filter(l => (l.desc || '').trim() && this.num(l.hrs)).map(l => 'o|' + l.desc.trim() + '|' + l.hrs)]; }
   itemFromTpl(cands, k, urg, nota, id) {
     const S = this.state.serv, s = S.servicios[cands[k]];
     const tb = S.tabla[s.tipo.replace('SERVICIO ', '').replace(' COMPLETO', '')];
@@ -1153,9 +1157,11 @@ class Component extends DCLogic {
     s.items.forEach(([sec, name, q, u]) => { const tot = Math.round(q * u * 100) / 100; if (!tot) return;
       if (/MANO DE OBRA/i.test(sec)) ops.push({ desc: this.cap(name), hrs: String(Math.round(tot / (this.num(this.state.settings.tarifa) || 600) * 10000) / 10000) });
       else parts.push({ desc: this.cap(name.replace(/^wippe$/i, 'Wipe')), sec: this.cap(sec || 'Repuestos'), q, rep: String(this.r2(tot * this.F())) }); });
-    return { id: id || Math.random().toString(36).slice(2), name: this.cap(s.tipo), pk: s.tipo, urg, nota: nota || '', on: true,
+    const R = { id: id || Math.random().toString(36).slice(2), name: this.cap(s.tipo), pk: s.tipo, urg, nota: nota || '', on: true,
       src: { tpl: true, t: s.t, ...(cands.alt ? { alt: cands.alt } : {}) }, tpl: { cands, k }, hist: [], parts, ops,
       incluye: tb ? tb.l.map(x => this.cap(x)) : [], mat: s.items.filter(i => !/MANO DE OBRA/i.test(i[0]) && i[3] > 0).map(i => this.cap(i[1].replace(/^wippe$/i, 'Wipe'))) };
+    if (cands.alt) R.e0 = this.lineKeys(R);
+    return R;
   }
   makeItem(vk, raw, urg, nota) {
     const tipo = this.svcTipo(raw);
@@ -1299,7 +1305,7 @@ class Component extends DCLogic {
   fbGet(db, path, ms) { return Promise.race([db.ref(path).once('value').then(sn => sn.val()), new Promise((res, rej) => setTimeout(() => rej(new Error('La nube no respondió (tiempo agotado)')), ms || 20000))]); }
   fbKey(ot) { return String(ot || '').trim().replace(/[^A-Za-z0-9_-]/g, '_'); }
   newCode() { const a = new Uint8Array(9); crypto.getRandomValues(a); return [...a].map(x => (x % 36).toString(36)).join(''); }
-  clientPayload(q) { return { q: { ...q, texto: '', items: (q.items || []).map(({ hist, pk, tpl, foto, ...it }) => ({ ...it, ...(foto ? { foto } : {}), parts: (it.parts || []).map(({ costo, mg, mgOn, adj, base, ...l }) => l) })) }, s: { tarifa: this.state.settings.tarifa, iva: this.state.settings.iva } }; }
+  clientPayload(q) { return { q: { ...q, texto: '', items: (q.items || []).map(({ hist, pk, tpl, foto, e0, ...it }) => ({ ...it, ...(foto ? { foto } : {}), parts: (it.parts || []).map(({ costo, mg, mgOn, adj, base, ...l }) => l) })) }, s: { tarifa: this.state.settings.tarifa, iva: this.state.settings.iva } }; }
   saveFB(q) { return (this._savingFB = this.saveFB0(q)); }
   async saveFB0(q) {
     try {
