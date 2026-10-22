@@ -767,7 +767,7 @@ class Component extends DCLogic {
     e.target.value = '';
   }
   estimateP(vk, raw) {
-    const b = this.state.base; const marca = vk ? vk.split('|')[0] : this.norm(this.state.quote.vehiculo).split(' ')[0];
+    const b = this.state.base; const marca = vk ? vk.split('|')[0] : (this._marcaHint || this.norm(this.state.quote.vehiculo).split(' ')[0]);
     const all = [];
     for (const k in b.m) { if (k === vk) continue; const P = this.match(k, raw, 0.6); if (P) { const tot = P.last.l.reduce((a, l) => a + l[1] + l[2], 0); if (tot > 0) all.push({ k, P, tot }); } }
     if (all.length < 2) return null;
@@ -902,13 +902,13 @@ class Component extends DCLogic {
     });
     return { h, points };
   }
-  fromPdf(res) { this._real = true; try { this.fromPdf0(res); } finally { this._real = false; } }
+  fromPdf(res) { this._real = true; try { this.fromPdf0(res); } finally { this._real = false; this._estFallback = false; this._marcaHint = ''; } }
   fromPdf0({ h, points }) {
     const b = this.state.base; let vk = '';
     if (h.vehiculoRaw) { const T = this.norm(h.vehiculoRaw); let bl = 0; for (const k in b.m) { const d = this.norm(b.m[k].d); if (d.length > bl && (T === d || T.startsWith(d + ' ') || T.includes(d))) { vk = k; bl = d.length; } } }
     // El PDF mezcla columnas (el modelo puede quedar partido en dos renglones): si no hubo coincidencia, buscar un modelo del historial cuyas palabras estén todas en el texto cercano a “Vehículo:”.
     if (!vk && h.vehCtx) { const W = new Set(this.norm(h.vehCtx).split(' ')); let bl = 0; for (const k in b.m) { const d = this.norm(b.m[k].d), dw = d.split(' '); if (dw.length > 1 && d.length > bl && dw.every(w => W.has(w))) { vk = k; bl = d.length; } } }
-    let pk;
+    let pk; this._estFallback = true; this._marcaHint = vk ? '' : this.norm(h.vehiculoRaw || '').split(' ')[0];
     const items = points.map(p => {
       const priced = !this.state.settings.usarPdf ? [] : p.subs.filter(s => this.num(s.n['PRECIO U.']) || this.num(s.n['HRS.']));
       if (priced.length) {
@@ -930,10 +930,10 @@ class Component extends DCLogic {
       else if (!it.src) { const nm = this.cap(p.name), cambio = /reemplaz|cambi/i.test((p.com || '') + ' ' + p.name); it.parts = [{ desc: nm, rep: '' }]; it.ops = [{ desc: this.verboDe(p.com) + ' de ' + nm.charAt(0).toLowerCase() + nm.slice(1), hrs: '' }]; }
       return it;
     });
-    const withHist = items.filter(i => i.src && !i.src.pdf).length, fromPdf = items.filter(i => i.src && i.src.pdf).length;
+    const withEst = items.filter(i => i.src && i.src.est).length, withHist = items.filter(i => i.src && !i.src.pdf && !i.src.est).length, fromPdf = items.filter(i => i.src && i.src.pdf).length;
     this.setState(s => ({ quote: { ...this.emptyQ(), link: h.link || (s.quote.link === 'https://vehi.mobi/N8XwaN' ? '' : s.quote.link), or: h.or, cliente: h.cliente, tel: h.tel, placa: h.placa, km: h.km, asesor: h.asesor || '', anio: h.anio || '',
       vehiculo: vk ? b.m[vk].d : (h.vehiculoRaw || ''), items },
-      parseMsg: 'PDF leído: ' + (vk ? b.m[vk].d : (h.vehiculoRaw || 'vehículo no reconocido')) + ' ' + (h.anio || '') + ' · OR ' + h.or + ' · ' + items.length + ' puntos (' + withHist + ' con precio del historial' + (fromPdf ? ', ' + fromPdf + ' con precios del PDF' : '') + ', ' + (items.length - withHist - fromPdf) + ' para llenar). Revisa y agrega complementos.' }));
+      parseMsg: 'PDF leído: ' + (vk ? b.m[vk].d : (h.vehiculoRaw || 'vehículo no reconocido')) + ' ' + (h.anio || '') + ' · OR ' + h.or + ' · ' + items.length + ' puntos (' + withHist + ' con precio del historial' + (withEst ? ', ' + withEst + ' estimados con otros vehículos (revisar)' : '') + (fromPdf ? ', ' + fromPdf + ' con precios del PDF' : '') + ', ' + (items.length - withHist - withEst - fromPdf) + ' para llenar). Revisa y agrega complementos.' }));
   }
   pkgRules() {
     const parse = txt => (txt || '').split(/\n/).map(l => l.split('=')).filter(p => p.length === 2).map(([k, v]) => { const [r, m] = v.split('|'); const L = x => (x || '').split(/;/).map(t => t.trim()).filter(Boolean); return { k: this.toks(k), parts: L(r), ops: L(m) }; }).filter(r => r.k.length);
@@ -1064,7 +1064,7 @@ class Component extends DCLogic {
     const tipo = this.svcTipo(raw);
     if (tipo) { const c = this.tplCands(vk, tipo); if (c.length) return this.itemFromTpl(c, 0, urg, nota); }
     let P = this.match(vk, raw, 0.6), est = null; const s = this.state.settings;
-    if (!P && this.state.quote.estimado && !this._real && this.state.base) { est = this.estimateP(vk, raw); if (est) P = est.P; }
+    if (!P && this.state.base && ((this.state.quote.estimado && !this._real) || this._estFallback)) { est = this.estimateP(vk, raw); if (est) P = est.P; }
     const it = { id: Math.random().toString(36).slice(2), name: this.cap(P ? P.name : raw), pk: P ? this.norm(P.name) : '', urg, nota: nota || '', foto: '', on: true, src: null, hist: [], parts: [], ops: [] };
     if (!P) { it.parts = [{ desc: '', rep: '' }]; it.ops = [{ desc: '', hrs: '' }]; return it; }
     const L = P.last, mo = this.monthsAgo(L.d), applies = mo > this.num(s.meses);
@@ -1587,7 +1587,7 @@ class Component extends DCLogic {
         hasNota: !!(it.nota || '').trim(),
         srcText: it.src && it.src.tpl ? 'Plantilla oficial · ' + it.src.t : it.src && it.src.pdf ? 'Precios tomados del PDF' : it.src && it.src.est ? 'Estimado · ref. ' + it.src.est.model + ' OR ' + it.src.or + ' · rango Q' + it.src.est.min.toLocaleString('es-GT') + '–Q' + it.src.est.max.toLocaleString('es-GT') + ' en ' + it.src.est.n + ' vehículos ' + (it.src.est.sb ? 'de la misma marca' : 'de otras marcas') : it.src ? 'Ref. OR ' + it.src.or + ' · ' + this.fd(it.src.d) + ' · año ' + it.src.y + (it.src.adj ? ' · repuestos +' + it.src.adj + '%' : '') : 'Sin historial de “' + it.name + '” para ' + (q.vehiculo || 'este vehículo') + ' — ingresa costo de: ' + ((it.parts || []).filter(l => (l.desc || '').trim()).map(l => l.desc).join(', ') || 'los repuestos que lleve') + ', y horas en Mano de obra',
         srcBg: it.src && it.src.est ? '#fff2ef' : it.src && it.src.tpl ? '#FEED01' : it.src ? 'var(--color-neutral-200)' : 'var(--color-accent-100)', srcFg: it.src ? '#201e1d' : '#7c1405',
-        histText: it.src ? 'Cotizado ' + it.src.n + ' veces · últimos: ' + (it.hist || []).map(h => this.fd(h[0]).slice(3) + ' Q' + h[1].toLocaleString('es-GT')).join(', ') : '',
+        histText: it.src && it.src.n ? 'Cotizado ' + it.src.n + ' veces · últimos: ' + (it.hist || []).map(h => this.fd(h[0]).slice(3) + ' Q' + h[1].toLocaleString('es-GT')).join(', ') : '',
         hasNota: !!(it.nota || '').trim(), hasFoto: /^https?:\/\//.test(it.foto || ''),
         op: on ? 1 : 0.45, siBg: on ? '#000' : '#fff', siFg: on ? YEL : '#201e1d', noBg: on ? '#fff' : '#d7d3d3',
         onSi: () => this.updItem(i, { on: true }), onNo: () => this.updItem(i, { on: false }),
