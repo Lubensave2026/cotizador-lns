@@ -191,12 +191,22 @@
           </div>
           <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap; font-size: 13px;"><span><strong>Historial de este equipo:</strong> {{ histCount }}</span><button class="btn btn-secondary" onClick="{{ sincronizarAhora }}" style="font-size: 12px;">Actualizar desde la nube</button></div>
           <sc-if value="{{ histEstado }}" hint-placeholder-val="{{ false }}"><p style="margin: 0; font-size: 13px; font-weight: 600; color: #ae1800;">{{ histEstado }}</p></sc-if>
-          <p style="margin: 0; font-size: 13px; color: #605d5d;">Sin crear presupuesto. Escribe el vehículo (marca y/o modelo) y la pieza u operación, por ejemplo “Hilux” y “pastillas de freno delanteras”. Precios con IVA.</p>
+          <p style="margin: 0; font-size: 13px; color: #605d5d;">Sin crear presupuesto. Escribe el vehículo (marca y/o modelo) y la pieza u operación, por ejemplo “Hilux” y “pastillas de freno delanteras”. Si escribes solo el vehículo, verás todo lo que se le ha cotizado, orden por orden. Precios con IVA.</p>
           <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px;">
             <div class="field" style="position: relative;"><label>Vehículo</label><input class="input" value="{{ consVeh }}" onChange="{{ setConsVeh }}" placeholder="Ej. Toyota Hilux" style="padding-right: 40px;"><sc-if value="{{ hasConsVeh }}" hint-placeholder-val="{{ false }}"><button onClick="{{ clearConsVeh }}" aria-label="Borrar vehículo" title="Borrar vehículo" style="position: absolute; right: 4px; bottom: 4px; width: 32px; height: 32px; border: none; background: transparent; font-size: 22px; line-height: 1; cursor: pointer; color: #605d5d;">×</button></sc-if></div>
-            <div class="field" style="position: relative;"><label>Pieza u operación</label><input class="input" value="{{ consPieza }}" onChange="{{ setConsPieza }}" placeholder="Ej. pastillas de freno delanteras" style="padding-right: 40px;"><sc-if value="{{ hasConsPieza }}" hint-placeholder-val="{{ false }}"><button onClick="{{ clearConsPieza }}" aria-label="Borrar pieza u operación" title="Borrar pieza u operación" style="position: absolute; right: 4px; bottom: 4px; width: 32px; height: 32px; border: none; background: transparent; font-size: 22px; line-height: 1; cursor: pointer; color: #605d5d;">×</button></sc-if></div>
+            <div class="field" style="position: relative;"><label>Pieza u operación (opcional)</label><input class="input" value="{{ consPieza }}" onChange="{{ setConsPieza }}" placeholder="Ej. pastillas de freno delanteras" style="padding-right: 40px;"><sc-if value="{{ hasConsPieza }}" hint-placeholder-val="{{ false }}"><button onClick="{{ clearConsPieza }}" aria-label="Borrar pieza u operación" title="Borrar pieza u operación" style="position: absolute; right: 4px; bottom: 4px; width: 32px; height: 32px; border: none; background: transparent; font-size: 22px; line-height: 1; cursor: pointer; color: #605d5d;">×</button></sc-if></div>
           </div>
           <sc-if value="{{ cons.msg }}" hint-placeholder-val="{{ false }}"><p style="margin: 0; font-size: 14px; font-weight: 600;">{{ cons.msg }}</p></sc-if>
+          <sc-if value="{{ cons.hasV }}" hint-placeholder-val="{{ false }}">
+            <div style="display: flex; flex-direction: column; gap: 0; border-top: 2px solid #201e1d;">
+              <sc-for list="{{ cons.V.rows }}" as="r" hint-placeholder-count="3">
+                <div style="display: grid; grid-template-columns: 84px minmax(0, 1fr) 96px; gap: 4px 10px; font-size: 13px; padding: 10px 0; border-bottom: 1px solid var(--color-divider);">
+                  <span style="font-weight: 700;">{{ r.d }}</span><span><strong>{{ r.or }}</strong> · {{ r.veh }} · {{ r.y }}</span><span style="text-align: right; font-weight: 800;">{{ r.tot }}</span>
+                  <span></span><span style="color: #605d5d; grid-column: 2 / 4; text-wrap: pretty;">{{ r.pts }}</span>
+                </div>
+              </sc-for>
+            </div>
+          </sc-if>
           <sc-if value="{{ cons.hasP }}" hint-placeholder-val="{{ false }}">
             <div style="display: flex; flex-direction: column; gap: 8px;">
               <span style="font-size: 12px; text-transform: uppercase; letter-spacing: 0.08em; font-weight: 700;">Repuestos · {{ cons.P.n }} registros</span>
@@ -1321,9 +1331,24 @@ class Component extends DCLogic {
     this.setState(s => ({ clientOnly: false, step: 2, savedFB: null, quote: { ...s.quote, okP: null, okS: null }, parseMsg: 'Editando el presupuesto de la OT ' + (this._tfOt || this.state.quote.or) + '. Al confirmar de nuevo se actualiza el mismo link del cliente.' }));
   }
   // Consulta de precios del historial: más reciente, más alto y promedio (con IVA), sin crear presupuesto.
+  // Historial del vehículo: todo lo cotizado a ese modelo, por orden y fecha (solo con el vehículo escrito, sin pieza).
+  historialVeh(vt, tk) {
+    const F = this.F(), by = new Map();
+    for (const x of this.recs) {
+      if (!vt.every(t => tk(x[5] || '').includes(t))) continue;
+      const k = x[0] + '|' + x[1]; let o = by.get(k); if (!o) { o = { or: x[0], d: x[1], y: x[2], veh: x[5], tot: 0, pts: [] }; by.set(k, o); }
+      const t = (x[7] || []).reduce((a, l) => a + (l[1] || 0) + (l[2] || 0), 0) * F; o.tot += t; o.pts.push({ n: this.cap(x[4] || x[6] || ''), t });
+    }
+    const all = [...by.values()].sort((a, b) => b.d.localeCompare(a.d) || String(b.or).localeCompare(String(a.or)));
+    if (!all.length) return { msg: 'No hay órdenes de ese vehículo en el historial.' };
+    const veh = new Set(all.map(o => o.veh)), nPts = all.reduce((a, o) => a + o.pts.length, 0), tope = 80;
+    return { msg: all.length + ' órdenes · ' + nPts + ' puntos cotizados' + (veh.size > 1 ? ' · ' + veh.size + ' versiones del modelo' : '') + (all.length > tope ? ' · se muestran las ' + tope + ' más recientes' : '') + '. Precios con IVA.', hasV: true,
+      V: { rows: all.slice(0, tope).map(o => ({ d: this.fd(o.d), or: 'OR ' + o.or, y: o.y, veh: o.veh, tot: this.fmt(o.tot), pts: o.pts.sort((a, b) => b.t - a.t).map(p => p.n + (p.t ? ' ' + this.fmt(p.t) : '')).join(' · ') })) } };
+  }
   consultar() {
     const st = this.state, tk = x => this.toks(x).map(w => w.length > 5 ? w.replace(/[AO]$/, '') : w), pz = tk(st.consPieza || ''), vt = tk(st.consVeh || '');
-    if (!this.recs || !pz.length) return { msg: 'Escribe la pieza u operación que quieres consultar.' };
+    if (this.recs && !pz.length && vt.length) return this.historialVeh(vt, tk);
+    if (!this.recs || !pz.length) return { msg: 'Escribe el vehículo para ver todo lo que se le ha cotizado, o la pieza u operación para consultar precios.' };
     const F = this.F(), run = filtroVeh => { const P = [], O = [];
       for (const x of this.recs) { if (filtroVeh && vt.length && !vt.every(t => tk(x[5] || '').includes(t))) continue;
         for (const l of (x[7] || [])) { const dk = tk(l[0]); if (!pz.every(t => dk.includes(t))) continue;
