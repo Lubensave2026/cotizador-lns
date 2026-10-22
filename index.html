@@ -162,6 +162,11 @@
         <textarea class="input" style="min-height: 160px; font-size: 14px; font-family: var(--font-body);" value="{{ settings.kits }}" onChange="{{ setKits }}"></textarea>
       </section>
       <section style="display: flex; flex-direction: column; gap: 10px;">
+        <h2 style="margin: 0; font-size: 18px; text-transform: uppercase; border-bottom: 2px solid #201e1d; padding-bottom: 8px;">Modelos equivalentes para las plantillas de servicio</h2>
+        <p style="margin: 0; font-size: 14px; max-width: 80ch; text-wrap: pretty;">Una regla por línea: <strong>VEHÍCULO = MODELO CON PLANTILLA</strong>. Si el vehículo no tiene plantilla de servicio propia, se usa la del modelo equivalente y el punto queda marcado para revisar. Ejemplo: <strong>JAC HFC1012K = KIA K2700</strong>.</p>
+        <textarea class="input" style="min-height: 90px; font-size: 14px; font-family: var(--font-body);" value="{{ settings.equiv }}" onChange="{{ setEquiv }}"></textarea>
+      </section>
+      <section style="display: flex; flex-direction: column; gap: 10px;">
         <h2 style="margin: 0; font-size: 18px; text-transform: uppercase; border-bottom: 2px solid #201e1d; padding-bottom: 8px;">Paquetes por punto</h2>
         <p style="margin: 0; font-size: 14px; max-width: 80ch; text-wrap: pretty;">Una regla por línea: <strong>PUNTO = repuesto; repuesto | operación; operación</strong>. Cuando un punto del reporte no tiene historial en ese vehículo, se crean de una vez estos renglones en Repuestos y en Mano de obra, y se llenan los precios y horas que existan en el historial (del vehículo, o de otros si no hay).</p>
         <textarea class="input" style="min-height: 220px; font-size: 14px; font-family: var(--font-body);" value="{{ settings.paquetes }}" onChange="{{ setPaquetes }}"></textarea>
@@ -657,6 +662,7 @@
 class Component extends DCLogic {
   defS() { return { cortoNube: true, usarPdf: true, anos: '3', copias: '3', margen: '50', tarifa: '600', tarifaFija: true, iva: '12', pct: '8', meses: '6', r1: '425', r2: '500', r3: '600',
     paquetes: 'FRENOS DELANTEROS = Pastillas de freno delanteras; Líquido de frenos; Rectificado de discos | Cambio de pastillas delanteras; Desmontaje de discos delanteros\nFRENOS TRASEROS = Pastillas de freno traseras; Líquido de frenos | Cambio de pastillas traseras; Desmontaje de discos traseros\nBALATAS TRASERAS = Balatas traseras; Líquido de frenos | Cambio de balatas traseras\nAMORTIGUADORES DELANTEROS = Amortiguadores delanteros; Bases de amortiguador | Cambio de amortiguadores delanteros\nAMORTIGUADORES TRASEROS = Amortiguadores traseros | Cambio de amortiguadores traseros\nBATERIA = Batería | Cambio de batería\nBUJIAS = Bujías | Cambio de bujías\nCLUTCH = Kit de clutch; Aceite de transmisión | Desmontaje de caja; Cambio de clutch\nCABEZALES DIRECCION = Cabezales de dirección | Cambio de cabezales de dirección; Alineación\nTERMINALES = Terminales de dirección | Cambio de terminales; Alineación\nROTULAS = Rótulas | Cambio de rótulas; Alineación\nBUJES BARRA ESTABILIZADORA = Bujes de barra estabilizadora | Cambio de bujes de barra estabilizadora\nBOMBA DE AGUA = Bomba de agua; Refrigerante | Cambio de bomba de agua\nTERMOSTATO = Termostato; Refrigerante | Cambio de termostato\nRADIADOR = Radiador; Refrigerante | Cambio de radiador\nFUGA REFRIGERANTE = Refrigerante | Cambio de refrigerante; Purgado de sistema de enfriamiento\nBRIDA AGUA = Brida de agua; Empaque de brida; Sellador | Cambio de brida de agua\nMANGUERA RADIADOR = Manguera de radiador; Refrigerante | Cambio de manguera de radiador; Purgado de sistema de enfriamiento\nFUGA ACEITE MOTOR = Empaque o sello; Sellador; Aceite de motor; Filtro de aceite | Cambio de empaque o sello; Cambio de aceite y filtro\nACEITE DIFERENCIAL = Aceite de diferencial; Empaque o sello de tapón | Cambio de aceite de diferencial\nACEITE TRANSMISION = Aceite de transmisión | Cambio de aceite de transmisión\nBANDA = Banda de accesorios | Cambio de banda de accesorios\nCORREA TIEMPO = Kit de distribución; Bomba de agua; Refrigerante | Cambio de kit de distribución\nLLANTAS = Llantas | Montaje y balanceo de llantas; Alineación\nESCOBILLAS = Escobillas limpiaparabrisas | Cambio de escobillas\nFILTRO AIRE ACONDICIONADO = Filtro de aire acondicionado | Cambio de filtro de aire acondicionado',
+    equiv: 'JAC HFC1012K = KIA K2700',
     kits: 'RADIADOR = Refrigerante; Abrazaderas; Wipe\nTUBERIA AC = Gas freón; Aceite para compresor\nCOMPRESOR AC = Gas freón; Aceite para compresor\nBOMBA DE AGUA = Refrigerante; Wipe\nTERMOSTATO = Refrigerante\nFRENOS = Líquido de frenos\nCARGADORES = Materiales auxiliares' }; }
   sample() {
     return 'Lube N Save Zona 10\nReporte de inspección vehicular\nOrden: 5431\nCliente: Cliente de ejemplo\nTel: 55551234\nHyundai Tucson 2019  Placa P-123ABC  Km 85,000\n\nREQUIERE ATENCIÓN INMEDIATA\nFrenos delanteros  Urgente  Pastillas al 2 mm\nFrenos traseros  Urgente\n\nSUGERIDO\nFiltro de aire acondicionado  Recomendado\nChorritos y plumillas  Recomendado\nLuces de freno  Recomendado\nSoporte de motor  Recomendado\n\nOK\nNivel de aceite  OK\nEstado de llantas  OK';
@@ -1115,10 +1121,10 @@ class Component extends DCLogic {
     if (known.has(first)) return first === 'VOLKWAGEN' ? ['VOLKSWAGEN'] : [first];
     return this.norm(s.hoja).split(/[^A-Z]+/).filter(w => w.length > 1);
   }
-  tplCands(vk, tipo) {
+  tplCands(vk, tipo, eq) {
     const S = this.state.serv; if (!S || !this.state.base) return [];
     let marca, modelo;
-    if (vk) [marca, modelo] = vk.split('|'); else { const t = this.norm(this.state.quote.vehiculo).split(' '); marca = t[0] || ''; modelo = t.slice(1).join(' '); }
+    if (eq) [marca, modelo] = eq; else if (vk) [marca, modelo] = vk.split('|'); else { const t = this.norm(this.state.quote.vehiculo).split(' '); marca = t[0] || ''; modelo = t.slice(1).join(' '); }
     if (!marca || !modelo) return [];
     const mc = modelo.replace(/[^A-Z0-9]/g, '');
     const okT = t => t === tipo || (t.startsWith('SERVICIO MAYOR') && tipo.startsWith('SERVICIO MAYOR'));
@@ -1133,7 +1139,12 @@ class Component extends DCLogic {
       segs.forEach(g => { if (g === mc) sc = Math.max(sc, 3); else if (g.length >= 2 && mc.length >= 2 && (mc.startsWith(g) || g.startsWith(mc))) sc = Math.max(sc, 2); });
       if (sc >= 2) res.push({ idx, sc: sc + (s.tipo === tipo ? 0.5 : 0) });
     });
-    return res.sort((a, b) => b.sc - a.sc).map(r => r.idx);
+    const out = res.sort((a, b) => b.sc - a.sc).map(r => r.idx);
+    // Sin plantilla propia: la de un modelo equivalente (Base → Modelos equivalentes), marcada para revisar.
+    if (!out.length && !eq) { const vt = this.norm(marca + ' ' + modelo);
+      for (const l of (this.state.settings.equiv != null ? this.state.settings.equiv : this.defS().equiv).split(/\n/)) { const [a, b] = l.split('='); if (!a || !b) continue; const ka = this.norm(a);
+        if (ka && vt.includes(ka)) { const tg = this.norm(b).split(' '), r = this.tplCands(null, tipo, [tg[0], tg.slice(1).join(' ')]); if (r.length) { r.alt = b.trim().toUpperCase(); return r; } } } }
+    return out;
   }
   itemFromTpl(cands, k, urg, nota, id) {
     const S = this.state.serv, s = S.servicios[cands[k]];
@@ -1143,7 +1154,7 @@ class Component extends DCLogic {
       if (/MANO DE OBRA/i.test(sec)) ops.push({ desc: this.cap(name), hrs: String(Math.round(tot / (this.num(this.state.settings.tarifa) || 600) * 10000) / 10000) });
       else parts.push({ desc: this.cap(name.replace(/^wippe$/i, 'Wipe')), sec: this.cap(sec || 'Repuestos'), q, rep: String(this.r2(tot * this.F())) }); });
     return { id: id || Math.random().toString(36).slice(2), name: this.cap(s.tipo), pk: s.tipo, urg, nota: nota || '', on: true,
-      src: { tpl: true, t: s.t }, tpl: { cands, k }, hist: [], parts, ops,
+      src: { tpl: true, t: s.t, ...(cands.alt ? { alt: cands.alt } : {}) }, tpl: { cands, k }, hist: [], parts, ops,
       incluye: tb ? tb.l.map(x => this.cap(x)) : [], mat: s.items.filter(i => !/MANO DE OBRA/i.test(i[0]) && i[3] > 0).map(i => this.cap(i[1].replace(/^wippe$/i, 'Wipe'))) };
   }
   makeItem(vk, raw, urg, nota) {
@@ -1686,7 +1697,7 @@ class Component extends DCLogic {
         tplOpts: it.tpl && st.serv ? it.tpl.cands.map((c, k) => ({ v: String(k), label: st.serv.servicios[c].t + ' · ' + this.cap(st.serv.servicios[c].tipo) })) : [],
         onTpl: e => { const k = +e.target.value; this.setState(s => ({ quote: { ...s.quote, okP: null, okS: null, items: s.quote.items.map((x, n) => n === i ? this.itemFromTpl(x.tpl.cands, k, x.urg, x.nota, x.id) : x) } })); },
         hasNota: !!(it.nota || '').trim(),
-        srcText: it.src && it.src.tpl ? 'Plantilla oficial · ' + it.src.t : it.src && it.src.pdf ? 'Precios tomados del PDF' : it.src && it.src.est ? 'Estimado · ref. ' + it.src.est.model + ' OR ' + it.src.or + ' · rango Q' + it.src.est.min.toLocaleString('es-GT') + '–Q' + it.src.est.max.toLocaleString('es-GT') + ' en ' + it.src.est.n + ' vehículos ' + (it.src.est.sb ? 'de la misma marca' : 'de otras marcas') : it.src ? 'Ref. OR ' + it.src.or + ' · ' + this.fd(it.src.d) + ' · año ' + it.src.y + (it.src.adj ? ' · repuestos +' + it.src.adj + '%' : '') : 'Sin historial de “' + it.name + '” para ' + (q.vehiculo || 'este vehículo') + ' — ingresa costo de: ' + ((it.parts || []).filter(l => (l.desc || '').trim()).map(l => l.desc).join(', ') || 'los repuestos que lleve') + ', y horas en Mano de obra',
+        srcText: it.src && it.src.tpl ? (it.src.alt ? 'Plantilla de otro modelo (' + it.src.alt + ') · REVISAR, no es la de este vehículo · ' : 'Plantilla oficial · ') + it.src.t : it.src && it.src.pdf ? 'Precios tomados del PDF' : it.src && it.src.est ? 'Estimado · ref. ' + it.src.est.model + ' OR ' + it.src.or + ' · rango Q' + it.src.est.min.toLocaleString('es-GT') + '–Q' + it.src.est.max.toLocaleString('es-GT') + ' en ' + it.src.est.n + ' vehículos ' + (it.src.est.sb ? 'de la misma marca' : 'de otras marcas') : it.src ? 'Ref. OR ' + it.src.or + ' · ' + this.fd(it.src.d) + ' · año ' + it.src.y + (it.src.adj ? ' · repuestos +' + it.src.adj + '%' : '') : 'Sin historial de “' + it.name + '” para ' + (q.vehiculo || 'este vehículo') + ' — ingresa costo de: ' + ((it.parts || []).filter(l => (l.desc || '').trim()).map(l => l.desc).join(', ') || 'los repuestos que lleve') + ', y horas en Mano de obra',
         srcBg: it.src && it.src.est ? '#fff2ef' : it.src && it.src.tpl ? '#FEED01' : it.src ? 'var(--color-neutral-200)' : 'var(--color-accent-100)', srcFg: it.src ? '#201e1d' : '#7c1405',
         histText: it.src && it.src.n ? 'Cotizado ' + it.src.n + ' veces · últimos: ' + (it.hist || []).map(h => this.fd(h[0]).slice(3) + ' Q' + h[1].toLocaleString('es-GT')).join(', ') : '',
         hasNota: !!(it.nota || '').trim(), hasFoto: /^https?:\/\//.test(it.foto || ''),
@@ -1759,7 +1770,7 @@ class Component extends DCLogic {
       changePin: () => this.setState({ baseOpen: false, pinChanging: true, pin1: '', pin2: '' }), setMargen: e => this.setS('margen', e.target.value), setIva: e => this.setS('iva', e.target.value), setPct: e => this.setS('pct', e.target.value), setMeses: e => this.setS('meses', e.target.value),
       setR1: e => this.setS('r1', e.target.value), setR2: e => this.setS('r2', e.target.value), setR3: e => this.setS('r3', e.target.value),
       onPdf: e => this.onPdf(e), tarifaIvaFmt: this.fmt(T * (1 + IVA)), onServFile: e => this.onServFile(e), servSrc: st.servSrc || '—', servCount: st.serv ? st.serv.servicios.length : 0,
-      tablaText: st.serv ? Object.entries(st.serv.tabla).map(([k, v]) => this.cap(k) + ' ' + v.l.length).join(', ') : '—', demoPdf: e => { e.preventDefault(); e.stopPropagation(); this.loadDemoPdf(); }, setUsarPdf: e => this.setS('usarPdf', e.target.checked), setCortoNube: e => this.setS('cortoNube', e.target.checked), probarNube: () => this.probarNube(), setKits: e => this.setS('kits', e.target.value), setPaquetes: e => this.setS('paquetes', e.target.value), setAsesor: e => this.setQ({ asesor: e.target.value }),
+      tablaText: st.serv ? Object.entries(st.serv.tabla).map(([k, v]) => this.cap(k) + ' ' + v.l.length).join(', ') : '—', demoPdf: e => { e.preventDefault(); e.stopPropagation(); this.loadDemoPdf(); }, setUsarPdf: e => this.setS('usarPdf', e.target.checked), setCortoNube: e => this.setS('cortoNube', e.target.checked), probarNube: () => this.probarNube(), setKits: e => this.setS('kits', e.target.value), setEquiv: e => this.setS('equiv', e.target.value), setPaquetes: e => this.setS('paquetes', e.target.value), setAsesor: e => this.setQ({ asesor: e.target.value }),
       hasAsesor: !!(q.asesor || '').trim(), pdfLabel: st.pdfName ? 'Cambiar PDF (' + st.pdfName + ')' : 'Elegir PDF', armar: () => this.armar(),
       parseMsg: st.parseMsg, hasParseMsg: !!st.parseMsg,
       buscar: st.buscar || '', setBuscar: e => this.setState({ buscar: e.target.value }), clearBuscar: () => this.setState({ buscar: '' }), hasBuscar: !!(st.buscar || '').trim(),
