@@ -955,6 +955,8 @@ class Component extends DCLogic {
     const agregar = (txt, verbo, qdef) => {
       let t = String(txt || '').trim().replace(/^(?:de|del|la|el|los|las)\s+/i, '').replace(/\s+(?:por|que|ya|para|porque|debido|pues|y\s+se)\b.*$/i, '').replace(/[()"]/g, '').trim();
       const mv = t.match(RXV); if (mv) { verbo = tipoV(mv[1]) || verbo; t = t.slice(mv[0].length).replace(/^(?:de|del)\s+/i, ''); }
+      t = t.replace(/^(?:esta|este|esa|ese|estas|estos|esas|esos|dicha|dicho)\s+/i, '');
+      t = t.replace(/\s+(?:primero|antes|despu[eé]s|luego|tambi[eé]n|urgente|pronto|ahora)$/i, '');
       let q = qdef || 1;
       if (/^(?:ambos|ambas|los\s+dos|las\s+dos)\s+/i.test(t)) { t = t.replace(/^(?:ambos|ambas|los\s+dos|las\s+dos)\s+/i, ''); q = 2; }
       const mq = t.match(/^(\d{1,2}|un|una|uno|dos|tres|cuatro|cinco|seis|siete|ocho)\s+(.+)$/i);
@@ -995,7 +997,7 @@ class Component extends DCLogic {
   // tipo: 'sinParts' (PDF sin repuestos / nada), 'est' (estimado de otro vehículo), 'sub' (renglones listados por el técnico), 'pkg' (paquete de fábrica).
   enriquecer(vk, it, p, tipo) {
     try {
-      const gen = this.lineasDeTexto(p.name, p.com, tipo === 'sinParts' || tipo === 'est');
+      const gen = this.lineasDeTexto(p.name, p.com, true);
       if (!gen.parts.length && !gen.ops.length) return it;
       const cubre = (L, d) => { const k = this.toks(d).join(' '); return k && (L || []).some(l => { const h = this.toks(l.desc).join(' '); return h && (h.includes(k) || k.includes(h)); }); };
       const linea = g => { let pr = this.priceFor(vk, g.desc, null); if (!pr.rep && g.noun && g.noun !== g.desc) pr = this.priceFor(vk, g.noun, null); const u = pr.rep || 0; return { desc: g.desc, rep: u ? String(this.r2(u * g.q)) : '', q: String(g.q), ...(u ? { base: u * g.q, adj: 0 } : {}) }; };
