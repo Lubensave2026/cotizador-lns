@@ -1687,8 +1687,10 @@ class Component extends DCLogic {
   // ===== Autorizacion del cliente en la nube: cotizador/autorizaciones/{OT} (la guarda el equipo al marcar Si / Ahora no) =====
   sigAut(q) { try { return JSON.stringify((q.items || []).map((it, i) => [it.id != null ? it.id : i, it.on !== false ? 1 : 0])); } catch (e) { return ''; } }
   vigilarAut() {
-    const st = this.state; if (!st.clientOnly || !this._tfOt || !(st.quote.items || []).length || !this.esEquipo()) return;
-    if (!this._autLoaded) { this._autLoaded = true; this.cargarAut(); return; }
+    const st = this.state; if (!this._tfOt || !(st.quote.items || []).length || !this.esEquipo()) return;
+    // La autorización guardada también se carga al abrir el presupuesto desde la orden (vista de edición), una vez revisado el borrador; guardar sigue siendo solo desde la vista del cliente.
+    if (!this._autLoaded) { if (!st.clientOnly && !this._draftChecked) return; this._autLoaded = true; this.cargarAut(); return; }
+    if (!st.clientOnly) return;
     if (this._autPend || this.sigAut(st.quote) === this._autSig) return;
     clearTimeout(this._autT); this._autT = setTimeout(() => this.guardarAut(), 2500);
   }
