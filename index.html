@@ -545,6 +545,10 @@
           <div style="padding: 16px 20px; background: #FFE500; color: #000; display: flex; flex-direction: column; gap: 2px;">
             <span style="font-size: 12px; text-transform: uppercase; letter-spacing: 0.08em;">Total a pagar</span>
             <span style="font-size: 34px; font-weight: 800;">{{ sum.totFmt }}</span>
+            <div style="display: flex; gap: 20px; flex-wrap: wrap; margin: 6px 0 4px; padding: 8px 0; border-top: 1px solid rgba(0,0,0,0.25); border-bottom: 1px solid rgba(0,0,0,0.25);">
+              <div style="display: flex; flex-direction: column;"><span style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em;">Repuestos y materiales</span><span style="font-size: 20px; font-weight: 800;">{{ sum.repOnFmt }}</span></div>
+              <div style="display: flex; flex-direction: column;"><span style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em;">Mano de obra</span><span style="font-size: 20px; font-weight: 800;">{{ sum.moOnFmt }}</span></div>
+            </div>
             <span style="font-size: 12px;">Presupuesto completo: {{ sum.totAllFmt }}</span>
           </div>
           <sc-if value="{{ hasLink }}" hint-placeholder-val="{{ false }}"><a href="{{ linkHref }}" target="_blank" style="color: #FFE500; padding: 14px 20px; font-size: 14px;">Ver fotos del reporte de inspección</a></sc-if>
@@ -1738,7 +1742,7 @@ class Component extends DCLogic {
     const esRojo = i => (i.urg || 'rojo') === 'rojo', suma = L => L.reduce((a, i) => a + i.tot, 0);
     const rojosOn = onItems.filter(esRojo), amarOn = onItems.filter(i => !esRojo(i)), rojosAll = items.filter(esRojo), amarAll = items.filter(i => !esRojo(i));
     this._res = { cotizado: subAll, autorizado: sub, pendiente: subAll - sub, urgenteCotizado: suma(rojosAll), urgenteAutorizado: suma(rojosOn), sugeridoCotizado: suma(amarAll), sugeridoAutorizado: suma(amarOn), puntos: items.length, puntosAutorizados: onItems.length };
-    const sum = { urgFmt: this.fmt(suma(rojosOn)), sugFmt: this.fmt(suma(amarOn)), hasUrg: rojosAll.length > 0, hasSug: amarAll.length > 0, urgAllFmt: this.fmt(suma(rojosAll)), sugAllFmt: this.fmt(suma(amarAll)), urgAllN: rojosAll.length, sugAllN: amarAll.length,
+    const sum = { repOnFmt: this.fmt(onItems.reduce((a, i) => a + i.rep, 0)), moOnFmt: this.fmt(onItems.reduce((a, i) => a + i.mo, 0)), urgFmt: this.fmt(suma(rojosOn)), sugFmt: this.fmt(suma(amarOn)), hasUrg: rojosAll.length > 0, hasSug: amarAll.length > 0, urgAllFmt: this.fmt(suma(rojosAll)), sugAllFmt: this.fmt(suma(amarAll)), urgAllN: rojosAll.length, sugAllN: amarAll.length,
       countAll: items.length, totFmt: this.fmt(sub), totAllFmt: this.fmt(subAll),
       repAllFmt: this.fmt(items.reduce((a, i) => a + i.rep, 0)), moAllFmt: this.fmt(items.reduce((a, i) => a + i.mo, 0)) };
     const step = st.clientOnly ? 4 : st.step, pr = st.printing;
