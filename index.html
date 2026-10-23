@@ -1807,7 +1807,7 @@ class Component extends DCLogic {
     const sub = onItems.reduce((a, i) => a + i.tot, 0), subAll = items.reduce((a, i) => a + i.tot, 0);
     const esRojo = i => (i.urg || 'rojo') === 'rojo', suma = L => L.reduce((a, i) => a + i.tot, 0);
     const rojosOn = onItems.filter(esRojo), amarOn = onItems.filter(i => !esRojo(i)), rojosAll = items.filter(esRojo), amarAll = items.filter(i => !esRojo(i));
-    this._res = { cotizado: subAll, autorizado: sub, pendiente: subAll - sub, urgenteCotizado: suma(rojosAll), urgenteAutorizado: suma(rojosOn), sugeridoCotizado: suma(amarAll), sugeridoAutorizado: suma(amarOn), puntos: items.length, puntosAutorizados: onItems.length };
+    this._res = { cotizado: subAll, autorizado: sub, autorizadoMO: Math.min(sub, Math.max(0, Math.round(onItems.reduce((x, i) => x + i.mo, 0) * 100) / 100)), pendiente: subAll - sub, urgenteCotizado: suma(rojosAll), urgenteAutorizado: suma(rojosOn), sugeridoCotizado: suma(amarAll), sugeridoAutorizado: suma(amarOn), puntos: items.length, puntosAutorizados: onItems.length };
     const sum = { repOnFmt: this.fmt(onItems.reduce((a, i) => a + i.rep, 0)), moOnFmt: this.fmt(onItems.reduce((a, i) => a + i.mo, 0)), urgFmt: this.fmt(suma(rojosOn)), sugFmt: this.fmt(suma(amarOn)), hasUrg: rojosAll.length > 0, hasSug: amarAll.length > 0, urgAllFmt: this.fmt(suma(rojosAll)), sugAllFmt: this.fmt(suma(amarAll)), urgAllN: rojosAll.length, sugAllN: amarAll.length,
       countAll: items.length, totFmt: this.fmt(sub), totAllFmt: this.fmt(subAll),
       repAllFmt: this.fmt(items.reduce((a, i) => a + i.rep, 0)), moAllFmt: this.fmt(items.reduce((a, i) => a + i.mo, 0)) };
