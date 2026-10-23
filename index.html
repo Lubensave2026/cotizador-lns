@@ -191,10 +191,11 @@
       </div>
       <sc-if value="{{ guardOpen }}" hint-placeholder-val="{{ false }}">
         <section style="display: flex; flex-direction: column; gap: 10px; border: 2px solid #000; padding: 18px; background: #fff;">
-          <div style="display: flex; justify-content: space-between; align-items: center; gap: 8px;"><h2 style="margin: 0; font-size: 18px; text-transform: uppercase;">Presupuestos guardados en este equipo</h2><button class="btn btn-secondary" onClick="{{ toggleGuard }}" style="font-size: 12px;">Cerrar</button></div>
-          <p style="margin: 0; font-size: 13px; color: #605d5d;">Se guardan solos en este navegador, del más reciente al más antiguo. Toca uno para abrirlo y seguir trabajando.</p>
+          <div style="display: flex; justify-content: space-between; align-items: center; gap: 8px;"><h2 style="margin: 0; font-size: 18px; text-transform: uppercase;">{{ guardTitulo }}</h2><button class="btn btn-secondary" onClick="{{ toggleGuard }}" style="font-size: 12px;">Cerrar</button></div>
+          <p style="margin: 0; font-size: 13px; color: #605d5d;">{{ guardAyuda }}</p>
+          <input class="input" value="{{ guardQ }}" onInput="{{ setGuardQ }}" placeholder="Buscar por placa, cliente, vehículo o número de orden / presupuesto">
           <sc-for list="{{ guardados }}" as="g" hint-placeholder-count="3">
-            <button class="btn btn-secondary" onClick="{{ g.abrir }}" style="display: grid; grid-template-columns: 90px minmax(0, 1fr) 110px; gap: 4px 10px; text-align: left; font-size: 13px; padding: 10px;"><strong>{{ g.or }}</strong><span>{{ g.desc }}</span><span style="text-align: right;">{{ g.fecha }}</span></button>
+            <button class="btn btn-secondary" title="{{ g.tip }}" onClick="{{ g.abrir }}" style="display: grid; grid-template-columns: 90px minmax(0, 1fr) 110px; gap: 4px 10px; text-align: left; font-size: 13px; padding: 10px;"><strong>{{ g.or }}</strong><span>{{ g.desc }}</span><span style="text-align: right;">{{ g.fecha }}</span></button>
           </sc-for>
         </section>
       </sc-if>
@@ -746,7 +747,7 @@ class Component extends DCLogic {
   }
   // Presupuestos hechos fuera de TallerFLOW (sin OR): número correlativo propio de este equipo, P-001, P-002…
   nextCorr() { const m = this.quoteStore(); let n = 0; try { n = parseInt(localStorage.getItem('lns-corr') || '0', 10) || 0; } catch (e) {} do { n++; } while (m['P-' + String(n).padStart(3, '0')]); try { localStorage.setItem('lns-corr', String(n)); } catch (e) {} return 'P-' + String(n).padStart(3, '0'); }
-  listaGuardados() { const m = this.quoteStore(); return Object.keys(m).map(k => ({ ...m[k], _k: k })).sort((a, b) => (b._t || 0) - (a._t || 0)).slice(0, 60); }
+  listaGuardados() { const m = this.quoteStore(); return Object.keys(m).map(k => ({ ...m[k], _k: k })).sort((a, b) => (b._t || 0) - (a._t || 0)); }
   quoteStore() { try { return JSON.parse(localStorage.getItem('lns-cotizaciones') || '{}'); } catch (e) { return {}; } }
   componentDidUpdate() {
     this.precomprimirCliente(); this.actualizarTitulo(); this.programarBorrador(); this.vigilarAut();
@@ -1773,7 +1774,14 @@ class Component extends DCLogic {
     return {
       showBaseTab: !!st.adminDev && !this._tfOt && !this._modo, histCount: this.recs ? this.recs.length.toLocaleString('es-GT') + ' casos' : 'cargando…', histEstado: st.histEstado || '', sincronizarAhora: () => this.sincronizarAhora(),
       guardOpen: !!st.guardOpen, toggleGuard: () => this.setState(x => ({ guardOpen: !x.guardOpen })),
-      guardados: st.guardOpen ? this.listaGuardados().map(g => ({ or: g._k, desc: [g.cliente, g.vehiculo, g.placa].filter(Boolean).join(' · ') + ' · ' + (g.items || []).length + ' puntos' + (g.estimado ? ' · estimado' : ''), fecha: g._t ? this.fd(new Date(g._t).toISOString().slice(0, 10)) : '',
+      guardTitulo: this._tfOt ? 'Presupuestos de este vehículo' : 'Presupuestos guardados en este equipo', guardQ: st.guardQ || '',
+      setGuardQ: e => this.setState({ guardQ: e.target.value }),
+      guardAyuda: (this._tfOt ? 'Lo que se ha cotizado a este vehículo en este equipo. ' : 'Se guardan solos en este navegador, del más reciente al más antiguo. ') + 'Pasa el cursor sobre uno para ver qué se autorizó; toca para abrirlo.',
+      guardados: st.guardOpen ? (() => { const nz = x => this.norm(x || ''), pl = nz(q.placa).replace(/\s+/g, ''), ve = nz(q.vehiculo), tt = nz(st.guardQ || '').split(' ').filter(Boolean);
+        let L = this.listaGuardados();
+        if (this._tfOt) L = L.filter(g => pl && nz(g.placa).replace(/\s+/g, '') ? nz(g.placa).replace(/\s+/g, '') === pl : ve && nz(g.vehiculo) === ve);
+        if (tt.length) L = L.filter(g => { const h = nz([g._k, g.or, g.cliente, g.vehiculo, g.placa, g.anio].join(' ')); return tt.every(t => h.includes(t)); });
+        return L.slice(0, 60); })().map(g => ({ tip: (g.items || []).length ? (g.okP && g.okS ? '' : 'Presupuesto sin confirmar del todo\n') + (g.items || []).map(i => (i.on === false ? '✘ No autorizado: ' : '✔ Autorizado: ') + i.name).join('\n') : 'Sin puntos', or: g._k, desc: [g.cliente, g.vehiculo, g.placa].filter(Boolean).join(' · ') + ' · ' + (g.items || []).length + ' puntos' + (g.estimado ? ' · estimado' : ''), fecha: g._t ? this.fd(new Date(g._t).toISOString().slice(0, 10)) : '',
         abrir: () => { const { _k, _t, ...qq } = g; if (q.items.length && q.or !== _k && !window.confirm('Se abrirá ' + _k + '. El presupuesto actual (' + (q.or || 'sin OR') + ') queda guardado en la lista.')) return; this.setState({ quote: this.richest(qq), step: qq.okP && qq.okS ? 4 : qq.okP ? 3 : 2, guardOpen: false, parseMsg: 'Presupuesto ' + _k + ' recuperado.', pdfName: '' }); } })) : [],
       consOpen: !!st.consOpen, toggleCons: () => this.setState(x => ({ consOpen: !x.consOpen })), consVeh: st.consVeh || '', consPieza: st.consPieza || '', setConsVeh: e => this.setState({ consVeh: e.target.value }), setConsPieza: e => this.setState({ consPieza: e.target.value }), hasConsVeh: !!(st.consVeh || '').trim(), hasConsPieza: !!(st.consPieza || '').trim(), clearConsVeh: () => this.setState({ consVeh: '' }), hasConsAlgo: !!((st.consVeh || '').trim() || (st.consPieza || '').trim()), clearConsTodo: () => this.setState({ consVeh: '', consPieza: '' }), clearConsPieza: () => this.setState({ consPieza: '' }), cons: st.consOpen ? this.consultar() : {},
       publishHist: () => this.publishHist(),
