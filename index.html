@@ -184,10 +184,20 @@
         </div>
         <div style="display: flex; gap: 8px; flex-wrap: wrap;">
           <button class="btn btn-secondary" onClick="{{ toggleCons }}">Consultar precios</button>
+          <button class="btn btn-secondary" onClick="{{ toggleGuard }}">Presupuestos guardados</button>
           <button class="btn btn-secondary" onClick="{{ nuevoEst }}">Estimado rápido</button>
           <button class="btn btn-secondary" onClick="{{ nuevo }}">Nuevo presupuesto</button>
         </div>
       </div>
+      <sc-if value="{{ guardOpen }}" hint-placeholder-val="{{ false }}">
+        <section style="display: flex; flex-direction: column; gap: 10px; border: 2px solid #000; padding: 18px; background: #fff;">
+          <div style="display: flex; justify-content: space-between; align-items: center; gap: 8px;"><h2 style="margin: 0; font-size: 18px; text-transform: uppercase;">Presupuestos guardados en este equipo</h2><button class="btn btn-secondary" onClick="{{ toggleGuard }}" style="font-size: 12px;">Cerrar</button></div>
+          <p style="margin: 0; font-size: 13px; color: #605d5d;">Se guardan solos en este navegador, del más reciente al más antiguo. Toca uno para abrirlo y seguir trabajando.</p>
+          <sc-for list="{{ guardados }}" as="g" hint-placeholder-count="3">
+            <button class="btn btn-secondary" onClick="{{ g.abrir }}" style="display: grid; grid-template-columns: 90px minmax(0, 1fr) 110px; gap: 4px 10px; text-align: left; font-size: 13px; padding: 10px;"><strong>{{ g.or }}</strong><span>{{ g.desc }}</span><span style="text-align: right;">{{ g.fecha }}</span></button>
+          </sc-for>
+        </section>
+      </sc-if>
       <sc-if value="{{ consOpen }}" hint-placeholder-val="{{ false }}">
         <section style="display: flex; flex-direction: column; gap: 14px; border: 2px solid #000; padding: 18px; background: #fff;">
           <div style="display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap;">
@@ -732,14 +742,18 @@ class Component extends DCLogic {
       this.fbOpen(); this.fbSync();
     });
   }
+  // Presupuestos hechos fuera de TallerFLOW (sin OR): número correlativo propio de este equipo, P-001, P-002…
+  nextCorr() { const m = this.quoteStore(); let n = 0; try { n = parseInt(localStorage.getItem('lns-corr') || '0', 10) || 0; } catch (e) {} do { n++; } while (m['P-' + String(n).padStart(3, '0')]); try { localStorage.setItem('lns-corr', String(n)); } catch (e) {} return 'P-' + String(n).padStart(3, '0'); }
+  listaGuardados() { const m = this.quoteStore(); return Object.keys(m).map(k => ({ ...m[k], _k: k })).sort((a, b) => (b._t || 0) - (a._t || 0)).slice(0, 60); }
   quoteStore() { try { return JSON.parse(localStorage.getItem('lns-cotizaciones') || '{}'); } catch (e) { return {}; } }
   componentDidUpdate() {
     this.precomprimirCliente(); this.actualizarTitulo(); this.programarBorrador(); this.vigilarAut();
     if (this.state.clientOnly || this.state.loading) return;
+    { const q0 = this.state.quote; if (!q0.or && q0.items && q0.items.length && !q0.estimado && !this._tfOt) this.setState(st => st.quote.or ? null : { quote: { ...st.quote, or: this.nextCorr() } }); }
     if (this._lq !== this.state.quote || this._ls !== this.state.settings)
       try { this._lq = this.state.quote; this._ls = this.state.settings;
         const q = this.state.quote; if (q.or && q.items && q.items.length && !q.estimado) { const m = this.quoteStore(); const old = m[q.or]; if (old && this.opsScore(old) > this.opsScore(q)) { try { const b = this.backupStore(); b[q.or] = { ...old, _t: Date.now() }; Object.keys(b).sort((x, y) => (b[y]._t || 0) - (b[x]._t || 0)).slice(40).forEach(k => delete b[k]); localStorage.setItem('lns-cotiz-respaldo', JSON.stringify(b)); } catch (e) {} } m[q.or] = { ...q, _t: Date.now() };
-          const ks = Object.keys(m).sort((a, b) => (m[b]._t || 0) - (m[a]._t || 0)); ks.slice(150).forEach(k => delete m[k]); localStorage.setItem('lns-cotizaciones', JSON.stringify(m)); } localStorage.setItem('lns-cotizador-v2', JSON.stringify({ quote: this.state.quote, settings: this.state.settings })); if (this.state.baseOpen) { if (this._lsRef === undefined) this._lsRef = this.state.settings; else if (this._lsRef !== this.state.settings) { this._lsRef = this.state.settings; this.pushSettings(); } } else this._lsRef = undefined; } catch (e) {}
+          const ks = Object.keys(m).sort((a, b) => (m[b]._t || 0) - (m[a]._t || 0)); ks.slice(400).forEach(k => delete m[k]); localStorage.setItem('lns-cotizaciones', JSON.stringify(m)); } localStorage.setItem('lns-cotizador-v2', JSON.stringify({ quote: this.state.quote, settings: this.state.settings })); if (this.state.baseOpen) { if (this._lsRef === undefined) this._lsRef = this.state.settings; else if (this._lsRef !== this.state.settings) { this._lsRef = this.state.settings; this.pushSettings(); } } else this._lsRef = undefined; } catch (e) {}
   }
   enc(o) { const b = new TextEncoder().encode(JSON.stringify(o)); let s = ''; b.forEach(x => s += String.fromCharCode(x)); return btoa(s).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, ''); }
   dec(s) { s = s.replace(/-/g, '+').replace(/_/g, '/'); return JSON.parse(new TextDecoder().decode(Uint8Array.from(atob(s), c => c.charCodeAt(0)))); }
@@ -1756,6 +1770,9 @@ class Component extends DCLogic {
     const locked = !(q.okP && q.okS);
     return {
       showBaseTab: !!st.adminDev && !this._tfOt && !this._modo, histCount: this.recs ? this.recs.length.toLocaleString('es-GT') + ' casos' : 'cargando…', histEstado: st.histEstado || '', sincronizarAhora: () => this.sincronizarAhora(),
+      guardOpen: !!st.guardOpen, toggleGuard: () => this.setState(x => ({ guardOpen: !x.guardOpen })),
+      guardados: st.guardOpen ? this.listaGuardados().map(g => ({ or: g._k, desc: [g.cliente, g.vehiculo, g.placa].filter(Boolean).join(' · ') + ' · ' + (g.items || []).length + ' puntos' + (g.estimado ? ' · estimado' : ''), fecha: g._t ? this.fd(new Date(g._t).toISOString().slice(0, 10)) : '',
+        abrir: () => { const { _k, _t, ...qq } = g; if (q.items.length && q.or !== _k && !window.confirm('Se abrirá ' + _k + '. El presupuesto actual (' + (q.or || 'sin OR') + ') queda guardado en la lista.')) return; this.setState({ quote: this.richest(qq), step: qq.okP && qq.okS ? 4 : qq.okP ? 3 : 2, guardOpen: false, parseMsg: 'Presupuesto ' + _k + ' recuperado.', pdfName: '' }); } })) : [],
       consOpen: !!st.consOpen, toggleCons: () => this.setState(x => ({ consOpen: !x.consOpen })), consVeh: st.consVeh || '', consPieza: st.consPieza || '', setConsVeh: e => this.setState({ consVeh: e.target.value }), setConsPieza: e => this.setState({ consPieza: e.target.value }), hasConsVeh: !!(st.consVeh || '').trim(), hasConsPieza: !!(st.consPieza || '').trim(), clearConsVeh: () => this.setState({ consVeh: '' }), hasConsAlgo: !!((st.consVeh || '').trim() || (st.consPieza || '').trim()), clearConsTodo: () => this.setState({ consVeh: '', consPieza: '' }), clearConsPieza: () => this.setState({ consPieza: '' }), cons: st.consOpen ? this.consultar() : {},
       publishHist: () => this.publishHist(),
       teamView: this.esEquipo() && st.clientOnly && !pr, showListadosCli: this.esEquipo() && st.clientOnly && !pr && !!st.showListados, listadosLabel: st.showListados ? 'Ocultar listados para TallerFLOW' : 'Listados para TallerFLOW (equipo)', enviarResultado: () => this.enviarResultado(), toggleListados: () => this.setState(x => ({ showListados: !x.showListados })), cliPdf: st.clientOnly && !pr, canEdit: st.clientOnly && !pr && !!st.adminDev, editSaved: () => this.editSaved(),
