@@ -583,6 +583,7 @@
                       <span>{{ x.no }}</span><span>{{ x.desc }}</span><span style="text-align: right;">{{ x.q }}</span><span style="text-align: right;">{{ x.unit }}</span><span style="text-align: right;">{{ x.tot }}</span>
                     </div>
                   </sc-for>
+                  <div style="display: flex; justify-content: space-between; gap: 12px; font-size: 12px; font-weight: 800; padding: 5px 14px; background: #f1efe9; border-bottom: 1px solid var(--color-neutral-300); -webkit-print-color-adjust: exact; print-color-adjust: exact;"><span>Subtotal {{ sec.name }}</span><span>{{ sec.sub }}</span></div>
                 </div>
               </sc-for>
               <div style="display: flex; justify-content: space-between; gap: 12px; background: #000; color: #FFE500; padding: 10px 14px; -webkit-print-color-adjust: exact; print-color-adjust: exact;">
@@ -657,6 +658,7 @@
                 <span>{{ x.no }}</span><span>{{ x.desc }}</span><span style="text-align: right;">{{ x.q }}</span><span style="text-align: right; white-space: nowrap;">{{ x.unit }}</span><span style="text-align: right; white-space: nowrap;">{{ x.tot }}</span>
               </div>
             </sc-for>
+            <div style="display: flex; justify-content: space-between; gap: 12px; font-size: 13px; font-weight: 800; padding: 8px 14px; background: #f1efe9; border-bottom: 1px solid var(--color-neutral-300);"><span>Subtotal {{ sec.name }}</span><span style="white-space: nowrap;">{{ sec.sub }}</span></div>
           </div>
         </sc-for>
         <div style="display: flex; justify-content: space-between; align-items: baseline; gap: 12px; background: #000; color: #fff; padding: 14px 18px; border-top: 4px solid #FFE500;">
@@ -1745,10 +1747,10 @@ class Component extends DCLogic {
       (q.items.find(x => x.id === mi.id).parts || []).forEach(l => { const tot = this.num(l.rep); if (!(l.desc || '').trim() || !tot) return;
         let desc = l.desc, qty = l.q; const m = !qty && desc.match(/\s\((\d+(?:\.\d+)?)\)$/); if (m) { qty = +m[1]; desc = desc.slice(0, m.index); } qty = qty || 1;
         const g = l.sec || (tplS ? 'Adicionales' : 'Repuestos'); if (!groups[g]) { groups[g] = []; order.push(g); }
-        groups[g].push({ desc, q: String(qty), unit: this.fmt(tot / qty), tot: this.fmt(tot) }); });
-      const secs = order.map(g => ({ name: g, qLabel: 'CTD', rows: groups[g].map((x, k) => ({ ...x, no: String(k + 1) })) }));
-      const opsRows = mi.ops.filter(l => (l.desc || '').trim() && this.num(l.hrs)).map((l, k) => ({ no: String(k + 1), desc: l.desc, q: String(this.num(l.q) || 1), unit: this.fmt(this.num(l.moFmt) / (this.num(l.q) || 1)), tot: l.moFmt }));
-      if (opsRows.length) secs.push({ name: 'Mano de obra', qLabel: 'CTD', rows: opsRows });
+        groups[g].push({ desc, q: String(qty), unit: this.fmt(tot / qty), tot: this.fmt(tot), _t: tot }); });
+      const secs = order.map(g => ({ name: g, qLabel: 'CTD', sub: this.fmt(groups[g].reduce((a, x) => a + x._t, 0)), rows: groups[g].map((x, k) => ({ ...x, no: String(k + 1) })) }));
+      const opsRows = mi.ops.filter(l => (l.desc || '').trim() && this.num(l.hrs)).map((l, k) => ({ no: String(k + 1), desc: l.desc, q: String(this.num(l.q) || 1), unit: this.fmt(this.num(l.moFmt) / (this.num(l.q) || 1)), tot: l.moFmt, _t: this.num(l.moFmt) }));
+      if (opsRows.length) secs.push({ name: 'Mano de obra', qLabel: 'CTD', sub: this.fmt(opsRows.reduce((a, x) => a + x._t, 0)), rows: opsRows });
       const modal = { kicker: (tplS ? 'Detalle del servicio' : 'Desglose') + ' · ' + (q.vehiculo || '') + ' ' + (q.anio || ''), title: tplS ? tplS.t : mi.name,
         secs, totLabel: 'Total ' + mi.name, tot: mi.totFmt, incluye: mi.incluye || [], hasIncluye: !!(mi.incluye && mi.incluye.length) };
       return modal;
