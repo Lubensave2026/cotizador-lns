@@ -193,6 +193,7 @@
         <section style="display: flex; flex-direction: column; gap: 10px; border: 2px solid #000; padding: 18px; background: #fff;">
           <div style="display: flex; justify-content: space-between; align-items: center; gap: 8px;"><h2 style="margin: 0; font-size: 18px; text-transform: uppercase;">{{ guardTitulo }}</h2><button class="btn btn-secondary" onClick="{{ toggleGuard }}" style="font-size: 12px;">Cerrar</button></div>
           <p style="margin: 0; font-size: 13px; color: #605d5d;">{{ guardAyuda }}</p>
+          <sc-if value="{{ hasGuardMsg }}" hint-placeholder-val="{{ false }}"><p style="margin: 0; font-size: 13px; font-weight: 600; color: #605d5d;">{{ guardMsg }}</p></sc-if>
           <input class="input" value="{{ guardQ }}" onInput="{{ setGuardQ }}" placeholder="Buscar por placa, cliente, vehículo o número de orden / presupuesto">
           <sc-for list="{{ guardados }}" as="g" hint-placeholder-count="3">
             <button class="btn btn-secondary" title="{{ g.tip }}" onClick="{{ g.abrir }}" style="display: grid; grid-template-columns: 90px minmax(0, 1fr) 110px; gap: 4px 10px; text-align: left; font-size: 13px; padding: 10px;"><strong>{{ g.or }}</strong><span>{{ g.desc }}</span><span style="text-align: right;">{{ g.fecha }}</span></button>
@@ -745,12 +746,53 @@ class Component extends DCLogic {
       this.fbOpen(); this.fbSync();
     });
   }
+  // ===== Presupuestos guardados en la nube: cotizador/guardados-indice/{clave} (liviano, con índice por ts) y cotizador/guardados/{clave} (presupuesto completo) =====
+  // Clave: el número de la orden; si el presupuesto se hizo fuera de TallerFLOW, el correlativo más el código de este equipo (para que P-001 de dos equipos no se pisen).
+  sigNube(q) { try { return JSON.stringify([q.items, q.okP, q.okS, q.cliente, q.vehiculo, q.placa, q.or]); } catch (e) { return ''; } }
+  devId() { let d = ''; try { d = localStorage.getItem('lns-dev') || ''; if (!d) { d = Math.random().toString(36).slice(2, 5); localStorage.setItem('lns-dev', d); } } catch (e) {} return d || 'x'; }
+  programarNube() {
+    const st = this.state, q = st.quote;
+    if (st.clientOnly || st.loading || this._clientLink || !this.esEquipo() || q.estimado || !q.or || !(q.items || []).length) return;
+    if (this.sigNube(q) === this._nbSig) return;
+    clearTimeout(this._nbT); this._nbT = setTimeout(() => this.guardarNube(), 8000);
+  }
+  async guardarNube() {
+    try {
+      const q = this.state.quote, sig = this.sigNube(q); if (sig === this._nbSig || !q.or || q.estimado || !(q.items || []).length) return;
+      const json = JSON.stringify({ q: { ...q, texto: '', items: q.items.map(({ hist, ...it }) => it) } });
+      if (json.length > 140000) { console.warn('presupuesto demasiado grande para la nube'); return; }
+      const db = await this.fbDb(); if (!db) return;
+      const k = this.fbKey(q.or) + (this._tfOt ? '' : '-' + this.devId()), ts = Date.now(), ot = String(q.or), c = q.cliente || '', v = q.vehiculo || '', pl = q.placa || '';
+      await Promise.race([(async () => {
+        await db.ref('cotizador/guardados/' + k).set({ ot, ts, cliente: c, vehiculo: v, placa: pl, json });
+        await db.ref('cotizador/guardados-indice/' + k).set({ ot, ts, cliente: c, vehiculo: v, placa: pl, okP: !!q.okP, okS: !!q.okS, puntos: q.items.slice(0, 40).map(it => ({ n: String(it.name || '').slice(0, 80), on: it.on !== false, u: (it.urg || 'rojo') === 'rojo' })) });
+      })(), new Promise((_, rej) => setTimeout(() => rej(new Error('tiempo agotado')), 15000))]);
+      this._nbSig = sig;
+    } catch (e) { console.warn('guardar en la nube', e); }
+  }
+  // Una sola lectura al abrir la lista: los 60 más recientes del índice (nunca la lista completa, sin listeners).
+  async cargarGuardNube() {
+    try {
+      this.setState({ guardMsg: 'Buscando también en la nube…' });
+      const db = await this.fbDb(); if (!db) { this.setState({ guardMsg: 'Sin conexión a la nube: solo se muestran los guardados en este equipo.' }); return; }
+      const sn = await Promise.race([db.ref('cotizador/guardados-indice').orderByChild('ts').limitToLast(60).once('value'), new Promise((_, rej) => setTimeout(() => rej(new Error('tiempo agotado')), 20000))]);
+      this.setState({ guardNube: sn.val() || {}, guardMsg: '' });
+    } catch (e) { console.warn('leer guardados', e); this.setState({ guardMsg: 'No se pudo leer la nube (' + e.message + '): se muestran solo los de este equipo.' }); }
+  }
+  async abrirNube(ck, titulo) {
+    try {
+      const db = await this.fbDb(); if (!db) throw new Error('sin conexión');
+      const r = await this.fbGet(db, 'cotizador/guardados/' + ck); if (!r || !r.json) throw new Error('no se encontró');
+      const nq = this.withOps(this.limpiarQuote(JSON.parse(r.json).q)); this._nbSig = this.sigNube(nq);
+      this.setState({ quote: nq, step: nq.okP && nq.okS ? 4 : nq.okP ? 3 : 2, guardOpen: false, parseMsg: 'Presupuesto ' + titulo + ' recuperado de la nube.', pdfName: '' });
+    } catch (e) { this.setState({ msg: 'No se pudo abrir el presupuesto de la nube: ' + e.message }); }
+  }
   // Presupuestos hechos fuera de TallerFLOW (sin OR): número correlativo propio de este equipo, P-001, P-002…
   nextCorr() { const m = this.quoteStore(); let n = 0; try { n = parseInt(localStorage.getItem('lns-corr') || '0', 10) || 0; } catch (e) {} do { n++; } while (m['P-' + String(n).padStart(3, '0')]); try { localStorage.setItem('lns-corr', String(n)); } catch (e) {} return 'P-' + String(n).padStart(3, '0'); }
   listaGuardados() { const m = this.quoteStore(); return Object.keys(m).map(k => ({ ...m[k], _k: k })).sort((a, b) => (b._t || 0) - (a._t || 0)); }
   quoteStore() { try { return JSON.parse(localStorage.getItem('lns-cotizaciones') || '{}'); } catch (e) { return {}; } }
   componentDidUpdate() {
-    this.precomprimirCliente(); this.actualizarTitulo(); this.programarBorrador(); this.vigilarAut();
+    this.precomprimirCliente(); this.actualizarTitulo(); this.programarBorrador(); this.vigilarAut(); this.programarNube();
     if (this.state.clientOnly || this.state.loading) return;
     { const q0 = this.state.quote; if (!q0.or && q0.items && q0.items.length && !q0.estimado && !this._tfOt) this.setState(st => st.quote.or ? null : { quote: { ...st.quote, or: this.nextCorr() } }); }
     if (this._lq !== this.state.quote || this._ls !== this.state.settings)
@@ -1773,16 +1815,19 @@ class Component extends DCLogic {
     const locked = !(q.okP && q.okS);
     return {
       showBaseTab: !!st.adminDev && !this._tfOt && !this._modo, histCount: this.recs ? this.recs.length.toLocaleString('es-GT') + ' casos' : 'cargando…', histEstado: st.histEstado || '', sincronizarAhora: () => this.sincronizarAhora(),
-      guardOpen: !!st.guardOpen, toggleGuard: () => this.setState(x => ({ guardOpen: !x.guardOpen })),
-      guardTitulo: this._tfOt ? 'Presupuestos de este vehículo' : 'Presupuestos guardados en este equipo', guardQ: st.guardQ || '',
+      guardOpen: !!st.guardOpen, toggleGuard: () => { const abre = !this.state.guardOpen; this.setState({ guardOpen: abre, guardNube: abre ? this.state.guardNube : null }); if (abre) this.cargarGuardNube(); },
+      guardTitulo: this._tfOt ? 'Presupuestos de este vehículo' : 'Presupuestos guardados en este equipo', guardQ: st.guardQ || '', guardMsg: st.guardMsg || '', hasGuardMsg: !!st.guardMsg,
       setGuardQ: e => this.setState({ guardQ: e.target.value }),
       guardAyuda: (this._tfOt ? 'Lo que se ha cotizado a este vehículo en este equipo. ' : 'Se guardan solos en este navegador, del más reciente al más antiguo. ') + 'Pasa el cursor sobre uno para ver qué se autorizó; toca para abrirlo.',
       guardados: st.guardOpen ? (() => { const nz = x => this.norm(x || ''), pl = nz(q.placa).replace(/\s+/g, ''), ve = nz(q.vehiculo), tt = nz(st.guardQ || '').split(' ').filter(Boolean);
-        let L = this.listaGuardados();
+        let L = this.listaGuardados(); const seen = new Set(L.map(g => nz(g._k) + '|' + nz(g.cliente)));
+        Object.keys(st.guardNube || {}).forEach(ck => { const v = st.guardNube[ck] || {}; if (seen.has(nz(v.ot) + '|' + nz(v.cliente))) return;
+          L.push({ _k: v.ot || ck, _ck: ck, _nube: true, _t: v.ts, cliente: v.cliente, vehiculo: v.vehiculo, placa: v.placa, okP: v.okP, okS: v.okS, items: (v.puntos || []).map(p => ({ name: p.n, on: p.on, urg: p.u ? 'rojo' : 'amarillo' })) }); });
+        L.sort((a, b) => (b._t || 0) - (a._t || 0));
         if (this._tfOt) L = L.filter(g => pl && nz(g.placa).replace(/\s+/g, '') ? nz(g.placa).replace(/\s+/g, '') === pl : ve && nz(g.vehiculo) === ve);
         if (tt.length) L = L.filter(g => { const h = nz([g._k, g.or, g.cliente, g.vehiculo, g.placa, g.anio].join(' ')); return tt.every(t => h.includes(t)); });
-        return L.slice(0, 60); })().map(g => ({ tip: (g.items || []).length ? (g.okP && g.okS ? '' : 'Presupuesto sin confirmar del todo\n') + (g.items || []).map(i => (i.on === false ? '✘ ' : '✔ ') + ((i.urg || 'rojo') === 'rojo' ? '🔴 ' : '🟡 ') + (i.on === false ? 'No autorizado: ' : 'Autorizado: ') + i.name).join('\n') : 'Sin puntos', or: g._k, desc: [g.cliente, g.vehiculo, g.placa].filter(Boolean).join(' · ') + ' · ' + (g.items || []).length + ' puntos' + (g.estimado ? ' · estimado' : ''), fecha: g._t ? this.fd(new Date(g._t).toISOString().slice(0, 10)) : '',
-        abrir: () => { const { _k, _t, ...qq } = g; if (q.items.length && q.or !== _k && !window.confirm('Se abrirá ' + _k + '. El presupuesto actual (' + (q.or || 'sin OR') + ') queda guardado en la lista.')) return; this.setState({ quote: this.richest(qq), step: qq.okP && qq.okS ? 4 : qq.okP ? 3 : 2, guardOpen: false, parseMsg: 'Presupuesto ' + _k + ' recuperado.', pdfName: '' }); } })) : [],
+        return L.slice(0, 60); })().map(g => ({ tip: (g.items || []).length ? (g.okP && g.okS ? '' : 'Presupuesto sin confirmar del todo\n') + (g.items || []).map(i => (i.on === false ? '✘ ' : '✔ ') + ((i.urg || 'rojo') === 'rojo' ? '🔴 ' : '🟡 ') + (i.on === false ? 'No autorizado: ' : 'Autorizado: ') + i.name).join('\n') : 'Sin puntos', or: g._k, desc: [g.cliente, g.vehiculo, g.placa].filter(Boolean).join(' · ') + ' · ' + (g.items || []).length + ' puntos' + (g.estimado ? ' · estimado' : '') + (g._nube ? ' · en la nube' : ''), fecha: g._t ? this.fd(new Date(g._t).toISOString().slice(0, 10)) : '',
+        abrir: () => { const { _k, _t, ...qq } = g; if (q.items.length && q.or !== _k && !window.confirm('Se abrirá ' + _k + '. El presupuesto actual (' + (q.or || 'sin OR') + ') queda guardado en la lista.')) return; if (g._nube) { this.abrirNube(g._ck, _k); return; } this.setState({ quote: this.richest(qq), step: qq.okP && qq.okS ? 4 : qq.okP ? 3 : 2, guardOpen: false, parseMsg: 'Presupuesto ' + _k + ' recuperado.', pdfName: '' }); } })) : [],
       consOpen: !!st.consOpen, toggleCons: () => this.setState(x => ({ consOpen: !x.consOpen })), consVeh: st.consVeh || '', consPieza: st.consPieza || '', setConsVeh: e => this.setState({ consVeh: e.target.value }), setConsPieza: e => this.setState({ consPieza: e.target.value }), hasConsVeh: !!(st.consVeh || '').trim(), hasConsPieza: !!(st.consPieza || '').trim(), clearConsVeh: () => this.setState({ consVeh: '' }), hasConsAlgo: !!((st.consVeh || '').trim() || (st.consPieza || '').trim()), clearConsTodo: () => this.setState({ consVeh: '', consPieza: '' }), clearConsPieza: () => this.setState({ consPieza: '' }), cons: st.consOpen ? this.consultar() : {},
       publishHist: () => this.publishHist(),
       teamView: this.esEquipo() && st.clientOnly && !pr, showListadosCli: this.esEquipo() && st.clientOnly && !pr && !!st.showListados, listadosLabel: st.showListados ? 'Ocultar listados para TallerFLOW' : 'Listados para TallerFLOW (equipo)', enviarResultado: () => this.enviarResultado(), toggleListados: () => this.setState(x => ({ showListados: !x.showListados })), cliPdf: st.clientOnly && !pr, canEdit: st.clientOnly && !pr && !!st.adminDev, editSaved: () => this.editSaved(),
