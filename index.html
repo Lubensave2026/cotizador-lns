@@ -1687,10 +1687,12 @@ class Component extends DCLogic {
     try { const kN = (tipo || 'cli') + '|' + url; if (this._lastNotif === kN) return; /* mismo link ya avisado: no repetir en la bitácora de TallerFLOW */
       if (this._tfOt && !this.state.quote.estimado && window.opener && !window.opener.closed) { this._lastNotif = kN; window.opener.postMessage({ tipo: tipo === 'partes' ? 'lns-cotizacion-partes' : 'lns-cotizacion', ot: this._tfOt, url, total: this._tot || '', ts: Date.now() }, 'https://lubensave2026.github.io'); this.setState({ msg: (tipo === 'partes' ? 'Cotización de repuestos enviada a TallerFLOW' : 'Link enviado a TallerFLOW') + ' (OT ' + this._tfOt + ').' }); } } catch (e) {}
   }
+  // Número de orden de este presupuesto: el de TallerFLOW (?ot=) o, en un equipo del taller con un link sin ot, el OR del presupuesto si es un número de orden (solo dígitos).
+  otEq() { if (this._tfOt) return this._tfOt; const o = String((this.state.quote || {}).or || '').trim(); return this.esEquipo() && /^[0-9]{3,7}$/.test(o) ? o : ''; }
   // ===== Autorizacion del cliente en la nube: cotizador/autorizaciones/{OT} (la guarda el equipo al marcar Si / Ahora no) =====
   sigAut(q) { try { return JSON.stringify((q.items || []).map((it, i) => [it.id != null ? it.id : i, it.on !== false ? 1 : 0])); } catch (e) { return ''; } }
   vigilarAut() {
-    const st = this.state; if (!this._tfOt || !(st.quote.items || []).length || !this.esEquipo()) return;
+    const st = this.state; if (!this.otEq() || !(st.quote.items || []).length || !this.esEquipo()) return;
     // La autorización guardada también se carga al abrir el presupuesto desde la orden (vista de edición), una vez revisado el borrador; guardar sigue siendo solo desde la vista del cliente.
     if (!this._autLoaded) { if (!st.clientOnly && !this._draftChecked) return; this._autLoaded = true; this.cargarAut(); return; }
     if (!st.clientOnly) return;
@@ -1701,7 +1703,7 @@ class Component extends DCLogic {
     try {
       this._autSig = this.sigAut(this.state.quote);
       const db = await this.fbDb(); if (!db) return;
-      const r = await this.fbGet(db, 'cotizador/autorizaciones/' + this.fbKey(this._tfOt)); if (!r || !r.sel) return;
+      const r = await this.fbGet(db, 'cotizador/autorizaciones/' + this.fbKey(this.otEq())); if (!r || !r.sel) return;
       const sel = JSON.parse(r.sel); this._autPend = true;
       this.setState(s => ({ quote: { ...s.quote, items: s.quote.items.map((it, i) => { const v = sel[it.id != null ? it.id : i]; return v === undefined ? it : { ...it, on: v === 1 }; }) }, msg: 'Autorización del cliente cargada (guardada ' + new Date(r.ts).toLocaleString('es-GT', { dateStyle: 'short', timeStyle: 'short' }) + ').' }), () => { this._autSig = this.sigAut(this.state.quote); this._autPend = false; });
     } catch (e) { console.warn('cargarAut', e); this._autPend = false; }
@@ -1709,14 +1711,14 @@ class Component extends DCLogic {
   // Contenido de cotizador/autorizaciones/{OT}: la selección del cliente y los montos (Q con IVA). Lo usan el guardado automático y el botón "Enviar resultado".
   payloadAut(extra) {
     const q = this.state.quote, r = this._res, r2 = n => Math.round(n * 100) / 100, sel = {}; (q.items || []).forEach((it, i) => { sel[it.id != null ? it.id : i] = it.on !== false ? 1 : 0; });
-    return { ot: String(this._tfOt), ts: Date.now(), sel: JSON.stringify(sel), cotizado: r2(r.cotizado), autorizado: r2(r.autorizado), autorizadoMO: r2(r.autorizadoMO), pendiente: r2(r.pendiente), urgenteCotizado: r2(r.urgenteCotizado), urgenteAutorizado: r2(r.urgenteAutorizado), sugeridoCotizado: r2(r.sugeridoCotizado), sugeridoAutorizado: r2(r.sugeridoAutorizado), puntos: r.puntos, puntosAutorizados: r.puntosAutorizados, ...(extra || {}) };
+    return { ot: String(this.otEq()), ts: Date.now(), sel: JSON.stringify(sel), cotizado: r2(r.cotizado), autorizado: r2(r.autorizado), autorizadoMO: r2(r.autorizadoMO), pendiente: r2(r.pendiente), urgenteCotizado: r2(r.urgenteCotizado), urgenteAutorizado: r2(r.urgenteAutorizado), sugeridoCotizado: r2(r.sugeridoCotizado), sugeridoAutorizado: r2(r.sugeridoAutorizado), puntos: r.puntos, puntosAutorizados: r.puntosAutorizados, ...(extra || {}) };
   }
   async guardarAut() {
     try {
-      const q = this.state.quote, sig = this.sigAut(q), r = this._res; if (!this._tfOt || !r || sig === this._autSig) return;
+      const q = this.state.quote, sig = this.sigAut(q), r = this._res; if (!this.otEq() || !r || sig === this._autSig) return;
       const db = await this.fbDb(); if (!db) return;
-      await Promise.race([db.ref('cotizador/autorizaciones/' + this.fbKey(this._tfOt)).set(this.payloadAut()), new Promise((_, rej) => setTimeout(() => rej(new Error('tiempo agotado')), 15000))]);
-      this._autSig = sig; this.setState({ msg: 'Autorización del cliente guardada en la nube (OT ' + this._tfOt + ').' });
+      await Promise.race([db.ref('cotizador/autorizaciones/' + this.fbKey(this.otEq())).set(this.payloadAut()), new Promise((_, rej) => setTimeout(() => rej(new Error('tiempo agotado')), 15000))]);
+      this._autSig = sig; this.setState({ msg: 'Autorización del cliente guardada en la nube (OT ' + this.otEq() + ').' });
     } catch (e) { console.warn('guardarAut', e); }
   }
   // Aviso de que el presupuesto salio al cliente: solo al copiar el link, una vez por link.
@@ -1730,17 +1732,17 @@ class Component extends DCLogic {
     const r = this._res; if (!r) return; const f = n => this.fmt(n);
     const txt = 'Cotizado ' + f(r.cotizado) + ' · Autorizado ' + f(r.autorizado) + ' · Pendiente ' + f(r.pendiente) + ' (urgentes autorizados ' + f(r.urgenteAutorizado) + ' de ' + f(r.urgenteCotizado) + '; sugeridos autorizados ' + f(r.sugeridoAutorizado) + ' de ' + f(r.sugeridoCotizado) + ')';
     let ventana = '', nube = '';
-    if (!this._tfOt) ventana = 'este link no trae el número de orden (ot / presupuesto)';
+    if (!this.otEq()) ventana = 'este link no trae el número de orden (ot / presupuesto)';
     else {
-      try { if (window.opener === null || window.opener === undefined) ventana = 'window.opener es null: TallerFLOW abrió esta pestaña sin conexión (por ejemplo la app instalada, un enlace o una pestaña ya abierta antes de actualizar)'; else if (window.opener.closed) ventana = 'la pestaña de TallerFLOW que abrió el Cotizador está cerrada'; else { window.opener.postMessage({ tipo: 'lns-cotizacion-resultado', ot: String(this._tfOt), ...r, ts: Date.now() }, 'https://lubensave2026.github.io'); ventana = ''; this._resPosted = true; } }
+      try { if (window.opener === null || window.opener === undefined) ventana = 'window.opener es null: TallerFLOW abrió esta pestaña sin conexión (por ejemplo la app instalada, un enlace o una pestaña ya abierta antes de actualizar)'; else if (window.opener.closed) ventana = 'la pestaña de TallerFLOW que abrió el Cotizador está cerrada'; else { window.opener.postMessage({ tipo: 'lns-cotizacion-resultado', ot: String(this.otEq()), ...r, ts: Date.now() }, 'https://lubensave2026.github.io'); ventana = ''; this._resPosted = true; } }
       catch (e) { ventana = 'postMessage dio error: ' + e.message; }
-      try { const db = await this.fbDb(); if (!db) nube = 'no se pudo conectar con Firebase'; else { await Promise.race([db.ref('cotizador/autorizaciones/' + this.fbKey(this._tfOt)).set(this.payloadAut({ resultadoTs: Date.now() })), new Promise((_, rej) => setTimeout(() => rej(new Error('tiempo agotado')), 15000))]); this._autSig = this.sigAut(this.state.quote); } }
+      try { const db = await this.fbDb(); if (!db) nube = 'no se pudo conectar con Firebase'; else { await Promise.race([db.ref('cotizador/autorizaciones/' + this.fbKey(this.otEq())).set(this.payloadAut({ resultadoTs: Date.now() })), new Promise((_, rej) => setTimeout(() => rej(new Error('tiempo agotado')), 15000))]); this._autSig = this.sigAut(this.state.quote); } }
       catch (e) { nube = e.message; }
     }
     let modo = ''; try { modo = (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches ? 'app instalada (standalone)' : 'navegador') + ' · referrer: ' + (document.referrer || 'ninguno'); } catch (e) {}
     const partes = [];
     if (!ventana && this._resPosted) partes.push('avisado a la ventana de TallerFLOW'); else if (ventana) partes.push('sin aviso a la ventana de TallerFLOW (' + ventana + ')');
-    if (this._tfOt) partes.push(nube ? 'NO se pudo guardar en la nube (' + nube + ')' : 'guardado en la nube (cotizador/autorizaciones/' + this.fbKey(this._tfOt) + ')');
+    if (this.otEq()) partes.push(nube ? 'NO se pudo guardar en la nube (' + nube + ')' : 'guardado en la nube (cotizador/autorizaciones/' + this.fbKey(this.otEq()) + ')');
     this._resPosted = false;
     this.setState({ msg: 'Resultado: ' + txt + '. ' + partes.join(' · ') + '. [' + modo + ']' });
   }
