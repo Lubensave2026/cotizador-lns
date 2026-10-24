@@ -1731,6 +1731,11 @@ class Component extends DCLogic {
     (navigator.clipboard ? navigator.clipboard.writeText(url) : Promise.reject()).catch(() => window.prompt('Copia el link:', url));
     this.setState({ copied: label }); setTimeout(() => this.setState({ copied: '' }), 2000);
   }
+  // Link para el cliente: si el presupuesto reabierto no coincide con la copia de la nube, se guarda antes para poder dar el link corto (?presupuesto=…&k=…) y no el largo (#q=…).
+  async linkCliente() {
+    try { const q = this.state.quote; if (this.state.settings.cortoNube && this._tfOt && !q.estimado && (q.items || []).length && !(this._k && this._cloudSig && this._cloudSig === this.sigItems(q))) await Promise.race([this.saveFB(q), new Promise(r => setTimeout(r, 8000))]); } catch (e) {}
+    return this.clientUrl();
+  }
   clientUrl() { const q = this.state.quote; if (this.state.settings.cortoNube && this._tfOt && this._k && this._cloudSig && this._cloudSig === this.sigItems(q)) return location.origin + location.pathname + '?presupuesto=' + encodeURIComponent(this._tfOt) + (q.vehiculo ? '&vehiculo=' + encodeURIComponent(String(q.vehiculo).trim().replace(/\s+/g, '-')) : '') + (q.placa ? '&placas=' + encodeURIComponent(String(q.placa).trim().replace(/\s+/g, '-')) : '') + '&k=' + this._k; const base = this._tfOt && this._k ? location.origin + location.pathname + '?ot=' + encodeURIComponent(this._tfOt) + '&k=' + this._k : location.href.split('#')[0]; const z = this._cliZ && this._cliZ.q === q ? this._cliZ.z : this.enc(this.clientPayload(q)); return base + '#q=' + z; }
   doPrint() {
     this.setState({ printing: true }, () => setTimeout(() => {
@@ -1897,9 +1902,9 @@ class Component extends DCLogic {
       confirmServ: () => { if (q.okS) this.setState({ step: 4 }); else { this.setQ({ okS: this.stamp() }); this.notifyMod(q); if (q.okP) { this.saveToHist(q); this.avisarLinkCliente(q); } } },
       locked, lockMsg: !q.okP ? 'Falta que el asesor de partes confirme los repuestos.' : 'Falta que el asesor de servicio confirme la mano de obra.',
       copyLabel: st.copied === 'cli' ? 'Link copiado ✓' : 'Copiar link para cliente',
-      copyLink: async () => { if (S.cortoNube && this._savingFB) await Promise.race([this._savingFB, new Promise(r => setTimeout(r, 4000))]); const u = this.clientUrl(); this.copy(u, 'cli'); this.notifyEnviada(u); },
-      sendWa: () => { const tel = (q.tel || '').replace(/\D/g, ''); const msg = 'Lube N Save Zona 10' + String.fromCharCode(10) + 'Presupuesto No. ' + q.or + ' · ' + q.vehiculo + (q.placa ? ' · ' + q.placa : '') + String.fromCharCode(10) + 'Elija qué trabajos realizar aquí: ' + (this._cu = this.clientUrl()); this.notifyTF(this._cu);
-        window.open('https://wa.me/' + (tel ? (tel.length === 8 ? '502' + tel : tel) : '') + '?text=' + encodeURIComponent(msg), '_blank'); },
+      copyLink: async () => { if (S.cortoNube && this._savingFB) await Promise.race([this._savingFB, new Promise(r => setTimeout(r, 4000))]); const u = await this.linkCliente(); this.copy(u, 'cli'); this.notifyEnviada(u); },
+      sendWa: async () => { const w = window.open('about:blank', '_blank'); const tel = (q.tel || '').replace(/\D/g, ''); const msg = 'Lube N Save Zona 10' + String.fromCharCode(10) + 'Presupuesto No. ' + q.or + ' · ' + q.vehiculo + (q.placa ? ' · ' + q.placa : '') + String.fromCharCode(10) + 'Elija qué trabajos realizar aquí: ' + (this._cu = await this.linkCliente()); this.notifyTF(this._cu);
+        const wa = 'https://wa.me/' + (tel ? (tel.length === 8 ? '502' + tel : tel) : '') + '?text=' + encodeURIComponent(msg); if (w) w.location.href = wa; else window.open(wa, '_blank'); },
       doPrint: () => this.doPrint(),
       exp: (() => { const E = this.expRows(items, T * (1 + IVA)); const txtP = this.tsv(E.P), txtO = this.tsv(E.O);
         return { nP: E.P.length, nO: E.O.length, noP: !E.P.length, noO: !E.O.length,  countText: onItems.length + ' de ' + items.length + ' puntos',
