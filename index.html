@@ -1558,7 +1558,7 @@ class Component extends DCLogic {
     const S = this.state.settings, keep = ['tarifa', 'tarifaDesde', 'iva', 'margen', 'pct', 'meses', 'r1', 'r2', 'r3', 'anos', 'usarPdf', 'tarifaFija'], sm = {};
     keep.forEach(k => { if (S[k] !== undefined) sm[k] = S[k]; });
     const slim = { ...q, texto: '', items: (q.items || []).map(({ hist, ...it }) => it) };
-    const base = this._tfOt ? location.origin + location.pathname + '?ot=' + encodeURIComponent(this._tfOt) : location.href.split('#')[0];
+    const base = this._tfOt ? location.origin + location.pathname + '?ot=' + encodeURIComponent(this._tfOt) : this.baseLimpia();
     return base + '#t=' + await this.encZ({ q: slim, s: sm });
   }
   // Verbo de la operación por defecto según lo que pide el técnico en su comentario (gana la palabra que aparece primero). Sin pista: Desmontaje.
@@ -1736,7 +1736,9 @@ class Component extends DCLogic {
     try { const q = this.state.quote; if (this.state.settings.cortoNube && this._tfOt && !q.estimado && (q.items || []).length && !(this._k && this._cloudSig && this._cloudSig === this.sigItems(q))) await Promise.race([this.saveFB(q), new Promise(r => setTimeout(r, 8000))]); } catch (e) {}
     return this.clientUrl();
   }
-  clientUrl() { const q = this.state.quote; if (this.state.settings.cortoNube && this._tfOt && this._k && this._cloudSig && this._cloudSig === this.sigItems(q)) return location.origin + location.pathname + '?presupuesto=' + encodeURIComponent(this._tfOt) + (q.vehiculo ? '&vehiculo=' + encodeURIComponent(String(q.vehiculo).trim().replace(/\s+/g, '-')) : '') + (q.placa ? '&placas=' + encodeURIComponent(String(q.placa).trim().replace(/\s+/g, '-')) : '') + '&k=' + this._k; const base = this._tfOt && this._k ? location.origin + location.pathname + '?ot=' + encodeURIComponent(this._tfOt) + '&k=' + this._k : location.href.split('#')[0]; const z = this._cliZ && this._cliZ.q === q ? this._cliZ.z : this.enc(this.clientPayload(q)); return base + '#q=' + z; }
+  // Dirección actual sin # y sin los parámetros de equipo (modo, admin): los links para el cliente nunca deben registrar su equipo como del taller.
+  baseLimpia() { try { const u = new URL(location.href); u.hash = ''; ['modo', 'admin'].forEach(k => u.searchParams.delete(k)); return u.toString(); } catch (e) { return location.origin + location.pathname; } }
+  clientUrl() { const q = this.state.quote; if (this.state.settings.cortoNube && this._tfOt && this._k && this._cloudSig && this._cloudSig === this.sigItems(q)) return location.origin + location.pathname + '?presupuesto=' + encodeURIComponent(this._tfOt) + (q.vehiculo ? '&vehiculo=' + encodeURIComponent(String(q.vehiculo).trim().replace(/\s+/g, '-')) : '') + (q.placa ? '&placas=' + encodeURIComponent(String(q.placa).trim().replace(/\s+/g, '-')) : '') + '&k=' + this._k; const base = this._tfOt && this._k ? location.origin + location.pathname + '?ot=' + encodeURIComponent(this._tfOt) + '&k=' + this._k : this.baseLimpia(); const z = this._cliZ && this._cliZ.q === q ? this._cliZ.z : this.enc(this.clientPayload(q)); return base + '#q=' + z; }
   doPrint() {
     this.setState({ printing: true }, () => setTimeout(() => {
       const done = () => { this.setState({ printing: false }); window.removeEventListener('afterprint', done); };
