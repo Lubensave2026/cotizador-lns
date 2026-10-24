@@ -564,6 +564,15 @@
             </div>
             <span style="font-size: 12px;">Presupuesto completo: {{ sum.totAllFmt }}</span>
           </div>
+          <sc-if value="{{ sum.hasPend }}" hint-placeholder-val="{{ false }}">
+            <div style="background: #d7d3d3; color: #201e1d; display: flex; flex-direction: column; -webkit-print-color-adjust: exact; print-color-adjust: exact;">
+              <div style="padding: 14px 20px 8px;"><span style="font-size: 12px; text-transform: uppercase; letter-spacing: 0.08em; font-weight: 800;">Pendiente de autorizar</span></div>
+              <sc-for list="{{ offItems }}" as="it" hint-placeholder-count="2">
+                <div style="display: flex; justify-content: space-between; gap: 12px; padding: 8px 20px; border-top: 1px solid rgba(0,0,0,0.18); font-size: 14px;"><span>{{ it.name }}</span><span style="white-space: nowrap;">{{ it.totFmt }}</span></div>
+              </sc-for>
+              <div style="display: flex; justify-content: space-between; align-items: baseline; gap: 12px; padding: 12px 20px; border-top: 2px solid #201e1d;"><span style="font-size: 12px; text-transform: uppercase; letter-spacing: 0.06em; font-weight: 800;">Total pendiente</span><span style="font-size: 22px; font-weight: 800; white-space: nowrap;">{{ sum.pendFmt }}</span></div>
+            </div>
+          </sc-if>
           <sc-if value="{{ hasLink }}" hint-placeholder-val="{{ false }}"><a href="{{ linkHref }}" target="_blank" style="color: #FFE500; padding: 14px 20px; font-size: 14px;">Ver fotos del reporte de inspección</a></sc-if>
         </aside>
       </div>
@@ -1837,7 +1846,8 @@ class Component extends DCLogic {
     const esRojo = i => (i.urg || 'rojo') === 'rojo', suma = L => L.reduce((a, i) => a + i.tot, 0);
     const rojosOn = onItems.filter(esRojo), amarOn = onItems.filter(i => !esRojo(i)), rojosAll = items.filter(esRojo), amarAll = items.filter(i => !esRojo(i));
     this._res = { cotizado: subAll, autorizado: sub, autorizadoMO: Math.min(sub, Math.max(0, Math.round(onItems.reduce((x, i) => x + i.mo, 0) * 100) / 100)), pendiente: subAll - sub, urgenteCotizado: suma(rojosAll), urgenteAutorizado: suma(rojosOn), sugeridoCotizado: suma(amarAll), sugeridoAutorizado: suma(amarOn), puntos: items.length, puntosAutorizados: onItems.length };
-    const sum = { repOnFmt: this.fmt(onItems.reduce((a, i) => a + i.rep, 0)), moOnFmt: this.fmt(onItems.reduce((a, i) => a + i.mo, 0)), urgFmt: this.fmt(suma(rojosOn)), sugFmt: this.fmt(suma(amarOn)), hasUrg: rojosAll.length > 0, hasSug: amarAll.length > 0, urgAllFmt: this.fmt(suma(rojosAll)), sugAllFmt: this.fmt(suma(amarAll)), urgAllN: rojosAll.length, sugAllN: amarAll.length,
+    const offItems = items.filter(i => i.on === false);
+    const sum = { hasPend: offItems.length > 0, pendFmt: this.fmt(subAll - sub), repOnFmt: this.fmt(onItems.reduce((a, i) => a + i.rep, 0)), moOnFmt: this.fmt(onItems.reduce((a, i) => a + i.mo, 0)), urgFmt: this.fmt(suma(rojosOn)), sugFmt: this.fmt(suma(amarOn)), hasUrg: rojosAll.length > 0, hasSug: amarAll.length > 0, urgAllFmt: this.fmt(suma(rojosAll)), sugAllFmt: this.fmt(suma(amarAll)), urgAllN: rojosAll.length, sugAllN: amarAll.length,
       countAll: items.length, totFmt: this.fmt(sub), totAllFmt: this.fmt(subAll),
       repAllFmt: this.fmt(items.reduce((a, i) => a + i.rep, 0)), moAllFmt: this.fmt(items.reduce((a, i) => a + i.mo, 0)) };
     const step = st.clientOnly ? 4 : st.step, pr = st.printing;
@@ -1895,7 +1905,7 @@ class Component extends DCLogic {
       buscar: st.buscar || '', setBuscar: e => this.setState({ buscar: e.target.value }), clearBuscar: () => this.setState({ buscar: '' }), hasBuscar: !!(st.buscar || '').trim(),
       itemsVis: (() => { const k = this.norm(st.buscar || ''); return k ? items.filter(it => this.norm([it.name, it.nota, ...(it.parts || []).map(l => l.desc), ...(it.ops || []).map(l => l.desc)].join(' ')).includes(k)) : items; })(),
       buscarInfo: (st.buscar || '').trim() ? 'Mostrando ' + (() => { const k = this.norm(st.buscar || ''); return k ? items.filter(it => this.norm([it.name, it.nota, ...(it.parts || []).map(l => l.desc), ...(it.ops || []).map(l => l.desc)].join(' ')).includes(k)) : items; })().length + ' de ' + items.length : items.length + ' puntos',
-      quote: q, items, onItems, hasModal: !!modal && !pr0, printDetails, hasPrintDetails: printDetails.length > 0, modal: modal || { secs: [], incluye: [] },
+      quote: q, items, onItems, offItems, hasModal: !!modal && !pr0, printDetails, hasPrintDetails: printDetails.length > 0, modal: modal || { secs: [], incluye: [] },
       closeModal: () => this.setState({ modal: null }), stopProp: e => e.stopPropagation(), noItems: !items.length, sum,
       setLink: e => this.setQ({ link: this.normLink(e.target.value) }), selAll: e => { try { e.target.select(); } catch (x) {} }, linkHref: this.normLink(q.link), setOr: e => this.setQ({ or: e.target.value }), setCliente: e => this.setQ({ cliente: e.target.value }), setTel: e => this.setQ({ tel: e.target.value }),
       setPlaca: e => this.setQ({ placa: e.target.value }), setKm: e => this.setQ({ km: e.target.value }), setVehiculo: e => this.setQ({ vehiculo: e.target.value }),
