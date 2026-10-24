@@ -1706,12 +1706,16 @@ class Component extends DCLogic {
       this.setState(s => ({ quote: { ...s.quote, items: s.quote.items.map((it, i) => { const v = sel[it.id != null ? it.id : i]; return v === undefined ? it : { ...it, on: v === 1 }; }) }, msg: 'Autorización del cliente cargada (guardada ' + new Date(r.ts).toLocaleString('es-GT', { dateStyle: 'short', timeStyle: 'short' }) + ').' }), () => { this._autSig = this.sigAut(this.state.quote); this._autPend = false; });
     } catch (e) { console.warn('cargarAut', e); this._autPend = false; }
   }
+  // Contenido de cotizador/autorizaciones/{OT}: la selección del cliente y los montos (Q con IVA). Lo usan el guardado automático y el botón "Enviar resultado".
+  payloadAut(extra) {
+    const q = this.state.quote, r = this._res, r2 = n => Math.round(n * 100) / 100, sel = {}; (q.items || []).forEach((it, i) => { sel[it.id != null ? it.id : i] = it.on !== false ? 1 : 0; });
+    return { ot: String(this._tfOt), ts: Date.now(), sel: JSON.stringify(sel), cotizado: r2(r.cotizado), autorizado: r2(r.autorizado), autorizadoMO: r2(r.autorizadoMO), pendiente: r2(r.pendiente), urgenteCotizado: r2(r.urgenteCotizado), urgenteAutorizado: r2(r.urgenteAutorizado), sugeridoCotizado: r2(r.sugeridoCotizado), sugeridoAutorizado: r2(r.sugeridoAutorizado), puntos: r.puntos, puntosAutorizados: r.puntosAutorizados, ...(extra || {}) };
+  }
   async guardarAut() {
     try {
       const q = this.state.quote, sig = this.sigAut(q), r = this._res; if (!this._tfOt || !r || sig === this._autSig) return;
-      const sel = {}; (q.items || []).forEach((it, i) => { sel[it.id != null ? it.id : i] = it.on !== false ? 1 : 0; });
       const db = await this.fbDb(); if (!db) return;
-      await Promise.race([db.ref('cotizador/autorizaciones/' + this.fbKey(this._tfOt)).set({ ot: String(this._tfOt), ts: Date.now(), sel: JSON.stringify(sel), cotizado: Math.round(r.cotizado * 100) / 100, autorizado: Math.round(r.autorizado * 100) / 100, pendiente: Math.round(r.pendiente * 100) / 100, puntos: r.puntos, puntosAutorizados: r.puntosAutorizados }), new Promise((_, rej) => setTimeout(() => rej(new Error('tiempo agotado')), 15000))]);
+      await Promise.race([db.ref('cotizador/autorizaciones/' + this.fbKey(this._tfOt)).set(this.payloadAut()), new Promise((_, rej) => setTimeout(() => rej(new Error('tiempo agotado')), 15000))]);
       this._autSig = sig; this.setState({ msg: 'Autorización del cliente guardada en la nube (OT ' + this._tfOt + ').' });
     } catch (e) { console.warn('guardarAut', e); }
   }
@@ -1721,11 +1725,24 @@ class Component extends DCLogic {
       if (this._tfOt && !this.state.quote.estimado && window.opener && !window.opener.closed) { this._lastEnv = kN; window.opener.postMessage({ tipo: 'lns-cotizacion-enviada', ot: this._tfOt, url, ts: Date.now() }, 'https://lubensave2026.github.io'); this.setState({ msg: 'Aviso de envío al cliente registrado en TallerFLOW (OT ' + this._tfOt + ').' }); } } catch (e) {}
   }
   // Resultado de la autorizacion del cliente (boton manual del equipo): cotizado, autorizado y pendiente.
-  enviarResultado() {
+  // Resultado de la autorizacion (boton manual del equipo): se guarda SIEMPRE en cotizador/autorizaciones/{OT} (campo resultadoTs) y, si hay ventana de TallerFLOW conectada, se avisa también con postMessage.
+  async enviarResultado() {
     const r = this._res; if (!r) return; const f = n => this.fmt(n);
     const txt = 'Cotizado ' + f(r.cotizado) + ' · Autorizado ' + f(r.autorizado) + ' · Pendiente ' + f(r.pendiente) + ' (urgentes autorizados ' + f(r.urgenteAutorizado) + ' de ' + f(r.urgenteCotizado) + '; sugeridos autorizados ' + f(r.sugeridoAutorizado) + ' de ' + f(r.sugeridoCotizado) + ')';
-    try { if (this._tfOt && window.opener && !window.opener.closed) { window.opener.postMessage({ tipo: 'lns-cotizacion-resultado', ot: String(this._tfOt), ...r, ts: Date.now() }, 'https://lubensave2026.github.io'); this.setState({ msg: 'Resultado enviado a TallerFLOW: ' + txt }); return; } } catch (e) {}
-    this.setState({ msg: 'Resultado: ' + txt + '. (No hay conexión con TallerFLOW: abre el Cotizador desde la orden para enviarlo.)' });
+    let ventana = '', nube = '';
+    if (!this._tfOt) ventana = 'este link no trae el número de orden (ot / presupuesto)';
+    else {
+      try { if (window.opener === null || window.opener === undefined) ventana = 'window.opener es null: TallerFLOW abrió esta pestaña sin conexión (por ejemplo la app instalada, un enlace o una pestaña ya abierta antes de actualizar)'; else if (window.opener.closed) ventana = 'la pestaña de TallerFLOW que abrió el Cotizador está cerrada'; else { window.opener.postMessage({ tipo: 'lns-cotizacion-resultado', ot: String(this._tfOt), ...r, ts: Date.now() }, 'https://lubensave2026.github.io'); ventana = ''; this._resPosted = true; } }
+      catch (e) { ventana = 'postMessage dio error: ' + e.message; }
+      try { const db = await this.fbDb(); if (!db) nube = 'no se pudo conectar con Firebase'; else { await Promise.race([db.ref('cotizador/autorizaciones/' + this.fbKey(this._tfOt)).set(this.payloadAut({ resultadoTs: Date.now() })), new Promise((_, rej) => setTimeout(() => rej(new Error('tiempo agotado')), 15000))]); this._autSig = this.sigAut(this.state.quote); } }
+      catch (e) { nube = e.message; }
+    }
+    let modo = ''; try { modo = (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches ? 'app instalada (standalone)' : 'navegador') + ' · referrer: ' + (document.referrer || 'ninguno'); } catch (e) {}
+    const partes = [];
+    if (!ventana && this._resPosted) partes.push('avisado a la ventana de TallerFLOW'); else if (ventana) partes.push('sin aviso a la ventana de TallerFLOW (' + ventana + ')');
+    if (this._tfOt) partes.push(nube ? 'NO se pudo guardar en la nube (' + nube + ')' : 'guardado en la nube (cotizador/autorizaciones/' + this.fbKey(this._tfOt) + ')');
+    this._resPosted = false;
+    this.setState({ msg: 'Resultado: ' + txt + '. ' + partes.join(' · ') + '. [' + modo + ']' });
   }
   copy(url, label) {
     (navigator.clipboard ? navigator.clipboard.writeText(url) : Promise.reject()).catch(() => window.prompt('Copia el link:', url));
