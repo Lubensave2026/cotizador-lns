@@ -586,6 +586,7 @@
             </div>
           </sc-if>
           <sc-if value="{{ hasLink }}" hint-placeholder-val="{{ false }}"><a href="{{ linkHref }}" target="_blank" style="color: #FFE500; padding: 14px 20px; font-size: 14px;">Ver fotos del reporte de inspección</a></sc-if>
+          <div style="padding: 10px 20px 14px; font-size: 12px; color: #d7d3d3; border-top: 1px solid #333;">Total cotizado (todos los puntos): <strong style="color: #fff;">{{ sum.totAllFmt }}</strong></div>
         </aside>
       </div>
       <sc-if value="{{ hasPrintDetails }}" hint-placeholder-val="{{ false }}">
