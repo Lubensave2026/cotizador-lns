@@ -1771,7 +1771,7 @@ class Component extends DCLogic {
     try {
       const q = this.state.quote, sig = this.sigAut(q), r = this._res; if (!this.otEq() || !r || sig === this._autSig) return;
       const db = await this.fbDb(); if (!db) return;
-      await Promise.race([db.ref('cotizador/autorizaciones/' + this.fbKey(this.otEq())).update(this.payloadAut()), new Promise((_, rej) => setTimeout(() => rej(new Error('tiempo agotado')), 15000))]);
+      await Promise.race([db.ref('cotizador/autorizaciones/' + this.fbKey(this.otEq())).update(this.payloadAut({ clienteTs: Date.now() })), new Promise((_, rej) => setTimeout(() => rej(new Error('tiempo agotado')), 15000))]);
       this._autSig = sig; this.setState({ msg: 'Autorización del cliente guardada en la nube (OT ' + this.otEq() + ').' });
     } catch (e) { console.warn('guardarAut', e); }
   }
