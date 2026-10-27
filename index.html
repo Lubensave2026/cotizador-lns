@@ -923,6 +923,7 @@ class Component extends DCLogic {
   async loadPdf(buf, name) {
     this.setState({ pdfName: name, parseMsg: 'Leyendo ' + name + '…' });
     try {
+      await this.asegurarBase();
       const pdfjs = await import('https://cdn.jsdelivr.net/npm/pdfjs-dist@4.4.168/build/pdf.min.mjs');
       pdfjs.GlobalWorkerOptions.workerSrc = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@4.4.168/build/pdf.worker.min.mjs';
       const doc = await pdfjs.getDocument({ data: buf }).promise;
@@ -1311,7 +1312,7 @@ class Component extends DCLogic {
     }
     return { h, points };
   }
-  armar() { this._real = true; try { this.armar0(); } finally { this._real = false; } }
+  async armar() { await this.asegurarBase(); this._real = true; try { this.armar0(); } finally { this._real = false; } }
   armar0() {
     const text = this.glifos(this.state.quote.texto || ''); if (!this.state.base || !text.trim()) return;
     if (/Puntos\s+(Urgentes|Sugeridos)/i.test(text)) { this.fromPdf(this.parseText(text)); return; }
@@ -1431,11 +1432,20 @@ class Component extends DCLogic {
   }
   // Equipo = abierto desde TallerFLOW, administrador, con PIN creado o equipo que alguna vez abrió ?modo=equipo (los clientes no tienen nada de esto).
   esEquipo() { let f = false; try { f = localStorage.getItem('lns-equipo') === '1'; } catch (e) {} if (window.opener) { try { localStorage.setItem('lns-equipo', '1'); } catch (e) {} } return !!(window.opener || f || this.state.adminDev || this.state.pinHash); }
+  // Los links #q= del cliente salen de componentDidMount sin cargar el historial; si luego se edita ese presupuesto (PIN) hace falta la base.
+  async asegurarBase() {
+    if (this.state.base) return;
+    let recs = await this.idbGet('recs'); if (!recs) { recs = await (await fetch('historial-registros.json')).json(); await this.idbSet(recs, 'recs'); }
+    this.recs = recs; const base = this.lib.buildFromRecords(recs);
+    let serv = this.state.serv || await this.idbGet('serv'); if (!serv) { try { serv = await (await fetch('servicios.json')).json(); } catch (e) { serv = null; } }
+    this.setState({ base, serv, baseSrc: 'Base propia de este navegador · procesado ' + this.fd(base.meta.built) });
+  }
   async editSaved() {
     const pin = window.prompt('PIN del equipo para editar este presupuesto:'); if (pin === null) return;
     const h = this.state.pinHash;
     if (!h) { this.setState({ msg: 'Aún no hay PIN en este navegador: créalo en la Base de datos antes de editar.' }); return; }
     if (await this.hash(pin) !== h) { window.alert('PIN incorrecto.'); return; }
+    await this.asegurarBase();
     this._baseSnap = this.snapQ(this.state.quote);
     this.setState(s => ({ clientOnly: false, step: 2, savedFB: null, quote: { ...s.quote, okP: null, okS: null }, parseMsg: 'Editando el presupuesto de la OT ' + (this._tfOt || this.state.quote.or) + '. Al confirmar de nuevo se actualiza el mismo link del cliente.' }));
   }
