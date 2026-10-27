@@ -1422,7 +1422,13 @@ class Component extends DCLogic {
       if (k) {
         const r = await this.fbGet(db, 'cotizador/presupuestos/' + key + '-' + k);
         if (r && r.json) { const d = JSON.parse(r.json); this._k = k; d.q = this.limpiarQuote(d.q); this.setState({ clientOnly: true, step: 4, quote: d.q, settings: { ...this.defS(), ...d.s }, loading: false, cargaNube: false, savedFB: { ot: this._tfOt, k } }); }
-        else fallo('No se encontró este presupuesto. Pide a Lube N Save que te envíe el link otra vez.');
+        else {
+          // Link viejo (otro código k): el equipo abre la última copia guardada de esa OT; el cliente sigue necesitando su link exacto.
+          let ok = false;
+          if (this.esEquipo()) { const g = await this.fbGet(db, 'cotizador/guardados/' + key); if (g && g.json) { const nq = this.withOps(this.limpiarQuote(JSON.parse(g.json).q)); this._clientLink = false; this._nbSig = this.sigNube(nq);
+            this.setState({ quote: nq, step: nq.okP && nq.okS ? 4 : nq.okP ? 3 : 2, cargaNube: false, loading: false, parseMsg: 'Este link de la bitácora es de una versión anterior; se abrió la última copia guardada de la OT ' + this._tfOt + '.' }); ok = true; } }
+          if (!ok) fallo('No se encontró este presupuesto. Pide a Lube N Save que te envíe el link otra vez.');
+        }
         return;
       }
       const ix = (await this.fbGet(db, 'cotizador/indice/' + key));
