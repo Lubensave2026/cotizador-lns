@@ -730,7 +730,10 @@ class Component extends DCLogic {
     if (m) {
       try {
         const d = await this.decAny(m[2]);
-        if (m[1] === 'q') { d.q = this.limpiarQuote(d.q); this.setState({ clientOnly: true, step: 4, quote: d.q, settings: { ...this.defS(), ...d.s }, loading: false }); return; }
+        if (m[1] === 'q') { d.q = this.limpiarQuote(d.q); this.setState({ clientOnly: true, step: 4, quote: d.q, settings: { ...this.defS(), ...d.s }, loading: false });
+          // Link con #q= y también ot+k: la copia en la nube (versión vigente) reemplaza a la foto que trae el link.
+          try { const P = new URLSearchParams(location.search), ot = (P.get('ot') || P.get('presupuesto') || '').trim(); if (ot && P.get('k')) { this._tfOt = ot; this.fbOpen(); } } catch (e) {}
+          return; }
         this._hashT = true; d.q = this.withOps(this.richest(this.limpiarQuote(d.q))); if (d.q.okP) this._baseSnap = this.snapQ(d.q); this.setState({ quote: d.q, settings: { ...this.defS(), ...d.s }, step: d.q.okP ? 3 : 2 });
       } catch (e) { console.warn('link inválido', e); }
     } else {
@@ -1403,9 +1406,10 @@ class Component extends DCLogic {
   async saveFB0(q) {
     try {
       if (!this._tfOt || q.estimado || !(q.items || []).length) return;
-      this._k = this._k || this.newCode();
       const db = await this.fbDb(); if (!db) { this.setState({ msg: 'No se pudo guardar en la nube (sin conexión con Firebase). El link del cliente sigue funcionando.' }); this.saveFail('sin conexión'); return; }
       const key = this.fbKey(this._tfOt);
+      // Un solo k por orden: si ya hay uno vigente en autorizaciones/{OT}/k se reutiliza, así los links ya enviados siguen mostrando la última versión.
+      if (!this._k) { try { const a = await this.fbGet(db, 'cotizador/autorizaciones/' + key); if (a && /^[A-Za-z0-9]{4,20}$/.test(a.k || '')) this._k = a.k; } catch (e) {} this._k = this._k || this.newCode(); }
       await db.ref('cotizador/presupuestos/' + key + '-' + this._k).set({ ot: String(this._tfOt), cliente: q.cliente || '', vehiculo: q.vehiculo || '', placa: q.placa || '', ts: Date.now(), estado: 'completo', json: JSON.stringify(this.clientPayload(q)) });
       await db.ref('cotizador/indice/' + key).set({ ts: Date.now(), estado: 'completo' });
       await this.publicarK(db, key);
@@ -1422,13 +1426,15 @@ class Component extends DCLogic {
   async fbOpen() {
     const fallo = m => this.setState({ cargaError: m });
     try {
-      if (!this._tfOt || /^#[qt]=/.test(location.hash)) return;
+      const hq = /^#q=/.test(location.hash); if (!this._tfOt || /^#t=/.test(location.hash) || (hq && !new URLSearchParams(location.search).get('k'))) return;
       const k = (new URLSearchParams(location.search).get('k') || (location.hash.match(/^#\??k=([A-Za-z0-9]+)/) || [])[1] || '').trim(), key = this.fbKey(this._tfOt);
       if (k) this._clientLink = true;
-      const db = await this.fbDb(); if (!db) { if (k) fallo('No se pudo cargar el presupuesto. Revisa tu conexión a internet e intenta de nuevo, o pide a Lube N Save que te lo envíe otra vez.'); return; }
+      const db = await this.fbDb(); if (!db) { if (k && !hq) fallo('No se pudo cargar el presupuesto. Revisa tu conexión a internet e intenta de nuevo, o pide a Lube N Save que te lo envíe otra vez.'); return; }
       if (k) {
-        const r = await this.fbGet(db, 'cotizador/presupuestos/' + key + '-' + k);
-        if (r && r.json) { const d = JSON.parse(r.json); this._k = k; d.q = this.limpiarQuote(d.q); this.setState({ clientOnly: true, step: 4, quote: d.q, settings: { ...this.defS(), ...d.s }, loading: false, cargaNube: false, savedFB: { ot: this._tfOt, k } }); }
+        let r = await this.fbGet(db, 'cotizador/presupuestos/' + key + '-' + k), kk = k;
+        // Si la OT ya tiene un k más reciente (el presupuesto se reenvió), este link viejo muestra la versión vigente; solo si el k del link existe.
+        if (r && r.json) { try { const a = await this.fbGet(db, 'cotizador/autorizaciones/' + key), k2 = a && a.k; if (k2 && k2 !== k && /^[A-Za-z0-9]{4,20}$/.test(k2)) { const r2 = await this.fbGet(db, 'cotizador/presupuestos/' + key + '-' + k2); if (r2 && r2.json) { r = r2; kk = k2; } } } catch (e) {} }
+        if (r && r.json) { const d = JSON.parse(r.json); this._k = kk; d.q = this.limpiarQuote(d.q); this.setState({ clientOnly: true, step: 4, quote: d.q, settings: { ...this.defS(), ...d.s }, loading: false, cargaNube: false, savedFB: { ot: this._tfOt, k: kk } }); }
         else {
           // Link viejo (otro código k): el equipo abre la última copia guardada de esa OT; el cliente sigue necesitando su link exacto.
           let ok = false;
@@ -1438,7 +1444,7 @@ class Component extends DCLogic {
           // 2) última copia en la nube
           if (!ok && this.esEquipo()) { const g = await this.fbGet(db, 'cotizador/guardados/' + key); if (g && g.json) { const nq = this.withOps(this.limpiarQuote(JSON.parse(g.json).q)); this._clientLink = false; this._nbSig = this.sigNube(nq);
             this.setState({ quote: nq, step: nq.okP && nq.okS ? 4 : nq.okP ? 3 : 2, cargaNube: false, loading: false, parseMsg: 'Este link de la bitácora es de una versión anterior; se abrió la última copia guardada de la OT ' + this._tfOt + '.' }); ok = true; } }
-          if (!ok) fallo('No se encontró este presupuesto. Pide a Lube N Save que te envíe el link otra vez.');
+          if (!ok && !hq) fallo('No se encontró este presupuesto. Pide a Lube N Save que te envíe el link otra vez.');
         }
         return;
       }
