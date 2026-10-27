@@ -715,7 +715,7 @@ class Component extends DCLogic {
   F() { return 1 + this.num(this.state.settings.iva) / 100; }
   r2(n) { return Math.round(n * 100) / 100; }
   emptyQ() { return { ivaIncl: true, link: '', or: '', cliente: '', tel: '', asesor: '', placa: '', km: '', vehiculo: '', anio: '', texto: '', items: [], okP: null, okS: null }; }
-  state = { cargaNube: (() => { try { const P = new URLSearchParams(location.search); return !!((P.get('k') || '').trim() && (P.get('ot') || P.get('presupuesto')) && !location.hash); } catch (e) { return false; } })(), cargaError: '', adminDev: (() => { try { return localStorage.getItem('lns-admin-dev') === '9f2a55eb9abd8d40a26bc2387de86a878781fd9af2eec049a50382f5bb15cdeb'; } catch (e) { return false; } })(), step: 2, base: null, baseSrc: '', loading: true, msg: '', parseMsg: '', pdfName: '', settings: this.defS(), quote: { ...this.emptyQ(), texto: this.sample(), link: 'https://vehi.mobi/N8XwaN', ivaIncl: true }, clientOnly: false, printing: false, copied: '', addName: '', pinField: 1, pinHash: (() => { try { return localStorage.getItem('lns-pin') || ''; } catch (e) { return ''; } })(), baseOpen: (() => { try { return sessionStorage.getItem('lns-base-open') === '1' && !!localStorage.getItem('lns-pin'); } catch (e) { return false; } })(), pinChanging: false, pin1: '', pin2: '', pinMsg: '', open: {}, serv: null, servSrc: '' };
+  state = { cargaNube: (() => { try { const P = new URLSearchParams(location.search); return !!((P.get('k') || (location.hash.match(/^#\??k=([A-Za-z0-9]+)/) || [])[1] || '').trim() && (P.get('ot') || P.get('presupuesto')) && !/^#[qt]=/.test(location.hash)); } catch (e) { return false; } })(), cargaError: '', adminDev: (() => { try { return localStorage.getItem('lns-admin-dev') === '9f2a55eb9abd8d40a26bc2387de86a878781fd9af2eec049a50382f5bb15cdeb'; } catch (e) { return false; } })(), step: 2, base: null, baseSrc: '', loading: true, msg: '', parseMsg: '', pdfName: '', settings: this.defS(), quote: { ...this.emptyQ(), texto: this.sample(), link: 'https://vehi.mobi/N8XwaN', ivaIncl: true }, clientOnly: false, printing: false, copied: '', addName: '', pinField: 1, pinHash: (() => { try { return localStorage.getItem('lns-pin') || ''; } catch (e) { return ''; } })(), baseOpen: (() => { try { return sessionStorage.getItem('lns-base-open') === '1' && !!localStorage.getItem('lns-pin'); } catch (e) { return false; } })(), pinChanging: false, pin1: '', pin2: '', pinMsg: '', open: {}, serv: null, servSrc: '' };
 
   componentWillUnmount() { window.removeEventListener('keydown', this._pinKey); }
   async componentDidMount() {
@@ -1408,15 +1408,22 @@ class Component extends DCLogic {
       const key = this.fbKey(this._tfOt);
       await db.ref('cotizador/presupuestos/' + key + '-' + this._k).set({ ot: String(this._tfOt), cliente: q.cliente || '', vehiculo: q.vehiculo || '', placa: q.placa || '', ts: Date.now(), estado: 'completo', json: JSON.stringify(this.clientPayload(q)) });
       await db.ref('cotizador/indice/' + key).set({ ts: Date.now(), estado: 'completo' });
+      await this.publicarK(db, key);
       this._cloudSig = this.sigItems(q); this._cloudKey = key + '-' + this._k;
       this.setState({ msg: 'Presupuesto de la OT ' + this._tfOt + ' guardado en la nube.' }); this.saveOk('en la nube');
     } catch (e) { console.warn(e); this.setState({ msg: 'No se pudo guardar en la nube: ' + e.message }); this.saveFail(e.message); }
+  }
+  // k vigente de la OT en cotizador/autorizaciones/{OT}/k (solo cuando el presupuesto quedó confirmado o enviado): TallerFLOW lo lee para que sus botones apunten al último.
+  async publicarK(db, key) {
+    try { const ref = db.ref('cotizador/autorizaciones/' + key), r = await this.fbGet(db, 'cotizador/autorizaciones/' + key);
+      if (r) await ref.update({ k: this._k }); else await ref.set({ ot: String(this._tfOt), ts: Date.now(), sel: '{}', k: this._k });
+    } catch (e) { console.warn('publicarK', e); }
   }
   async fbOpen() {
     const fallo = m => this.setState({ cargaError: m });
     try {
       if (!this._tfOt || /^#[qt]=/.test(location.hash)) return;
-      const k = (new URLSearchParams(location.search).get('k') || '').trim(), key = this.fbKey(this._tfOt);
+      const k = (new URLSearchParams(location.search).get('k') || (location.hash.match(/^#\??k=([A-Za-z0-9]+)/) || [])[1] || '').trim(), key = this.fbKey(this._tfOt);
       if (k) this._clientLink = true;
       const db = await this.fbDb(); if (!db) { if (k) fallo('No se pudo cargar el presupuesto. Revisa tu conexión a internet e intenta de nuevo, o pide a Lube N Save que te lo envíe otra vez.'); return; }
       if (k) {
@@ -1745,7 +1752,7 @@ class Component extends DCLogic {
       this._autSig = this.sigAut(this.state.quote);
       const db = await this.fbDb(); if (!db) return;
       const r = await this.fbGet(db, 'cotizador/autorizaciones/' + this.fbKey(this.otEq())); if (!r || !r.sel) return;
-      const sel = JSON.parse(r.sel); this._autPend = true;
+      const sel = JSON.parse(r.sel); if (!Object.keys(sel).length) return; this._autPend = true;
       this.setState(s => ({ quote: { ...s.quote, items: s.quote.items.map((it, i) => { const v = sel[it.id != null ? it.id : i]; return v === undefined ? it : { ...it, on: v === 1 }; }) }, msg: 'Autorización del cliente cargada (guardada ' + new Date(r.ts).toLocaleString('es-GT', { dateStyle: 'short', timeStyle: 'short' }) + ').' }), () => { this._autSig = this.sigAut(this.state.quote); this._autPend = false; });
     } catch (e) { console.warn('cargarAut', e); this._autPend = false; }
   }
@@ -1758,7 +1765,7 @@ class Component extends DCLogic {
     try {
       const q = this.state.quote, sig = this.sigAut(q), r = this._res; if (!this.otEq() || !r || sig === this._autSig) return;
       const db = await this.fbDb(); if (!db) return;
-      await Promise.race([db.ref('cotizador/autorizaciones/' + this.fbKey(this.otEq())).set(this.payloadAut()), new Promise((_, rej) => setTimeout(() => rej(new Error('tiempo agotado')), 15000))]);
+      await Promise.race([db.ref('cotizador/autorizaciones/' + this.fbKey(this.otEq())).update(this.payloadAut()), new Promise((_, rej) => setTimeout(() => rej(new Error('tiempo agotado')), 15000))]);
       this._autSig = sig; this.setState({ msg: 'Autorización del cliente guardada en la nube (OT ' + this.otEq() + ').' });
     } catch (e) { console.warn('guardarAut', e); }
   }
@@ -1777,7 +1784,7 @@ class Component extends DCLogic {
     else {
       try { if (window.opener === null || window.opener === undefined) ventana = 'window.opener es null: TallerFLOW abrió esta pestaña sin conexión (por ejemplo la app instalada, un enlace o una pestaña ya abierta antes de actualizar)'; else if (window.opener.closed) ventana = 'la pestaña de TallerFLOW que abrió el Cotizador está cerrada'; else { window.opener.postMessage({ tipo: 'lns-cotizacion-resultado', ot: String(this.otEq()), ...r, ts: Date.now() }, 'https://lubensave2026.github.io'); ventana = ''; this._resPosted = true; } }
       catch (e) { ventana = 'postMessage dio error: ' + e.message; }
-      try { const db = await this.fbDb(); if (!db) nube = 'no se pudo conectar con Firebase'; else { await Promise.race([db.ref('cotizador/autorizaciones/' + this.fbKey(this.otEq())).set(this.payloadAut({ resultadoTs: Date.now() })), new Promise((_, rej) => setTimeout(() => rej(new Error('tiempo agotado')), 15000))]); this._autSig = this.sigAut(this.state.quote); } }
+      try { const db = await this.fbDb(); if (!db) nube = 'no se pudo conectar con Firebase'; else { await Promise.race([db.ref('cotizador/autorizaciones/' + this.fbKey(this.otEq())).update(this.payloadAut({ resultadoTs: Date.now() })), new Promise((_, rej) => setTimeout(() => rej(new Error('tiempo agotado')), 15000))]); this._autSig = this.sigAut(this.state.quote); } }
       catch (e) { nube = e.message; }
     }
     let modo = ''; try { modo = (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches ? 'app instalada (standalone)' : 'navegador') + ' · referrer: ' + (document.referrer || 'ninguno'); } catch (e) {}
