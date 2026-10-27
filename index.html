@@ -1425,7 +1425,11 @@ class Component extends DCLogic {
         else {
           // Link viejo (otro código k): el equipo abre la última copia guardada de esa OT; el cliente sigue necesitando su link exacto.
           let ok = false;
-          if (this.esEquipo()) { const g = await this.fbGet(db, 'cotizador/guardados/' + key); if (g && g.json) { const nq = this.withOps(this.limpiarQuote(JSON.parse(g.json).q)); this._clientLink = false; this._nbSig = this.sigNube(nq);
+          // 1) copia de este mismo equipo (solo existe donde se hizo el presupuesto)
+          try { const loc = this.quoteStore()[this._tfOt] ? this.richest(this.quoteStore()[this._tfOt]) : (this.backupStore()[this._tfOt] || null);
+            if (loc && (loc.items || []).length) { this._clientLink = false; this.setState({ quote: { ...this.emptyQ(), ...loc }, step: loc.okP && loc.okS ? 4 : loc.okP ? 3 : 2, cargaNube: false, loading: false, parseMsg: 'Este link de la bitácora es de una versión anterior; se abrió la copia de la OT ' + this._tfOt + ' guardada en este equipo.' }); ok = true; } } catch (e) {}
+          // 2) última copia en la nube
+          if (!ok && this.esEquipo()) { const g = await this.fbGet(db, 'cotizador/guardados/' + key); if (g && g.json) { const nq = this.withOps(this.limpiarQuote(JSON.parse(g.json).q)); this._clientLink = false; this._nbSig = this.sigNube(nq);
             this.setState({ quote: nq, step: nq.okP && nq.okS ? 4 : nq.okP ? 3 : 2, cargaNube: false, loading: false, parseMsg: 'Este link de la bitácora es de una versión anterior; se abrió la última copia guardada de la OT ' + this._tfOt + '.' }); ok = true; } }
           if (!ok) fallo('No se encontró este presupuesto. Pide a Lube N Save que te envíe el link otra vez.');
         }
