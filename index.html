@@ -1023,7 +1023,10 @@ class Component extends DCLogic {
     const items = points.map(p => {
       const priced = !this.state.settings.usarPdf ? [] : p.subs.filter(s => this.num(s.n['PRECIO U.']) || this.num(s.n['HRS.']));
       if (priced.length) {
-        const it = this.makeItem(vk, p.name, p.urg, p.com); it.name = this.cap(p.name); it.src = { pdf: true }; it.parts = []; it.ops = [];
+        const it = this.makeItem(vk, p.name, p.urg, p.com); it.name = this.cap(p.name);
+        // Servicio con plantilla oficial: el PDF trae un renglón global (ej. "Materiales y lubricantes"); se usa el detalle de la plantilla.
+        if (it.src && it.src.tpl) return it;
+        it.src = { pdf: true }; it.parts = []; it.ops = [];
         priced.forEach(s => { const q = this.num(s.n['CANT.']) || 1, pu = this.num(s.n['PRECIO U.']), hr = this.num(s.n['HRS.']);
           // Renglón con horas = mano de obra, a la tarifa configurada con IVA (hrs x hora con IVA). Su PRECIO U. en el PDF es el IVA de esa mano de obra, no un repuesto: no se agrega a Repuestos.
           // Renglón sin horas = repuesto: el precio del PDF ya incluye IVA, se toma tal cual.
