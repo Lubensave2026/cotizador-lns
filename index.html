@@ -710,7 +710,7 @@
 class Component extends DCLogic {
   defS() { return { cortoNube: true, usarPdf: true, anos: '3', copias: '3', margen: '50', tarifa: '600', tarifaFija: true, iva: '12', pct: '8', meses: '6', r1: '425', r2: '500', r3: '600',
     paquetes: 'FRENOS DELANTEROS = Pastillas de freno delanteras; Líquido de frenos; Rectificado de discos | Cambio de pastillas delanteras; Desmontaje de discos delanteros\nFRENOS TRASEROS = Pastillas de freno traseras; Líquido de frenos | Cambio de pastillas traseras; Desmontaje de discos traseros\nBALATAS TRASERAS = Balatas traseras; Líquido de frenos | Cambio de balatas traseras\nAMORTIGUADORES DELANTEROS = Amortiguadores delanteros; Bases de amortiguador | Cambio de amortiguadores delanteros\nAMORTIGUADORES TRASEROS = Amortiguadores traseros | Cambio de amortiguadores traseros\nBATERIA = Batería | Cambio de batería\nBUJIAS = Bujías | Cambio de bujías\nCLUTCH = Kit de clutch; Aceite de transmisión | Desmontaje de caja; Cambio de clutch\nCABEZALES DIRECCION = Cabezales de dirección | Cambio de cabezales de dirección; Alineación\nTERMINALES = Terminales de dirección | Cambio de terminales; Alineación\nROTULAS = Rótulas | Cambio de rótulas; Alineación\nBUJES BARRA ESTABILIZADORA = Bujes de barra estabilizadora | Cambio de bujes de barra estabilizadora\nBOMBA DE AGUA = Bomba de agua; Refrigerante | Cambio de bomba de agua\nTERMOSTATO = Termostato; Refrigerante | Cambio de termostato\nRADIADOR = Radiador; Refrigerante | Cambio de radiador\nFUGA REFRIGERANTE = Refrigerante | Cambio de refrigerante; Purgado de sistema de enfriamiento\nBRIDA AGUA = Brida de agua; Empaque de brida; Sellador | Cambio de brida de agua\nMANGUERA RADIADOR = Manguera de radiador; Refrigerante | Cambio de manguera de radiador; Purgado de sistema de enfriamiento\nFUGA ACEITE MOTOR = Empaque o sello; Sellador; Aceite de motor; Filtro de aceite | Cambio de empaque o sello; Cambio de aceite y filtro\nACEITE DIFERENCIAL = Aceite de diferencial; Empaque o sello de tapón | Cambio de aceite de diferencial\nACEITE TRANSMISION = Aceite de transmisión | Cambio de aceite de transmisión\nBANDA = Banda de accesorios | Cambio de banda de accesorios\nCORREA TIEMPO = Kit de distribución; Bomba de agua; Refrigerante | Cambio de kit de distribución\nLLANTAS = Llantas | Montaje y balanceo de llantas; Alineación\nESCOBILLAS = Escobillas limpiaparabrisas | Cambio de escobillas\nFILTRO AIRE ACONDICIONADO = Filtro de aire acondicionado | Cambio de filtro de aire acondicionado',
-    equiv: 'JAC HFC1012K = KIA K2700\nMAZDA 3 = MAZDA 2\nMAZDA 2 = MAZDA 3',
+    equiv: 'JAC HFC1012K = KIA K2700\nMAZDA 3 = MAZDA 2\nMAZDA 2 = MAZDA 3\nTOYOTA PRADO = TOYOTA 4RUNNER\nTOYOTA LAND CRUISER PRADO = TOYOTA 4RUNNER\nTOYOTA LANDA CRUISER PRADO = TOYOTA 4RUNNER\nKIA PICANTO = KIA RIO\nKIA CERATO = KIA RIO\nHYUNDAI ELANTRA = KIA RIO\nHYUNDAI ACCENT = KIA RIO\nHYUNDAI CRETA = KIA RIO\nRENAULT KOLEOS = NISSAN XTRAIL\nRENAULT DUSTER = NISSAN XTRAIL\nNISSAN KICKS = NISSAN XTRAIL\nBMW 320 = BMW 3\nFIAT 500 = PEUGEOT 3008\nJEEP RENEGADE = JEEP GRAND CHEROKEE',
     kits: 'RADIADOR = Refrigerante; Abrazaderas; Wipe\nTUBERIA AC = Gas freón; Aceite para compresor\nCOMPRESOR AC = Gas freón; Aceite para compresor\nBOMBA DE AGUA = Refrigerante; Wipe\nTERMOSTATO = Refrigerante\nFRENOS = Líquido de frenos\nCARGADORES = Materiales auxiliares' }; }
   sample() {
     return 'Lube N Save Zona 10\nReporte de inspección vehicular\nOrden: 5431\nCliente: Cliente de ejemplo\nTel: 55551234\nHyundai Tucson 2019  Placa P-123ABC  Km 85,000\n\nREQUIERE ATENCIÓN INMEDIATA\nFrenos delanteros  Urgente  Pastillas al 2 mm\nFrenos traseros  Urgente\n\nSUGERIDO\nFiltro de aire acondicionado  Recomendado\nChorritos y plumillas  Recomendado\nLuces de freno  Recomendado\nSoporte de motor  Recomendado\n\nOK\nNivel de aceite  OK\nEstado de llantas  OK';
@@ -1456,6 +1456,7 @@ class Component extends DCLogic {
         }
         return;
       }
+      if (await this.ofrecerGuardado(db, key)) return;
       const ix = (await this.fbGet(db, 'cotizador/indice/' + key));
       if (ix) this.setState(s => ({ parseMsg: 'Ya existe un presupuesto guardado para la OT ' + this._tfOt + '. Para verlo abre el link que quedó en el historial de la orden en TallerFLOW ("Cotización enviada al cliente").' }));
     } catch (e) { console.warn('fbOpen', e); if (this.state.cargaNube) fallo('No se pudo cargar el presupuesto: ' + e.message + '. Intenta de nuevo en un momento.'); }
@@ -1729,6 +1730,22 @@ class Component extends DCLogic {
   async borrarBorrador() {
     try { clearTimeout(this._drT); this._drSig = ''; if (!this._tfOt) return; const db = await this.fbDb(); if (db) await db.ref('cotizador/borradores/' + this.fbKey(this._tfOt)).set(null); } catch (e) { console.warn('borrar borrador', e); }
   }
+  // Orden sin copia en este equipo (ej. el celular): si la nube tiene el presupuesto guardado de la OT, se ofrece abrirlo en vez de empezar de cero.
+  async ofrecerGuardado(db, key) {
+    try {
+      if (!this.esEquipo()) return false;
+      const q = this.state.quote, ot = String(this._tfOt), loc = this.quoteStore()[ot];
+      if ((String(q.or) === ot && (q.items || []).length) || (loc && (loc.items || []).length)) return false;
+      const g = await this.fbGet(db, 'cotizador/guardados/' + key); if (!g || !g.json) return false;
+      const d = JSON.parse(g.json); if (!d.q || !(d.q.items || []).length) return false;
+      const fecha = g.ts ? new Date(g.ts).toLocaleString('es-GT', { dateStyle: 'short', timeStyle: 'short' }) : '';
+      const estado = d.q.okP && d.q.okS ? 'confirmado' : d.q.okP ? 'con repuestos confirmados' : 'en proceso';
+      if (!window.confirm('Este equipo no tiene el presupuesto de la OT ' + ot + ', pero hay uno guardado en la nube' + (fecha ? ' el ' + fecha : '') + ' (' + d.q.items.length + ' puntos, ' + estado + '). ¿Quieres abrirlo?')) return false;
+      const nq = this.withOps(this.limpiarQuote(d.q)); this._nbSig = this.sigNube(nq); this._savedTs = g.ts || 0;
+      this.setState({ quote: nq, step: nq.okP && nq.okS ? 4 : nq.okP ? 3 : 2, cargaNube: false, loading: false, parseMsg: 'Presupuesto de la OT ' + ot + ' recuperado de la nube' + (fecha ? ' (guardado ' + fecha + ')' : '') + '.' });
+      return true;
+    } catch (e) { console.warn('ofrecerGuardado', e); return false; }
+  }
   async ofrecerBorrador() {
     try {
       const db = await this.fbDb(); if (!db) return;
@@ -1736,7 +1753,7 @@ class Component extends DCLogic {
       if (!r || !r.json || !r.ts || Date.now() - r.ts > 30 * 864e5) return;
       const d = JSON.parse(r.json); if (!d.q || !(d.q.items || []).length) return;
       const q = this.state.quote, localT = ((this.quoteStore()[q.or] || {})._t) || 0;
-      if ((q.items || []).length && r.ts <= localT + 60000) return;
+      if ((q.items || []).length && r.ts <= Math.max(localT, this._savedTs || 0) + 60000) return;
       const fecha = new Date(r.ts).toLocaleString('es-GT', { dateStyle: 'short', timeStyle: 'short' });
       if (!window.confirm('Hay un borrador de esta orden guardado el ' + fecha + ' (' + d.q.items.length + ' puntos). ¿Quieres continuar con ese borrador?')) return;
       const nq = this.withOps(this.limpiarQuote(d.q)); this._drSig = '';
