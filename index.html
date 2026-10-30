@@ -391,6 +391,7 @@
           <datalist id="lns-puntos"><sc-for list="{{ puntoList }}" as="p" hint-placeholder-count="0"><option value="{{ p }}"></option></sc-for></datalist>
         </div>
       </section>
+      <div class="field" style="margin-top: 20px; max-width: 760px;"><label>Observaciones (las ve el cliente en el presupuesto y el PDF)</label><textarea class="input" value="{{ quote.obs }}" onChange="{{ setObs }}" placeholder="Ej. Se recomienda cambiar las 4 llantas en conjunto. Precios sujetos a disponibilidad de repuestos." style="min-height: 84px; resize: vertical;"></textarea></div>
     </main>
 
     <div style="position: sticky; bottom: 0; background: #000; color: #fff; border-top: 4px solid #FFE500;">
@@ -463,6 +464,7 @@
           </article>
         </sc-for>
       </section>
+      <div class="field" style="margin-top: 20px; max-width: 760px;"><label>Observaciones (las ve el cliente en el presupuesto y el PDF)</label><textarea class="input" value="{{ quote.obs }}" onChange="{{ setObs }}" placeholder="Ej. Se recomienda cambiar las 4 llantas en conjunto. Precios sujetos a disponibilidad de repuestos." style="min-height: 84px; resize: vertical;"></textarea></div>
     </main>
 
     <div style="position: sticky; bottom: 0; background: #000; color: #fff; border-top: 4px solid #FFE500;">
@@ -631,6 +633,7 @@
           </div>
         </div>
       </sc-if>
+      <sc-if value="{{ hasObs }}" hint-placeholder-val="{{ false }}"><div style="margin-top: 24px; background: #fff; border-left: 6px solid #FFE500; padding: 14px 18px; break-inside: avoid; page-break-inside: avoid; display: flex; flex-direction: column; gap: 6px;"><span style="font-size: 12px; text-transform: uppercase; letter-spacing: 0.08em; font-weight: 800;">Observaciones</span><span style="font-size: 14px; white-space: pre-wrap; text-wrap: pretty;">{{ quote.obs }}</span></div></sc-if>
       <p style="font-size: 12px; color: #605d5d; padding: 16px 0; margin: 0;">Precios en quetzales con IVA incluido. Mano de obra a tarifa flat rate. Presupuesto válido por 15 días; repuestos sujetos a disponibilidad.</p>
       <sc-if value="{{ teamView }}" hint-placeholder-val="{{ false }}"><div style="display: flex; gap: 8px; flex-wrap: wrap; margin: 0 0 12px;"><button class="btn btn-secondary" onClick="{{ toggleListados }}" style="font-size: 13px;">{{ listadosLabel }}</button><button class="btn btn-secondary" onClick="{{ enviarResultado }}" style="font-size: 13px;">Enviar resultado a TallerFLOW</button></div><sc-if value="{{ hasMsg }}" hint-placeholder-val="{{ false }}"><p style="margin: 0 0 12px; font-size: 13px; padding: 8px 10px; background: #fff; border-left: 3px solid #FFE500;">{{ msg }}</p></sc-if></sc-if>
       <sc-if value="{{ showListadosCli }}" hint-placeholder-val="{{ false }}">
@@ -714,7 +717,7 @@ class Component extends DCLogic {
   }
   F() { return 1 + this.num(this.state.settings.iva) / 100; }
   r2(n) { return Math.round(n * 100) / 100; }
-  emptyQ() { return { ivaIncl: true, link: '', or: '', cliente: '', tel: '', asesor: '', placa: '', km: '', vehiculo: '', anio: '', texto: '', items: [], okP: null, okS: null }; }
+  emptyQ() { return { ivaIncl: true, link: '', or: '', cliente: '', tel: '', asesor: '', placa: '', km: '', vehiculo: '', anio: '', texto: '', items: [], okP: null, okS: null, obs: '' }; }
   state = { cargaNube: (() => { try { const P = new URLSearchParams(location.search); return !!((P.get('k') || (location.hash.match(/^#\??k=([A-Za-z0-9]+)/) || [])[1] || '').trim() && (P.get('ot') || P.get('presupuesto')) && !/^#[qt]=/.test(location.hash)); } catch (e) { return false; } })(), cargaError: '', adminDev: (() => { try { return localStorage.getItem('lns-admin-dev') === '9f2a55eb9abd8d40a26bc2387de86a878781fd9af2eec049a50382f5bb15cdeb'; } catch (e) { return false; } })(), step: 2, base: null, baseSrc: '', loading: true, msg: '', parseMsg: '', pdfName: '', settings: this.defS(), quote: { ...this.emptyQ(), texto: this.sample(), link: 'https://vehi.mobi/N8XwaN', ivaIncl: true }, clientOnly: false, printing: false, copied: '', addName: '', pinField: 1, pinHash: (() => { try { return localStorage.getItem('lns-pin') || ''; } catch (e) { return ''; } })(), baseOpen: (() => { try { return sessionStorage.getItem('lns-base-open') === '1' && !!localStorage.getItem('lns-pin'); } catch (e) { return false; } })(), pinChanging: false, pin1: '', pin2: '', pinMsg: '', open: {}, serv: null, servSrc: '' };
 
   componentWillUnmount() { window.removeEventListener('keydown', this._pinKey); }
@@ -773,7 +776,7 @@ class Component extends DCLogic {
   }
   // ===== Presupuestos guardados en la nube: cotizador/guardados-indice/{clave} (liviano, con índice por ts) y cotizador/guardados/{clave} (presupuesto completo) =====
   // Clave: el número de la orden; si el presupuesto se hizo fuera de TallerFLOW, el correlativo más el código de este equipo (para que P-001 de dos equipos no se pisen).
-  sigNube(q) { try { return JSON.stringify([q.items, q.okP, q.okS, q.cliente, q.vehiculo, q.placa, q.or]); } catch (e) { return ''; } }
+  sigNube(q) { try { return JSON.stringify([q.items, q.okP, q.okS, q.cliente, q.vehiculo, q.placa, q.or, q.obs]); } catch (e) { return ''; } }
   devId() { let d = ''; try { d = localStorage.getItem('lns-dev') || ''; if (!d) { d = Math.random().toString(36).slice(2, 5); localStorage.setItem('lns-dev', d); } } catch (e) {} return d || 'x'; }
   programarNube() {
     const st = this.state, q = st.quote;
@@ -1706,7 +1709,7 @@ class Component extends DCLogic {
     return { ...q, items: q.items.map(it => ({ ...it, name: g(it.name), nota: g(it.nota), parts: (it.parts || []).map(l => ({ ...l, desc: g(l.desc) })), ops: (it.ops || []).map(l => ({ ...l, desc: g(l.desc) })) })) };
   }
   // ===== Borrador en la nube: cotizador/borradores/{OT} (un borrador por orden; la última escritura gana) =====
-  sigDraft(q) { try { return JSON.stringify([q.items, q.okP, q.okS, this.state.step]); } catch (e) { return ''; } }
+  sigDraft(q) { try { return JSON.stringify([q.items, q.okP, q.okS, this.state.step, q.obs]); } catch (e) { return ''; } }
   programarBorrador() {
     if (!this._tfOt || this._clientLink || this.state.clientOnly || !this._draftChecked) return;
     const q = this.state.quote; if (q.estimado || !(q.items || []).length || (q.okP && q.okS)) return;
@@ -1957,6 +1960,7 @@ class Component extends DCLogic {
       buscarInfo: (st.buscar || '').trim() ? 'Mostrando ' + (() => { const k = this.norm(st.buscar || ''); return k ? items.filter(it => this.norm([it.name, it.nota, ...(it.parts || []).map(l => l.desc), ...(it.ops || []).map(l => l.desc)].join(' ')).includes(k)) : items; })().length + ' de ' + items.length : items.length + ' puntos',
       quote: q, items, onItems, offItems, hasModal: !!modal && !pr0, printDetails, hasPrintDetails: printDetails.length > 0, modal: modal || { secs: [], incluye: [] },
       closeModal: () => this.setState({ modal: null }), stopProp: e => e.stopPropagation(), noItems: !items.length, sum,
+      setObs: e => this.setQ({ obs: e.target.value }), hasObs: !!(q.obs || '').trim(),
       setLink: e => this.setQ({ link: this.normLink(e.target.value) }), selAll: e => { try { e.target.select(); } catch (x) {} }, linkHref: this.normLink(q.link), setOr: e => this.setQ({ or: e.target.value }), setCliente: e => this.setQ({ cliente: e.target.value }), setTel: e => this.setQ({ tel: e.target.value }),
       setPlaca: e => this.setQ({ placa: e.target.value }), setKm: e => this.setQ({ km: e.target.value }), setVehiculo: e => this.setQ({ vehiculo: e.target.value }),
       setAnio: e => this.setQ({ anio: e.target.value }), setTexto: e => this.setQ({ texto: e.target.value }),
