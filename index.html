@@ -707,7 +707,7 @@
 class Component extends DCLogic {
   defS() { return { cortoNube: true, usarPdf: true, anos: '3', copias: '3', margen: '50', tarifa: '600', tarifaFija: true, iva: '12', pct: '8', meses: '6', r1: '425', r2: '500', r3: '600',
     paquetes: 'FRENOS DELANTEROS = Pastillas de freno delanteras; Líquido de frenos; Rectificado de discos | Cambio de pastillas delanteras; Desmontaje de discos delanteros\nFRENOS TRASEROS = Pastillas de freno traseras; Líquido de frenos | Cambio de pastillas traseras; Desmontaje de discos traseros\nBALATAS TRASERAS = Balatas traseras; Líquido de frenos | Cambio de balatas traseras\nAMORTIGUADORES DELANTEROS = Amortiguadores delanteros; Bases de amortiguador | Cambio de amortiguadores delanteros\nAMORTIGUADORES TRASEROS = Amortiguadores traseros | Cambio de amortiguadores traseros\nBATERIA = Batería | Cambio de batería\nBUJIAS = Bujías | Cambio de bujías\nCLUTCH = Kit de clutch; Aceite de transmisión | Desmontaje de caja; Cambio de clutch\nCABEZALES DIRECCION = Cabezales de dirección | Cambio de cabezales de dirección; Alineación\nTERMINALES = Terminales de dirección | Cambio de terminales; Alineación\nROTULAS = Rótulas | Cambio de rótulas; Alineación\nBUJES BARRA ESTABILIZADORA = Bujes de barra estabilizadora | Cambio de bujes de barra estabilizadora\nBOMBA DE AGUA = Bomba de agua; Refrigerante | Cambio de bomba de agua\nTERMOSTATO = Termostato; Refrigerante | Cambio de termostato\nRADIADOR = Radiador; Refrigerante | Cambio de radiador\nFUGA REFRIGERANTE = Refrigerante | Cambio de refrigerante; Purgado de sistema de enfriamiento\nBRIDA AGUA = Brida de agua; Empaque de brida; Sellador | Cambio de brida de agua\nMANGUERA RADIADOR = Manguera de radiador; Refrigerante | Cambio de manguera de radiador; Purgado de sistema de enfriamiento\nFUGA ACEITE MOTOR = Empaque o sello; Sellador; Aceite de motor; Filtro de aceite | Cambio de empaque o sello; Cambio de aceite y filtro\nACEITE DIFERENCIAL = Aceite de diferencial; Empaque o sello de tapón | Cambio de aceite de diferencial\nACEITE TRANSMISION = Aceite de transmisión | Cambio de aceite de transmisión\nBANDA = Banda de accesorios | Cambio de banda de accesorios\nCORREA TIEMPO = Kit de distribución; Bomba de agua; Refrigerante | Cambio de kit de distribución\nLLANTAS = Llantas | Montaje y balanceo de llantas; Alineación\nESCOBILLAS = Escobillas limpiaparabrisas | Cambio de escobillas\nFILTRO AIRE ACONDICIONADO = Filtro de aire acondicionado | Cambio de filtro de aire acondicionado',
-    equiv: 'JAC HFC1012K = KIA K2700',
+    equiv: 'JAC HFC1012K = KIA K2700\nMAZDA 3 = MAZDA 2\nMAZDA 2 = MAZDA 3',
     kits: 'RADIADOR = Refrigerante; Abrazaderas; Wipe\nTUBERIA AC = Gas freón; Aceite para compresor\nCOMPRESOR AC = Gas freón; Aceite para compresor\nBOMBA DE AGUA = Refrigerante; Wipe\nTERMOSTATO = Refrigerante\nFRENOS = Líquido de frenos\nCARGADORES = Materiales auxiliares' }; }
   sample() {
     return 'Lube N Save Zona 10\nReporte de inspección vehicular\nOrden: 5431\nCliente: Cliente de ejemplo\nTel: 55551234\nHyundai Tucson 2019  Placa P-123ABC  Km 85,000\n\nREQUIERE ATENCIÓN INMEDIATA\nFrenos delanteros  Urgente  Pastillas al 2 mm\nFrenos traseros  Urgente\n\nSUGERIDO\nFiltro de aire acondicionado  Recomendado\nChorritos y plumillas  Recomendado\nLuces de freno  Recomendado\nSoporte de motor  Recomendado\n\nOK\nNivel de aceite  OK\nEstado de llantas  OK';
@@ -1222,7 +1222,9 @@ class Component extends DCLogic {
     let marca, modelo;
     if (eq) [marca, modelo] = eq; else if (vk) [marca, modelo] = vk.split('|'); else { const t = this.norm(this.state.quote.vehiculo).split(' '); marca = t[0] || ''; modelo = t.slice(1).join(' '); }
     if (!marca || !modelo) return [];
-    const mc = modelo.replace(/[^A-Z0-9]/g, '');
+    // El historial nombra distinto que la plantilla ("SEDAN 3", "CX-09"): se prueba también el nombre limpio.
+    const limpio = modelo.replace(new RegExp('^' + marca.replace(/[^A-Z0-9 ]/g, '\\$&') + '\\s+'), '').replace(/^(?:(?:NEW|NUEVO|SEDAN|HATCHBACK|HB)\s+)+/, '').replace(/\b([A-Z]+)-?0+(\d)/g, '$1$2');
+    const mcs = [...new Set([modelo, limpio].map(x => x.replace(/[^A-Z0-9]/g, '')).filter(Boolean))];
     const okT = t => t === tipo || (t.startsWith('SERVICIO MAYOR') && tipo.startsWith('SERVICIO MAYOR'));
     const res = [];
     S.servicios.forEach((s, idx) => {
@@ -1232,14 +1234,14 @@ class Component extends DCLogic {
       const segs = this.norm(s.t).replace(/\([^)]*\)?/g, ' ').replace(/\b\d{1,2}-?\d{0,2}W\d{2}\b|\bGULF\b|\bGASOLINA\b|\bDIESEL\b|100%|SINTETICO|MECANICA|4X4|SERVICIO|MENOR|INTERMEDIO|MAYOR|PICK UP|GT LINE/g, ' ')
         .split(/[\/,]| Y /).map(x => x.split(' ').filter(w => !brands.includes(w)).join('').replace(/[^A-Z0-9]/g, '')).filter(Boolean);
       let sc = 0;
-      segs.forEach(g => { if (g === mc) sc = Math.max(sc, 3); else if (g.length >= 2 && mc.length >= 2 && (mc.startsWith(g) || g.startsWith(mc))) sc = Math.max(sc, 2); });
+      segs.forEach(g => mcs.forEach(mc => { if (g === mc) sc = Math.max(sc, 3); else if (g.length >= 2 && mc.length >= 2 && (mc.startsWith(g) || g.startsWith(mc))) sc = Math.max(sc, 2); }));
       if (sc >= 2) res.push({ idx, sc: sc + (s.tipo === tipo ? 0.5 : 0) });
     });
     const out = res.sort((a, b) => b.sc - a.sc).map(r => r.idx);
     // Sin plantilla propia: la de un modelo equivalente (Base → Modelos equivalentes), marcada para revisar.
-    if (!out.length && !eq) { const vt = this.norm(marca + ' ' + modelo);
-      for (const l of (this.state.settings.equiv != null ? this.state.settings.equiv : this.defS().equiv).split(/\n/)) { const [a, b] = l.split('='); if (!a || !b) continue; const ka = this.norm(a);
-        if (ka && vt.includes(ka)) { const tg = this.norm(b).split(' '), r = this.tplCands(null, tipo, [tg[0], tg.slice(1).join(' ')]); if (r.length) { r.alt = b.trim().toUpperCase(); return r; } } } }
+    if (!out.length && !eq) { const vt = this.norm(marca + ' ' + modelo); const vt2 = marca + ' ' + limpio;
+      for (const l of ((this.state.settings.equiv != null ? this.state.settings.equiv : '') + '\n' + this.defS().equiv).split(/\n/)) { const [a, b] = l.split('='); if (!a || !b) continue; const ka = this.norm(a);
+        if (ka && [vt, vt2].some(v => new RegExp('(^| )' + ka.replace(/[^A-Z0-9 ]/g, '\\$&') + (/\d$/.test(ka) ? '(?!\\d)' : '')).test(v))) { const tg = this.norm(b).split(' '), r = this.tplCands(null, tipo, [tg[0], tg.slice(1).join(' ')]); if (r.length) { r.alt = b.trim().toUpperCase(); return r; } } } }
     return out;
   }
   // Llaves de las líneas de un punto (descripción + precio u horas): sirven para reconocer qué líneas siguen siendo una estimación sin tocar.
