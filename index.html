@@ -1250,6 +1250,24 @@ class Component extends DCLogic {
         if (ka && [vt, vt2].some(v => new RegExp('(^| )' + ka.replace(/[^A-Z0-9 ]/g, '\\$&') + (/\d$/.test(ka) ? '(?!\\d)' : '')).test(v))) { const tg = this.norm(b).split(' '), r = this.tplCands(null, tipo, [tg[0], tg.slice(1).join(' ')]); if (r.length) { r.alt = b.trim().toUpperCase(); return r; } } } }
     return out;
   }
+  // Plantillas que se parecen al vehículo del punto: la actual, las propias o equivalentes, y las de la misma marca; con "Ver todas" salen las de todas las marcas.
+  tplSugs(it, all) {
+    const S = this.state.serv; if (!S || !it.tpl || !it.pk) return [];
+    const tipo = it.pk, okT = t => t === tipo || (t.startsWith('SERVICIO MAYOR') && tipo.startsWith('SERVICIO MAYOR')), out = [];
+    const add = i => { if (i != null && !out.includes(i) && S.servicios[i] && okT(S.servicios[i].tipo)) out.push(i); };
+    const vk = this.vehKeyOf(this.state.quote.vehiculo), marca = vk ? vk.split('|')[0] : (this.norm(this.state.quote.vehiculo).split(' ')[0] || '');
+    add(it.tpl.cands[it.tpl.k]); it.tpl.cands.forEach(add); this.tplCands(vk, tipo).forEach(add);
+    S.servicios.forEach((x, i) => { if (marca && okT(x.tipo) && this.tplBrands(x).some(b => marca === b || marca.startsWith(b) || b.startsWith(marca))) add(i); });
+    if (all) S.servicios.map((x, i) => i).filter(i => okT(S.servicios[i].tipo)).sort((a, b) => ((S.servicios[a].hoja || '') + S.servicios[a].t).localeCompare((S.servicios[b].hoja || '') + S.servicios[b].t)).forEach(add);
+    return out;
+  }
+  elegirTpl(i, v) {
+    if (v === 'ALL') { this.setState(s => ({ quote: { ...s.quote, items: s.quote.items.map((x, n) => n === i ? { ...x, tplAll: true } : x) } })); return; }
+    const idx = +v, S = this.state.serv;
+    this.setState(s => ({ quote: { ...s.quote, okP: null, okS: null, items: s.quote.items.map((x, n) => { if (n !== i) return x;
+      const vk = this.vehKeyOf(s.quote.vehiculo), r = this.tplCands(vk, x.pk), c = r.includes(idx) ? r : Object.assign([idx], { alt: S.servicios[idx].t });
+      return { ...this.itemFromTpl(c, c.indexOf(idx), x.urg, x.nota, x.id), ...(x.tplAll ? { tplAll: true } : {}) }; }) } }));
+  }
   // Llaves de las líneas de un punto (descripción + precio u horas): sirven para reconocer qué líneas siguen siendo una estimación sin tocar.
   lineKeys(it) { return [...(it.parts || []).filter(l => (l.desc || '').trim() && this.num(l.rep)).map(l => 'p|' + l.desc.trim() + '|' + l.rep), ...(it.ops || []).filter(l => (l.desc || '').trim() && this.num(l.hrs)).map(l => 'o|' + l.desc.trim() + '|' + l.hrs)]; }
   itemFromTpl(cands, k, urg, nota, id) {
@@ -1877,9 +1895,9 @@ class Component extends DCLogic {
         hasIncluye: !!(it.incluye && it.incluye.length), hasDetalle: cliOps.length + cliParts.length > 0 || !!(it.incluye && it.incluye.length),
         incOpen: false, incLabel: 'Ver desglose ▾',
         onInc: () => this.setState({ modal: it.id }),
-        hasTplOpts: !!(it.tpl && it.tpl.cands.length > 1), tplK: it.tpl ? String(it.tpl.k) : '0',
-        tplOpts: it.tpl && st.serv ? it.tpl.cands.map((c, k) => ({ v: String(k), label: st.serv.servicios[c].t + ' · ' + this.cap(st.serv.servicios[c].tipo) })) : [],
-        onTpl: e => { const k = +e.target.value; this.setState(s => ({ quote: { ...s.quote, okP: null, okS: null, items: s.quote.items.map((x, n) => n === i ? this.itemFromTpl(x.tpl.cands, k, x.urg, x.nota, x.id) : x) } })); },
+        hasTplOpts: !!(it.tpl && st.serv && it.src && it.src.tpl), tplK: it.tpl && st.serv ? String(it.tpl.cands[it.tpl.k]) : '',
+        tplOpts: it.tpl && st.serv ? [...this.tplSugs(it, it.tplAll).map(c => ({ v: String(c), label: (st.serv.servicios[c].hoja || '').trim() + ' · ' + st.serv.servicios[c].t })), ...(it.tplAll ? [] : [{ v: 'ALL', label: 'Ver todas las plantillas…' }])] : [],
+        onTpl: e => this.elegirTpl(i, e.target.value),
         hasNota: !!(it.nota || '').trim(),
         srcText: it.src && it.src.tpl ? (it.src.alt ? 'Plantilla de otro modelo (' + it.src.alt + ') · REVISAR, no es la de este vehículo · ' : 'Plantilla oficial · ') + it.src.t : it.src && it.src.pdf ? 'Precios tomados del PDF' : it.src && it.src.est ? 'Estimado · ref. ' + it.src.est.model + ' OR ' + it.src.or + ' · rango Q' + it.src.est.min.toLocaleString('es-GT') + '–Q' + it.src.est.max.toLocaleString('es-GT') + ' en ' + it.src.est.n + ' vehículos ' + (it.src.est.sb ? 'de la misma marca' : 'de otras marcas') : it.src ? 'Ref. OR ' + it.src.or + ' · ' + this.fd(it.src.d) + ' · año ' + it.src.y + (it.src.adj ? ' · repuestos +' + it.src.adj + '%' : '') : 'Sin historial de “' + it.name + '” para ' + (q.vehiculo || 'este vehículo') + ' — ingresa costo de: ' + ((it.parts || []).filter(l => (l.desc || '').trim()).map(l => l.desc).join(', ') || 'los repuestos que lleve') + ', y horas en Mano de obra',
         srcBg: it.src && it.src.est ? '#fff2ef' : it.src && it.src.tpl ? '#FEED01' : it.src ? 'var(--color-neutral-200)' : 'var(--color-accent-100)', srcFg: it.src ? '#201e1d' : '#7c1405',
