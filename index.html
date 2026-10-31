@@ -391,7 +391,7 @@
           <datalist id="lns-puntos"><sc-for list="{{ puntoList }}" as="p" hint-placeholder-count="0"><option value="{{ p }}"></option></sc-for></datalist>
         </div>
       </section>
-      <div class="field" style="margin-top: 20px; max-width: 760px;"><label>Observaciones (las ve el cliente en el presupuesto y el PDF)</label><textarea class="input" value="{{ quote.obs }}" onChange="{{ setObs }}" placeholder="Ej. Se recomienda cambiar las 4 llantas en conjunto. Precios sujetos a disponibilidad de repuestos." style="min-height: 84px; resize: vertical;"></textarea></div>
+      <div class="field" style="margin-top: 20px; max-width: 760px;"><label>Observaciones del asesor de partes (las ve el cliente en el presupuesto y el PDF)</label><textarea class="input" value="{{ quote.obsP }}" onChange="{{ setObsP }}" placeholder="Ej. Se recomienda cambiar las 4 llantas en conjunto. Precios sujetos a disponibilidad de repuestos." style="min-height: 84px; resize: vertical;"></textarea></div>
     </main>
 
     <div style="position: sticky; bottom: 0; background: #000; color: #fff; border-top: 4px solid #FFE500;">
@@ -464,7 +464,7 @@
           </article>
         </sc-for>
       </section>
-      <div class="field" style="margin-top: 20px; max-width: 760px;"><label>Observaciones (las ve el cliente en el presupuesto y el PDF)</label><textarea class="input" value="{{ quote.obs }}" onChange="{{ setObs }}" placeholder="Ej. Se recomienda cambiar las 4 llantas en conjunto. Precios sujetos a disponibilidad de repuestos." style="min-height: 84px; resize: vertical;"></textarea></div>
+      <div class="field" style="margin-top: 20px; max-width: 760px;"><label>Observaciones del asesor de servicio (las ve el cliente en el presupuesto y el PDF)</label><textarea class="input" value="{{ quote.obs }}" onChange="{{ setObs }}" placeholder="Ej. Se recomienda cambiar las 4 llantas en conjunto. Precios sujetos a disponibilidad de repuestos." style="min-height: 84px; resize: vertical;"></textarea></div>
     </main>
 
     <div style="position: sticky; bottom: 0; background: #000; color: #fff; border-top: 4px solid #FFE500;">
@@ -493,6 +493,7 @@
         <button class="btn btn-secondary" onClick="{{ sendWa }}" disabled="{{ locked }}">Enviar por WhatsApp</button>
         <button class="btn" onClick="{{ doPrint }}" disabled="{{ locked }}" style="background: #000; color: #FFE500; font-weight: 800;" style-hover="background: #2d2b2b;">Descargar PDF</button>
       </div>
+      <div class="field" style="max-width: 760px;"><label>Observaciones finales (las ve el cliente; escríbelas antes de enviar)</label><textarea class="input" value="{{ quote.obsF }}" onChange="{{ setObsF }}" placeholder="Ej. Lo hablado con el cliente: se puede reprogramar la cita, el repuesto llega en 2 días." style="min-height: 72px; resize: vertical; background: #fff;"></textarea></div>
       <section style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 0; border-top: 2px solid #201e1d; border-bottom: 2px solid #201e1d; background: #fff;">
         <div style="grid-column: 1 / -1; padding: 12px 16px; border-bottom: 1px solid var(--color-divider); display: flex; flex-direction: column; gap: 2px;">
           <span style="font-size: 15px; font-weight: 800; text-transform: uppercase;">Listados para TallerFLOW · OT {{ quote.or }}</span>
@@ -633,7 +634,7 @@
           </div>
         </div>
       </sc-if>
-      <sc-if value="{{ hasObs }}" hint-placeholder-val="{{ false }}"><div style="margin-top: 24px; background: #fff; border-left: 6px solid #FFE500; padding: 14px 18px; break-inside: avoid; page-break-inside: avoid; display: flex; flex-direction: column; gap: 6px;"><span style="font-size: 12px; text-transform: uppercase; letter-spacing: 0.08em; font-weight: 800;">Observaciones</span><span style="font-size: 14px; white-space: pre-wrap; text-wrap: pretty;">{{ quote.obs }}</span></div></sc-if>
+      <sc-for list="{{ obsList }}" as="ob" hint-placeholder-count="0"><div style="margin-top: 24px; background: #fff; border-left: 6px solid #FFE500; padding: 14px 18px; break-inside: avoid; page-break-inside: avoid; display: flex; flex-direction: column; gap: 6px;"><span style="font-size: 12px; text-transform: uppercase; letter-spacing: 0.08em; font-weight: 800;">{{ ob.label }}</span><span style="font-size: 14px; white-space: pre-wrap; text-wrap: pretty;">{{ ob.text }}</span></div></sc-for><sc-if value="{{ teamView }}" hint-placeholder-val="{{ false }}"><div class="field" style="margin: 16px 0 0; max-width: 760px;"><label>Notas del equipo tras la autorización: acuerdos con el cliente (no salen en el PDF)</label><textarea class="input" value="{{ quote.obsA }}" onChange="{{ setObsA }}" placeholder="Ej. El cliente autorizó solo frenos; el cambio de llantas lo decide el viernes." style="min-height: 72px; resize: vertical; background: #fff;"></textarea></div></sc-if>
       <p style="font-size: 12px; color: #605d5d; padding: 16px 0; margin: 0;">Precios en quetzales con IVA incluido. Mano de obra a tarifa flat rate. Presupuesto válido por 15 días; repuestos sujetos a disponibilidad.</p>
       <sc-if value="{{ teamView }}" hint-placeholder-val="{{ false }}"><div style="display: flex; gap: 8px; flex-wrap: wrap; margin: 0 0 12px;"><button class="btn btn-secondary" onClick="{{ toggleListados }}" style="font-size: 13px;">{{ listadosLabel }}</button><button class="btn btn-secondary" onClick="{{ enviarResultado }}" style="font-size: 13px;">Enviar resultado a TallerFLOW</button></div><sc-if value="{{ hasMsg }}" hint-placeholder-val="{{ false }}"><p style="margin: 0 0 12px; font-size: 13px; padding: 8px 10px; background: #fff; border-left: 3px solid #FFE500;">{{ msg }}</p></sc-if></sc-if>
       <sc-if value="{{ showListadosCli }}" hint-placeholder-val="{{ false }}">
@@ -717,7 +718,7 @@ class Component extends DCLogic {
   }
   F() { return 1 + this.num(this.state.settings.iva) / 100; }
   r2(n) { return Math.round(n * 100) / 100; }
-  emptyQ() { return { ivaIncl: true, link: '', or: '', cliente: '', tel: '', asesor: '', placa: '', km: '', vehiculo: '', anio: '', texto: '', items: [], okP: null, okS: null, obs: '' }; }
+  emptyQ() { return { ivaIncl: true, link: '', or: '', cliente: '', tel: '', asesor: '', placa: '', km: '', vehiculo: '', anio: '', texto: '', items: [], okP: null, okS: null, obs: '', obsP: '', obsF: '', obsA: '' }; }
   state = { cargaNube: (() => { try { const P = new URLSearchParams(location.search); return !!((P.get('k') || (location.hash.match(/^#\??k=([A-Za-z0-9]+)/) || [])[1] || '').trim() && (P.get('ot') || P.get('presupuesto')) && !/^#[qt]=/.test(location.hash)); } catch (e) { return false; } })(), cargaError: '', adminDev: (() => { try { return localStorage.getItem('lns-admin-dev') === '9f2a55eb9abd8d40a26bc2387de86a878781fd9af2eec049a50382f5bb15cdeb'; } catch (e) { return false; } })(), step: 2, base: null, baseSrc: '', loading: true, msg: '', parseMsg: '', pdfName: '', settings: this.defS(), quote: { ...this.emptyQ(), texto: this.sample(), link: 'https://vehi.mobi/N8XwaN', ivaIncl: true }, clientOnly: false, printing: false, copied: '', addName: '', pinField: 1, pinHash: (() => { try { return localStorage.getItem('lns-pin') || ''; } catch (e) { return ''; } })(), baseOpen: (() => { try { return sessionStorage.getItem('lns-base-open') === '1' && !!localStorage.getItem('lns-pin'); } catch (e) { return false; } })(), pinChanging: false, pin1: '', pin2: '', pinMsg: '', open: {}, serv: null, servSrc: '' };
 
   componentWillUnmount() { window.removeEventListener('keydown', this._pinKey); }
@@ -776,7 +777,7 @@ class Component extends DCLogic {
   }
   // ===== Presupuestos guardados en la nube: cotizador/guardados-indice/{clave} (liviano, con índice por ts) y cotizador/guardados/{clave} (presupuesto completo) =====
   // Clave: el número de la orden; si el presupuesto se hizo fuera de TallerFLOW, el correlativo más el código de este equipo (para que P-001 de dos equipos no se pisen).
-  sigNube(q) { try { return JSON.stringify([q.items, q.okP, q.okS, q.cliente, q.vehiculo, q.placa, q.or, q.obs]); } catch (e) { return ''; } }
+  sigNube(q) { try { return JSON.stringify([q.items, q.okP, q.okS, q.cliente, q.vehiculo, q.placa, q.or, q.obs, q.obsP, q.obsF]); } catch (e) { return ''; } }
   devId() { let d = ''; try { d = localStorage.getItem('lns-dev') || ''; if (!d) { d = Math.random().toString(36).slice(2, 5); localStorage.setItem('lns-dev', d); } } catch (e) {} return d || 'x'; }
   programarNube() {
     const st = this.state, q = st.quote;
@@ -1729,7 +1730,7 @@ class Component extends DCLogic {
     return { ...q, items: q.items.map(it => ({ ...it, name: g(it.name), nota: g(it.nota), parts: (it.parts || []).map(l => ({ ...l, desc: g(l.desc) })), ops: (it.ops || []).map(l => ({ ...l, desc: g(l.desc) })) })) };
   }
   // ===== Borrador en la nube: cotizador/borradores/{OT} (un borrador por orden; la última escritura gana) =====
-  sigDraft(q) { try { return JSON.stringify([q.items, q.okP, q.okS, this.state.step, q.obs]); } catch (e) { return ''; } }
+  sigDraft(q) { try { return JSON.stringify([q.items, q.okP, q.okS, this.state.step, q.obs, q.obsP, q.obsF]); } catch (e) { return ''; } }
   programarBorrador() {
     if (!this._tfOt || this._clientLink || this.state.clientOnly || !this._draftChecked) return;
     const q = this.state.quote; if (q.estimado || !(q.items || []).length || (q.okP && q.okS)) return;
@@ -1801,7 +1802,9 @@ class Component extends DCLogic {
     try {
       this._autSig = this.sigAut(this.state.quote);
       const db = await this.fbDb(); if (!db) return;
-      const r = await this.fbGet(db, 'cotizador/autorizaciones/' + this.fbKey(this.otEq())); if (!r || !r.sel) return;
+      const r = await this.fbGet(db, 'cotizador/autorizaciones/' + this.fbKey(this.otEq()));
+      if (r && this.esEquipo() && r.acuerdos && !this.state.quote.obsA) this.setState(s => ({ quote: { ...s.quote, obsA: String(r.acuerdos) } }));
+      if (!r || !r.sel) return;
       const sel = JSON.parse(r.sel); if (!Object.keys(sel).length) return; this._autPend = true;
       this.setState(s => ({ quote: { ...s.quote, items: s.quote.items.map((it, i) => { const v = sel[it.id != null ? it.id : i]; return v === undefined ? it : { ...it, on: v === 1 }; }) }, msg: 'Autorización del cliente cargada (guardada ' + new Date(r.ts).toLocaleString('es-GT', { dateStyle: 'short', timeStyle: 'short' }) + ').' }), () => { this._autSig = this.sigAut(this.state.quote); this._autPend = false; });
     } catch (e) { console.warn('cargarAut', e); this._autPend = false; }
@@ -1818,6 +1821,13 @@ class Component extends DCLogic {
       await Promise.race([db.ref('cotizador/autorizaciones/' + this.fbKey(this.otEq())).update(this.payloadAut({ clienteTs: Date.now() })), new Promise((_, rej) => setTimeout(() => rej(new Error('tiempo agotado')), 15000))]);
       this._autSig = sig; this.setState({ msg: 'Autorización del cliente guardada en la nube (OT ' + this.otEq() + ').' });
     } catch (e) { console.warn('guardarAut', e); }
+  }
+  // Notas del equipo tras la autorización (acuerdos con el cliente): campo "acuerdos" de cotizador/autorizaciones/{OT}. No toca clienteTs, así que no cuenta como una autorización del cliente.
+  async guardarAcuerdos(texto) {
+    try { if (!this.otEq() || !this._res) return; const db = await this.fbDb(); if (!db) return;
+      await Promise.race([db.ref('cotizador/autorizaciones/' + this.fbKey(this.otEq())).update(this.payloadAut({ acuerdos: String(texto || '') })), new Promise((_, rej) => setTimeout(() => rej(new Error('tiempo agotado')), 15000))]);
+      this.setState({ msg: 'Notas del equipo guardadas en la nube (OT ' + this.otEq() + ').' });
+    } catch (e) { console.warn('guardarAcuerdos', e); this.setState({ msg: 'No se pudieron guardar las notas: ' + e.message }); }
   }
   // Aviso de que el presupuesto salio al cliente: solo al copiar el link, una vez por link.
   notifyEnviada(url) {
@@ -1996,7 +2006,7 @@ class Component extends DCLogic {
       buscarInfo: (st.buscar || '').trim() ? 'Mostrando ' + (() => { const k = this.norm(st.buscar || ''); return k ? items.filter(it => this.norm([it.name, it.nota, ...(it.parts || []).map(l => l.desc), ...(it.ops || []).map(l => l.desc)].join(' ')).includes(k)) : items; })().length + ' de ' + items.length : items.length + ' puntos',
       quote: q, items, onItems, offItems, hasModal: !!modal && !pr0, printDetails, hasPrintDetails: printDetails.length > 0, modal: modal || { secs: [], incluye: [] },
       closeModal: () => this.setState({ modal: null }), stopProp: e => e.stopPropagation(), noItems: !items.length, sum,
-      setObs: e => this.setQ({ obs: e.target.value }), hasObs: !!(q.obs || '').trim(),
+      setObs: e => this.setQ({ obs: e.target.value }), setObsP: e => this.setQ({ obsP: e.target.value }), setObsF: e => this.setQ({ obsF: e.target.value }), setObsA: e => { this.setQ({ obsA: e.target.value }); this.guardarAcuerdos(e.target.value); }, obsList: [['Observaciones del asesor de partes', q.obsP], ['Observaciones del asesor de servicio', q.obs], ['Observaciones', q.obsF]].filter(x => (x[1] || '').trim()).map(x => ({ label: x[0], text: x[1] })),
       setLink: e => this.setQ({ link: this.normLink(e.target.value) }), selAll: e => { try { e.target.select(); } catch (x) {} }, linkHref: this.normLink(q.link), setOr: e => this.setQ({ or: e.target.value }), setCliente: e => this.setQ({ cliente: e.target.value }), setTel: e => this.setQ({ tel: e.target.value }),
       setPlaca: e => this.setQ({ placa: e.target.value }), setKm: e => this.setQ({ km: e.target.value }), setVehiculo: e => this.setQ({ vehiculo: e.target.value }),
       setAnio: e => this.setQ({ anio: e.target.value }), setTexto: e => this.setQ({ texto: e.target.value }),
