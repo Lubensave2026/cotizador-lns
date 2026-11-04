@@ -1812,7 +1812,7 @@ class Component extends DCLogic {
   // Contenido de cotizador/autorizaciones/{OT}: la selección del cliente y los montos (Q con IVA). Lo usan el guardado automático y el botón "Enviar resultado".
   payloadAut(extra) {
     const q = this.state.quote, r = this._res, r2 = n => Math.round(n * 100) / 100, sel = {}; (q.items || []).forEach((it, i) => { sel[it.id != null ? it.id : i] = it.on !== false ? 1 : 0; });
-    return { ot: String(this.otEq()), ts: Date.now(), sel: JSON.stringify(sel), cotizado: r2(r.cotizado), autorizado: r2(r.autorizado), autorizadoMO: r2(r.autorizadoMO), pendiente: r2(r.pendiente), urgenteCotizado: r2(r.urgenteCotizado), urgenteAutorizado: r2(r.urgenteAutorizado), sugeridoCotizado: r2(r.sugeridoCotizado), sugeridoAutorizado: r2(r.sugeridoAutorizado), puntos: r.puntos, puntosAutorizados: r.puntosAutorizados, ...(extra || {}) };
+    return { ot: String(this.otEq()), ts: Date.now(), sel: JSON.stringify(sel), cotizado: r2(r.cotizado), cotizadoMO: r2(r.cotizadoMO), autorizado: r2(r.autorizado), autorizadoMO: r2(r.autorizadoMO), pendiente: r2(r.pendiente), urgenteCotizado: r2(r.urgenteCotizado), urgenteAutorizado: r2(r.urgenteAutorizado), sugeridoCotizado: r2(r.sugeridoCotizado), sugeridoAutorizado: r2(r.sugeridoAutorizado), puntos: r.puntos, puntosAutorizados: r.puntosAutorizados, ...(extra || {}) };
   }
   async guardarAut() {
     try {
@@ -1838,7 +1838,7 @@ class Component extends DCLogic {
   // Resultado de la autorizacion (boton manual del equipo): se guarda SIEMPRE en cotizador/autorizaciones/{OT} (campo resultadoTs) y, si hay ventana de TallerFLOW conectada, se avisa también con postMessage.
   async enviarResultado() {
     const r = this._res; if (!r) return; const f = n => this.fmt(n);
-    const txt = 'Cotizado ' + f(r.cotizado) + ' · Autorizado ' + f(r.autorizado) + ' · Pendiente ' + f(r.pendiente) + ' (urgentes autorizados ' + f(r.urgenteAutorizado) + ' de ' + f(r.urgenteCotizado) + '; sugeridos autorizados ' + f(r.sugeridoAutorizado) + ' de ' + f(r.sugeridoCotizado) + ')';
+    const txt = 'Cotizado ' + f(r.cotizado) + ' (M.O. ' + f(r.cotizadoMO) + ') · Autorizado ' + f(r.autorizado) + ' (M.O. ' + f(r.autorizadoMO) + ') · Pendiente ' + f(r.pendiente) + ' (urgentes autorizados ' + f(r.urgenteAutorizado) + ' de ' + f(r.urgenteCotizado) + '; sugeridos autorizados ' + f(r.sugeridoAutorizado) + ' de ' + f(r.sugeridoCotizado) + ')';
     let ventana = '', nube = '';
     if (!this.otEq()) ventana = 'este link no trae el número de orden (ot / presupuesto)';
     else {
@@ -1944,7 +1944,7 @@ class Component extends DCLogic {
     const sub = onItems.reduce((a, i) => a + i.tot, 0), subAll = items.reduce((a, i) => a + i.tot, 0);
     const esRojo = i => (i.urg || 'rojo') === 'rojo', suma = L => L.reduce((a, i) => a + i.tot, 0);
     const rojosOn = onItems.filter(esRojo), amarOn = onItems.filter(i => !esRojo(i)), rojosAll = items.filter(esRojo), amarAll = items.filter(i => !esRojo(i));
-    this._res = { cotizado: subAll, autorizado: sub, autorizadoMO: Math.min(sub, Math.max(0, Math.round(onItems.reduce((x, i) => x + i.mo, 0) * 100) / 100)), pendiente: subAll - sub, urgenteCotizado: suma(rojosAll), urgenteAutorizado: suma(rojosOn), sugeridoCotizado: suma(amarAll), sugeridoAutorizado: suma(amarOn), puntos: items.length, puntosAutorizados: onItems.length };
+    this._res = { cotizado: subAll, cotizadoMO: Math.min(subAll, Math.max(0, Math.round(items.reduce((x, i) => x + i.mo, 0) * 100) / 100)), autorizado: sub, autorizadoMO: Math.min(sub, Math.max(0, Math.round(onItems.reduce((x, i) => x + i.mo, 0) * 100) / 100)), pendiente: subAll - sub, urgenteCotizado: suma(rojosAll), urgenteAutorizado: suma(rojosOn), sugeridoCotizado: suma(amarAll), sugeridoAutorizado: suma(amarOn), puntos: items.length, puntosAutorizados: onItems.length };
     const offItems = items.filter(i => i.on === false);
     const sum = { hasPend: offItems.length > 0, pendFmt: this.fmt(subAll - sub), repOnFmt: this.fmt(onItems.reduce((a, i) => a + i.rep, 0)), moOnFmt: this.fmt(onItems.reduce((a, i) => a + i.mo, 0)), urgFmt: this.fmt(suma(rojosOn)), sugFmt: this.fmt(suma(amarOn)), hasUrg: rojosAll.length > 0, hasSug: amarAll.length > 0, urgAllFmt: this.fmt(suma(rojosAll)), sugAllFmt: this.fmt(suma(amarAll)), urgAllN: rojosAll.length, sugAllN: amarAll.length,
       countAll: items.length, totFmt: this.fmt(sub), totAllFmt: this.fmt(subAll),
