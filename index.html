@@ -553,10 +553,10 @@
                   <span style="font-weight: 800; font-size: 15px;">Total</span><span style="font-weight: 800; font-size: 15px;">{{ it.totFmt }}</span>
                 </div>
               </div>
-              <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; border-top: 2px solid #000;">
+              <div style="display: grid; grid-template-columns: {{ btnCols }}; border-top: 2px solid #000;">
                 <button onClick="{{ it.onSi }}" style="border: none; font: inherit; font-weight: 800; font-size: 14px; padding: 12px 10px; text-align: left; cursor: pointer; background: {{ it.siBg }}; color: {{ it.siFg }};">Sí, realizar</button>
                 <button onClick="{{ it.onNo }}" style="border: none; border-left: 2px solid #000; font: inherit; font-weight: 800; font-size: 14px; padding: 12px 10px; text-align: left; cursor: pointer; background: {{ it.noBg }}; color: #201e1d;">Ahora no</button>
-                <button onClick="{{ it.onCot }}" style="border: none; border-left: 2px solid #000; font: inherit; font-weight: 800; font-size: 14px; padding: 12px 10px; text-align: left; cursor: pointer; background: {{ it.cotBg }}; color: #201e1d;">Cotizado</button>
+                <sc-if value="{{ allowCot }}" hint-placeholder-val="{{ true }}"><button onClick="{{ it.onCot }}" style="border: none; border-left: 2px solid #000; font: inherit; font-weight: 800; font-size: 14px; padding: 12px 10px; text-align: left; cursor: pointer; background: {{ it.cotBg }}; color: #201e1d;">Cotizado</button></sc-if>
               </div>
             </article>
           </sc-for>
@@ -744,7 +744,7 @@ class Component extends DCLogic {
     } else {
       try { const saved = JSON.parse(localStorage.getItem('lns-cotizador-v2') || 'null'); if (saved) { const st = { ...this.defS(), ...(saved.settings || {}) }; let q = saved.quote;
         if (q && !q.ivaIncl) { const F = 1 + this.num(st.iva) / 100; q = { ...q, ivaIncl: true, items: (q.items || []).map(it => ({ ...it, parts: (it.parts || []).map(l => ({ ...l, rep: l.rep ? String(this.r2(this.num(l.rep) * F)) : l.rep, base: l.base ? l.base * F : l.base })), ops: (it.ops || []).map(l => l.fijo ? { ...l, monto: String(this.r2(this.num(l.monto) * F)) } : l) })) }; }
-        this.setState({ quote: this.migraSel(q), settings: st }); } } catch (e) {}
+        this.setState({ quote: q, settings: st }); } } catch (e) {}
     }
     try {
       const P = new URLSearchParams(location.search), keys = ['or', 'link', 'placa', 'vehiculo', 'anio', 'cliente', 'tel', 'km', 'asesor'];
@@ -1390,7 +1390,7 @@ class Component extends DCLogic {
       return n; }) }) } }));
   }
   expRows(items, T) {
-    const dec = items.some(i => i.on === true || i.on === false), on = dec ? items.filter(i => i.on === true) : items, P = [], O = [];
+    const leg = this.state.quote.dv !== 2, dec = leg || items.some(i => i.on === true || i.on === false), on = dec ? items.filter(i => leg ? i.on !== false : i.on === true) : items, P = [], O = [];
     on.forEach(it => {
       (it.parts || []).forEach(l => { const tot = this.num(l.rep); if (!(l.desc || '').trim() || !tot) return; P.push([String(this.num(l.q) || 1), l.desc.trim(), (l.espec || '').trim()]); });
       (it.ops || []).forEach(l => { const h = this.num(l.hrs); if (!(l.desc || '').trim() || !h) return; O.push([(l.tipo || '').trim(), l.desc.trim(), String(this.r2(h))]); });
@@ -1469,7 +1469,7 @@ class Component extends DCLogic {
           let ok = false;
           // 1) copia de este mismo equipo (solo existe donde se hizo el presupuesto)
           try { const loc = this.quoteStore()[this._tfOt] ? this.richest(this.quoteStore()[this._tfOt]) : (this.backupStore()[this._tfOt] || null);
-            if (loc && (loc.items || []).length) { this._clientLink = false; this.setState({ quote: { ...this.emptyQ(), ...this.migraSel(loc) }, step: loc.okP && loc.okS ? 4 : loc.okP ? 3 : 2, cargaNube: false, loading: false, parseMsg: 'Este link de la bitácora es de una versión anterior; se abrió la copia de la OT ' + this._tfOt + ' guardada en este equipo.' }); ok = true; } } catch (e) {}
+            if (loc && (loc.items || []).length) { this._clientLink = false; this.setState({ quote: { ...this.emptyQ(), ...loc, dv: loc.dv }, step: loc.okP && loc.okS ? 4 : loc.okP ? 3 : 2, cargaNube: false, loading: false, parseMsg: 'Este link de la bitácora es de una versión anterior; se abrió la copia de la OT ' + this._tfOt + ' guardada en este equipo.' }); ok = true; } } catch (e) {}
           // 2) última copia en la nube
           if (!ok && this.esEquipo()) { const g = await this.fbGet(db, 'cotizador/guardados/' + key); if (g && g.json) { const nq = this.withOps(this.limpiarQuote(JSON.parse(g.json).q)); this._clientLink = false; this._nbSig = this.sigNube(nq);
             this.setState({ quote: nq, step: nq.okP && nq.okS ? 4 : nq.okP ? 3 : 2, cargaNube: false, loading: false, parseMsg: 'Este link de la bitácora es de una versión anterior; se abrió la última copia guardada de la OT ' + this._tfOt + '.' }); ok = true; } }
@@ -1654,8 +1654,8 @@ class Component extends DCLogic {
   }
   // Todo punto debe tener al menos una operación (con horas en blanco) para que el asesor solo ponga el tiempo.
   withOps(q) {
-    return this.migraSel({ ...q, items: (q.items || []).map(it => (it.ops || []).some(o => (o.desc || '').trim() || this.num(o.hrs)) ? it
-      : { ...it, ops: [{ desc: this.verboDe(it.nota) + ' de ' + String(it.name || '').trim().replace(/^./, c => c.toLowerCase()), hrs: '' }] }) });
+    return { ...q, items: (q.items || []).map(it => (it.ops || []).some(o => (o.desc || '').trim() || this.num(o.hrs)) ? it
+      : { ...it, ops: [{ desc: this.verboDe(it.nota) + ' de ' + String(it.name || '').trim().replace(/^./, c => c.toLowerCase()), hrs: '' }] }) };
   }
   // ===== Protección del trabajo del asesor: nunca pisar una cotización con más mano de obra por otra más vacía =====
   opsScore(q) { return (q.okS ? 1000 : 0) + ((q && q.items) || []).reduce((a, it) => a + (it.ops || []).filter(o => this.num(o.hrs) > 0).length, 0); }
@@ -1725,12 +1725,11 @@ class Component extends DCLogic {
   async avisarLinkCliente(q) { try { await Promise.race([this.saveFB(q), new Promise(r => setTimeout(r, 12000))]); this.borrarBorrador(); await new Promise(r => setTimeout(r, 600)); this.notifyTF(this.clientUrl()); } catch (e) {} }
   // Glifos de la fuente de iconos del PDF de ClearMechanic: paréntesis y guion salen como caracteres privados (cuadro vacío). Se convierten; los demás se quitan.
   glifos(t) { return String(t == null ? '' : t).replace(//g, '(').replace(//g, ')').replace(//g, '-').replace(/[-]/g, ''); }
-  // Presupuestos anteriores tenían todos los puntos en "Sí, realizar" por defecto: pasan a "Cotizado" (solo se conserva el "Ahora no").
-  migraSel(q) { if (!q || !q.items || q.dv === 2) return q; return { ...q, dv: 2, items: q.items.map(it => { if (it.on !== true) return it; const { on, ...r } = it; return r; }) }; }
+  // Presupuestos nuevos (dv 2): cada punto nace en "Cotizado" y solo cuenta como autorizado si se marca "Sí". Los anteriores (sin dv) siguen igual: todo en "Sí" salvo lo marcado "Ahora no".
   limpiarQuote(q) {
     if (!q || !q.items) return q;
     const g = x => this.glifos(x);
-    return this.migraSel({ ...q, items: q.items.map(it => ({ ...it, name: g(it.name), nota: g(it.nota), parts: (it.parts || []).map(l => ({ ...l, desc: g(l.desc) })), ops: (it.ops || []).map(l => ({ ...l, desc: g(l.desc) })) })) });
+    return { ...q, items: q.items.map(it => ({ ...it, name: g(it.name), nota: g(it.nota), parts: (it.parts || []).map(l => ({ ...l, desc: g(l.desc) })), ops: (it.ops || []).map(l => ({ ...l, desc: g(l.desc) })) })) };
   }
   // ===== Borrador en la nube: cotizador/borradores/{OT} (un borrador por orden; la última escritura gana) =====
   sigDraft(q) { try { return JSON.stringify([q.items, q.okP, q.okS, this.state.step, q.obs, q.obsP, q.obsF]); } catch (e) { return ''; } }
@@ -1792,7 +1791,7 @@ class Component extends DCLogic {
   // Número de orden de este presupuesto: el de TallerFLOW (?ot=) o, en un equipo del taller con un link sin ot, el OR del presupuesto si es un número de orden (solo dígitos).
   otEq() { if (this._tfOt) return this._tfOt; const o = String((this.state.quote || {}).or || '').trim(); return this.esEquipo() && /^[0-9]{3,7}$/.test(o) ? o : ''; }
   // ===== Autorizacion del cliente en la nube: cotizador/autorizaciones/{OT} (la guarda el equipo al marcar Si / Ahora no) =====
-  sigAut(q) { try { return JSON.stringify((q.items || []).map((it, i) => [it.id != null ? it.id : i, it.on === true ? 1 : it.on === false ? 0 : -1])); } catch (e) { return ''; } }
+  sigAut(q) { try { return JSON.stringify((q.items || []).map((it, i) => [it.id != null ? it.id : i, q.dv !== 2 ? (it.on !== false ? 1 : 0) : it.on === true ? 1 : it.on === false ? 0 : -1])); } catch (e) { return ''; } }
   vigilarAut() {
     const st = this.state; if (!this.otEq() || !(st.quote.items || []).length || !this.esEquipo()) return;
     // La autorización guardada también se carga al abrir el presupuesto desde la orden (vista de edición), una vez revisado el borrador; guardar sigue siendo solo desde la vista del cliente.
@@ -1814,7 +1813,7 @@ class Component extends DCLogic {
   }
   // Contenido de cotizador/autorizaciones/{OT}: la selección del cliente y los montos (Q con IVA). Lo usan el guardado automático y el botón "Enviar resultado".
   payloadAut(extra) {
-    const q = this.state.quote, r = this._res, r2 = n => Math.round(n * 100) / 100, sel = {}; (q.items || []).forEach((it, i) => { if (it.on === true || it.on === false) sel[it.id != null ? it.id : i] = it.on ? 1 : 0; });
+    const q = this.state.quote, r = this._res, r2 = n => Math.round(n * 100) / 100, sel = {}; (q.items || []).forEach((it, i) => { if (q.dv !== 2) sel[it.id != null ? it.id : i] = it.on !== false ? 1 : 0; else if (it.on === true || it.on === false) sel[it.id != null ? it.id : i] = it.on ? 1 : 0; });
     return { ot: String(this.otEq()), ts: Date.now(), sel: JSON.stringify(sel), cotizado: r2(r.cotizado), cotizadoMO: r2(r.cotizadoMO), autorizado: r2(r.autorizado), autorizadoMO: r2(r.autorizadoMO), pendiente: r2(r.pendiente), urgenteCotizado: r2(r.urgenteCotizado), urgenteAutorizado: r2(r.urgenteAutorizado), sugeridoCotizado: r2(r.sugeridoCotizado), sugeridoAutorizado: r2(r.sugeridoAutorizado), puntos: r.puntos, puntosAutorizados: r.puntosAutorizados, ...(extra || {}) };
   }
   async guardarAut() {
@@ -1896,7 +1895,7 @@ class Component extends DCLogic {
         const DG = /^diagn[oó]stico computarizado con informe de aver[ií]as/i, VB = /^(desmontaje|cambio|reparaci[oó]n|revisi[oó]n)(?:\s+(?:de|del))?\s+(?=[\p{L}\d(])/iu, vm = (l.desc || '').match(VB), verbo = DG.test(l.desc || '') ? 'Diagnóstico' : vm ? ({ desmontaje: 'Desmontaje', cambio: 'Cambio', 'reparación': 'Reparación', 'reparacion': 'Reparación', 'revisión': 'Revisión', 'revision': 'Revisión' })[vm[1].toLowerCase()] : '';
         return { ...l, qv: String(l.q || 1), onQ: e => { const nq = this.num(e.target.value) > 0 ? this.num(e.target.value) : 1; this.updList(i, 'ops', j, { q: String(nq) }, 's'); }, verbo, onVerbo: e => { const v = e.target.value; if (!v) return; if (v === 'Diagnóstico') { this.updList(i, 'ops', j, { desc: 'Diagnóstico computarizado con informe de averías' }, 's'); return; } const b = ((l.desc || '').replace(DG, '').replace(VB, '').trim()) || String(it.name || '').trim(); this.updList(i, 'ops', j, { desc: v + ' de ' + b.charAt(0).toLowerCase() + b.slice(1) }, 's'); }, fijo: !!l.fijo, noFijo: !l.fijo, moFmt: this.fmt(m), onMonto: e => this.updList(i, 'ops', j, { monto: e.target.value }, 's'), onDesc: e => this.updList(i, 'ops', j, { desc: e.target.value }, 's'), onHrs: e => this.updList(i, 'ops', j, { hrs: e.target.value, fijo: false }, 's'),
           onDel: () => this.updItem(i, { ops: it.ops.filter((_, k) => k !== j) }, 's') }; });
-      const rojo = it.urg === 'rojo', e3 = it.on === true ? 'si' : it.on === false ? 'no' : 'cot';
+      const rojo = it.urg === 'rojo', e3 = st.quote.dv !== 2 ? (it.on !== false ? 'si' : 'no') : it.on === true ? 'si' : it.on === false ? 'no' : 'cot';
       const sugs = st.clientOnly ? [] : this.suggest(vk, it);
       const cliOps = ops.filter(l => (l.desc || '').trim() && (l.fijo ? this.num(l.monto) : this.num(l.hrs))).map(l => ({ desc: l.desc, amt: l.moFmt }));
       const cliParts = parts.filter(l => (l.desc || '').trim() && this.num(l.rep)).map(l => ({ desc: l.desc, amt: this.fmt(this.num(l.rep)) }));
@@ -1940,16 +1939,16 @@ class Component extends DCLogic {
         secs, totLabel: 'Total ' + mi.name, tot: mi.totFmt, incluye: mi.incluye || [], hasIncluye: !!(mi.incluye && mi.incluye.length) };
       return modal;
     };
-    const decided = items.some(i => i.on === true || i.on === false);
+    const leg = st.quote.dv !== 2, isOn = i => leg ? i.on !== false : i.on === true, decided = leg || items.some(i => i.on === true || i.on === false);
     let modal = null; const mi = items.find(i => i.id === st.modal); if (mi) detail(mi);
-    const printDetails = pr0 ? items.filter(i => (!decided || i.on === true) && (i.cliOps.length || i.cliParts.length)).map(i => { modal = null; return detail(i); }) : [];
+    const printDetails = pr0 ? items.filter(i => (!decided || isOn(i)) && (i.cliOps.length || i.cliParts.length)).map(i => { modal = null; return detail(i); }) : [];
     modal = null; if (mi) modal = detail(mi);
-    const onItems = decided ? items.filter(i => i.on === true) : items;
+    const onItems = decided ? items.filter(isOn) : items;
     const sub = onItems.reduce((a, i) => a + i.tot, 0), subAll = items.reduce((a, i) => a + i.tot, 0);
     const esRojo = i => (i.urg || 'rojo') === 'rojo', suma = L => L.reduce((a, i) => a + i.tot, 0);
     const rojosOn = onItems.filter(esRojo), amarOn = onItems.filter(i => !esRojo(i)), rojosAll = items.filter(esRojo), amarAll = items.filter(i => !esRojo(i));
     this._res = { cotizado: subAll, cotizadoMO: Math.min(subAll, Math.max(0, Math.round(items.reduce((x, i) => x + i.mo, 0) * 100) / 100)), autorizado: decided ? sub : 0, autorizadoMO: decided ? Math.min(sub, Math.max(0, Math.round(onItems.reduce((x, i) => x + i.mo, 0) * 100) / 100)) : 0, pendiente: subAll - (decided ? sub : 0), urgenteCotizado: suma(rojosAll), urgenteAutorizado: decided ? suma(rojosOn) : 0, sugeridoCotizado: suma(amarAll), sugeridoAutorizado: decided ? suma(amarOn) : 0, puntos: items.length, puntosAutorizados: decided ? onItems.length : 0 };
-    const offItems = decided ? items.filter(i => i.on !== true) : [];
+    const offItems = decided ? items.filter(i => !isOn(i)) : [];
     const sum = { hasPend: offItems.length > 0, pendFmt: this.fmt(subAll - sub), repOnFmt: this.fmt(onItems.reduce((a, i) => a + i.rep, 0)), moOnFmt: this.fmt(onItems.reduce((a, i) => a + i.mo, 0)), urgFmt: this.fmt(suma(rojosOn)), sugFmt: this.fmt(suma(amarOn)), hasUrg: rojosAll.length > 0, hasSug: amarAll.length > 0, urgAllFmt: this.fmt(suma(rojosAll)), sugAllFmt: this.fmt(suma(amarAll)), urgAllN: rojosAll.length, sugAllN: amarAll.length,
       countAll: items.length, totFmt: this.fmt(sub), totAllFmt: this.fmt(subAll),
       repAllFmt: this.fmt(items.reduce((a, i) => a + i.rep, 0)), moAllFmt: this.fmt(items.reduce((a, i) => a + i.mo, 0)) };
@@ -2010,7 +2009,7 @@ class Component extends DCLogic {
       buscarInfo: (st.buscar || '').trim() ? 'Mostrando ' + (() => { const k = this.norm(st.buscar || ''); return k ? items.filter(it => this.norm([it.name, it.nota, ...(it.parts || []).map(l => l.desc), ...(it.ops || []).map(l => l.desc)].join(' ')).includes(k)) : items; })().length + ' de ' + items.length : items.length + ' puntos',
       quote: q, items, onItems, offItems, hasModal: !!modal && !pr0, printDetails, hasPrintDetails: printDetails.length > 0, modal: modal || { secs: [], incluye: [] },
       closeModal: () => this.setState({ modal: null }), stopProp: e => e.stopPropagation(), noItems: !items.length, sum,
-      cotMode: !decided, totTitle: decided ? 'Total autorizado' : 'Total cotizado', selTitle: decided ? 'Tu selección' : 'Presupuesto cotizado',
+      cotMode: !decided, allowCot: !leg, btnCols: leg ? '1fr 1fr' : '1fr 1fr 1fr', totTitle: decided ? 'Total autorizado' : 'Total cotizado', selTitle: decided ? 'Tu selección' : 'Presupuesto cotizado',
       setObs: e => this.setQ({ obs: e.target.value }), setObsP: e => this.setQ({ obsP: e.target.value }), setObsF: e => this.setQ({ obsF: e.target.value }), setObsA: e => { this.setQ({ obsA: e.target.value }); this.guardarAcuerdos(e.target.value); }, obsList: [['Observaciones del asesor de partes', q.obsP], ['Observaciones del asesor de servicio', q.obs], ['Observaciones', q.obsF]].filter(x => (x[1] || '').trim()).map(x => ({ label: x[0], text: x[1] })),
       setLink: e => this.setQ({ link: this.normLink(e.target.value) }), selAll: e => { try { e.target.select(); } catch (x) {} }, linkHref: this.normLink(q.link), setOr: e => this.setQ({ or: e.target.value }), setCliente: e => this.setQ({ cliente: e.target.value }), setTel: e => this.setQ({ tel: e.target.value }),
       setPlaca: e => this.setQ({ placa: e.target.value }), setKm: e => this.setQ({ km: e.target.value }), setVehiculo: e => this.setQ({ vehiculo: e.target.value }),
