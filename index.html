@@ -497,7 +497,7 @@
       <section style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 0; border-top: 2px solid #201e1d; border-bottom: 2px solid #201e1d; background: #fff;">
         <div style="grid-column: 1 / -1; padding: 12px 16px; border-bottom: 1px solid var(--color-divider); display: flex; flex-direction: column; gap: 2px;">
           <span style="font-size: 15px; font-weight: 800; text-transform: uppercase;">Listados para TallerFLOW · OT {{ quote.or }}</span>
-          <span style="font-size: 13px; color: #605d5d;">Solo lo marcado “Sí, realizar” · {{ exp.countText }}. Texto separado por tabulación, sin encabezados: copia y pega directo en TallerFLOW.</span>
+          <span style="font-size: 13px; color: #605d5d;">{{ exp.countText }}. Texto separado por tabulación, sin encabezados: copia y pega directo en TallerFLOW.</span>
         </div>
         <div style="padding: 14px 16px; display: flex; flex-direction: column; gap: 8px; border-right: 1px solid var(--color-divider);">
           <div style="display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap;">
@@ -553,15 +553,16 @@
                   <span style="font-weight: 800; font-size: 15px;">Total</span><span style="font-weight: 800; font-size: 15px;">{{ it.totFmt }}</span>
                 </div>
               </div>
-              <div style="display: grid; grid-template-columns: 1fr 1fr; border-top: 2px solid #000;">
-                <button onClick="{{ it.onSi }}" style="border: none; font: inherit; font-weight: 800; font-size: 15px; padding: 12px 16px; text-align: left; cursor: pointer; background: {{ it.siBg }}; color: {{ it.siFg }};">Sí, realizar</button>
-                <button onClick="{{ it.onNo }}" style="border: none; border-left: 2px solid #000; font: inherit; font-weight: 800; font-size: 15px; padding: 12px 16px; text-align: left; cursor: pointer; background: {{ it.noBg }}; color: #201e1d;">Ahora no</button>
+              <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; border-top: 2px solid #000;">
+                <button onClick="{{ it.onSi }}" style="border: none; font: inherit; font-weight: 800; font-size: 14px; padding: 12px 10px; text-align: left; cursor: pointer; background: {{ it.siBg }}; color: {{ it.siFg }};">Sí, realizar</button>
+                <button onClick="{{ it.onNo }}" style="border: none; border-left: 2px solid #000; font: inherit; font-weight: 800; font-size: 14px; padding: 12px 10px; text-align: left; cursor: pointer; background: {{ it.noBg }}; color: #201e1d;">Ahora no</button>
+                <button onClick="{{ it.onCot }}" style="border: none; border-left: 2px solid #000; font: inherit; font-weight: 800; font-size: 14px; padding: 12px 10px; text-align: left; cursor: pointer; background: {{ it.cotBg }}; color: #201e1d;">Cotizado</button>
               </div>
             </article>
           </sc-for>
         </div>
         <aside style="position: sticky; top: 16px; background: #000; color: #fff; display: flex; flex-direction: column;">
-          <div style="padding: 18px 20px; border-bottom: 1px solid #333;"><span style="font-size: 12px; text-transform: uppercase; letter-spacing: 0.08em; color: #FFE500;">Tu selección</span></div>
+          <div style="padding: 18px 20px; border-bottom: 1px solid #333;"><span style="font-size: 12px; text-transform: uppercase; letter-spacing: 0.08em; color: #FFE500;">{{ selTitle }}</span></div>
           <sc-for list="{{ onItems }}" as="it" hint-placeholder-count="3">
             <div style="display: flex; justify-content: space-between; gap: 12px; padding: 10px 20px; border-bottom: 1px solid #333; font-size: 14px;"><span>{{ it.name }}</span><span style="white-space: nowrap;">{{ it.totFmt }}</span></div>
           </sc-for>
@@ -571,7 +572,7 @@
             <sc-if value="{{ sum.hasSug }}" hint-placeholder-val="{{ false }}"><div style="display: flex; justify-content: space-between; gap: 12px;"><span><span style="display: inline-block; width: 8px; height: 8px; background: #FFE500; margin-right: 6px;"></span>Puntos sugeridos (amarillo)</span><span style="white-space: nowrap;">{{ sum.sugFmt }}</span></div></sc-if>
           </div>
           <div style="padding: 16px 20px; background: #FFE500; color: #000; display: flex; flex-direction: column; gap: 2px;">
-            <span style="font-size: 12px; text-transform: uppercase; letter-spacing: 0.08em;">Total autorizado</span>
+            <span style="font-size: 12px; text-transform: uppercase; letter-spacing: 0.08em;">{{ totTitle }}</span>
             <span style="font-size: 34px; font-weight: 800;">{{ sum.totFmt }}</span>
             <div style="display: flex; gap: 20px; flex-wrap: wrap; margin: 6px 0 4px; padding: 8px 0; border-top: 1px solid rgba(0,0,0,0.25); border-bottom: 1px solid rgba(0,0,0,0.25);">
               <div style="display: flex; flex-direction: column;"><span style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em;">Repuestos y materiales</span><span style="font-size: 20px; font-weight: 800;">{{ sum.repOnFmt }}</span></div>
@@ -630,7 +631,7 @@
           <div style="background: #FFE500; padding: 14px 16px; display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; break-inside: avoid; page-break-inside: avoid; -webkit-print-color-adjust: exact; print-color-adjust: exact;">
             <div style="display: flex; flex-direction: column;"><span style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em;">Repuestos y materiales</span><span style="font-size: 20px; font-weight: 800;">{{ sum.repOnFmt }}</span></div>
             <div style="display: flex; flex-direction: column;"><span style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em;">Mano de obra</span><span style="font-size: 20px; font-weight: 800;">{{ sum.moOnFmt }}</span></div>
-            <div style="display: flex; flex-direction: column;"><span style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em;">Total autorizado</span><span style="font-size: 24px; font-weight: 800;">{{ sum.totFmt }}</span></div>
+            <div style="display: flex; flex-direction: column;"><span style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em;">{{ totTitle }}</span><span style="font-size: 24px; font-weight: 800;">{{ sum.totFmt }}</span></div>
           </div>
         </div>
       </sc-if>
@@ -642,7 +643,7 @@
         <section style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 0; border-top: 2px solid #201e1d; border-bottom: 2px solid #201e1d; background: #fff;">
         <div style="grid-column: 1 / -1; padding: 12px 16px; border-bottom: 1px solid var(--color-divider); display: flex; flex-direction: column; gap: 2px;">
           <span style="font-size: 15px; font-weight: 800; text-transform: uppercase;">Listados para TallerFLOW · OT {{ quote.or }}</span>
-          <span style="font-size: 13px; color: #605d5d;">Solo lo marcado “Sí, realizar” · {{ exp.countText }}. Texto separado por tabulación, sin encabezados: copia y pega directo en TallerFLOW.</span>
+          <span style="font-size: 13px; color: #605d5d;">{{ exp.countText }}. Texto separado por tabulación, sin encabezados: copia y pega directo en TallerFLOW.</span>
         </div>
         <div style="padding: 14px 16px; display: flex; flex-direction: column; gap: 8px; border-right: 1px solid var(--color-divider);">
           <div style="display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap;">
@@ -718,7 +719,7 @@ class Component extends DCLogic {
   }
   F() { return 1 + this.num(this.state.settings.iva) / 100; }
   r2(n) { return Math.round(n * 100) / 100; }
-  emptyQ() { return { ivaIncl: true, link: '', or: '', cliente: '', tel: '', asesor: '', placa: '', km: '', vehiculo: '', anio: '', texto: '', items: [], okP: null, okS: null, obs: '', obsP: '', obsF: '', obsA: '' }; }
+  emptyQ() { return { ivaIncl: true, link: '', or: '', cliente: '', tel: '', asesor: '', placa: '', km: '', vehiculo: '', anio: '', texto: '', items: [], okP: null, okS: null, obs: '', obsP: '', obsF: '', obsA: '', dv: 2 }; }
   state = { cargaNube: (() => { try { const P = new URLSearchParams(location.search); return !!((P.get('k') || (location.hash.match(/^#\??k=([A-Za-z0-9]+)/) || [])[1] || '').trim() && (P.get('ot') || P.get('presupuesto')) && !/^#[qt]=/.test(location.hash)); } catch (e) { return false; } })(), cargaError: '', adminDev: (() => { try { return localStorage.getItem('lns-admin-dev') === '9f2a55eb9abd8d40a26bc2387de86a878781fd9af2eec049a50382f5bb15cdeb'; } catch (e) { return false; } })(), step: 2, base: null, baseSrc: '', loading: true, msg: '', parseMsg: '', pdfName: '', settings: this.defS(), quote: { ...this.emptyQ(), texto: this.sample(), link: 'https://vehi.mobi/N8XwaN', ivaIncl: true }, clientOnly: false, printing: false, copied: '', addName: '', pinField: 1, pinHash: (() => { try { return localStorage.getItem('lns-pin') || ''; } catch (e) { return ''; } })(), baseOpen: (() => { try { return sessionStorage.getItem('lns-base-open') === '1' && !!localStorage.getItem('lns-pin'); } catch (e) { return false; } })(), pinChanging: false, pin1: '', pin2: '', pinMsg: '', open: {}, serv: null, servSrc: '' };
 
   componentWillUnmount() { window.removeEventListener('keydown', this._pinKey); }
@@ -743,7 +744,7 @@ class Component extends DCLogic {
     } else {
       try { const saved = JSON.parse(localStorage.getItem('lns-cotizador-v2') || 'null'); if (saved) { const st = { ...this.defS(), ...(saved.settings || {}) }; let q = saved.quote;
         if (q && !q.ivaIncl) { const F = 1 + this.num(st.iva) / 100; q = { ...q, ivaIncl: true, items: (q.items || []).map(it => ({ ...it, parts: (it.parts || []).map(l => ({ ...l, rep: l.rep ? String(this.r2(this.num(l.rep) * F)) : l.rep, base: l.base ? l.base * F : l.base })), ops: (it.ops || []).map(l => l.fijo ? { ...l, monto: String(this.r2(this.num(l.monto) * F)) } : l) })) }; }
-        this.setState({ quote: q, settings: st }); } } catch (e) {}
+        this.setState({ quote: this.migraSel(q), settings: st }); } } catch (e) {}
     }
     try {
       const P = new URLSearchParams(location.search), keys = ['or', 'link', 'placa', 'vehiculo', 'anio', 'cliente', 'tel', 'km', 'asesor'];
@@ -1279,7 +1280,7 @@ class Component extends DCLogic {
     s.items.forEach(([sec, name, q, u]) => { const tot = Math.round(q * u * 100) / 100; if (!tot) return;
       if (/MANO DE OBRA/i.test(sec)) ops.push({ desc: this.cap(name), hrs: String(Math.round(tot / (this.num(this.state.settings.tarifa) || 600) * 10000) / 10000) });
       else parts.push({ desc: this.cap(name.replace(/^wippe$/i, 'Wipe')), sec: this.cap(sec || 'Repuestos'), q, rep: String(this.r2(tot)) }); });
-    const R = { id: id || Math.random().toString(36).slice(2), name: this.cap(s.tipo), pk: s.tipo, urg, nota: nota || '', on: true,
+    const R = { id: id || Math.random().toString(36).slice(2), name: this.cap(s.tipo), pk: s.tipo, urg, nota: nota || '',
       src: { tpl: true, t: s.t, ...(cands.alt ? { alt: cands.alt } : {}) }, tpl: { cands, k }, hist: [], parts, ops,
       incluye: tb ? tb.l.map(x => this.cap(x)) : [], mat: s.items.filter(i => !/MANO DE OBRA/i.test(i[0]) && i[3] > 0).map(i => this.cap(i[1].replace(/^wippe$/i, 'Wipe'))) };
     if (cands.alt) R.e0 = this.lineKeys(R);
@@ -1290,7 +1291,7 @@ class Component extends DCLogic {
     if (tipo) { const c = this.tplCands(vk, tipo); if (c.length) return this.itemFromTpl(c, 0, urg, nota); }
     let P = this.match(vk, raw, 0.6), est = null; const s = this.state.settings;
     if (!P && this.state.base && ((this.state.quote.estimado && !this._real) || this._estFallback)) { est = this.estimateP(vk, raw); if (est) P = est.P; }
-    const it = { id: Math.random().toString(36).slice(2), name: this.cap(P ? P.name : raw), pk: P ? this.norm(P.name) : '', urg, nota: nota || '', foto: '', on: true, src: null, hist: [], parts: [], ops: [] };
+    const it = { id: Math.random().toString(36).slice(2), name: this.cap(P ? P.name : raw), pk: P ? this.norm(P.name) : '', urg, nota: nota || '', foto: '', src: null, hist: [], parts: [], ops: [] };
     if (!P) { it.parts = [{ desc: '', rep: '' }]; it.ops = [{ desc: '', hrs: '' }]; return it; }
     const L = P.last, mo = this.monthsAgo(L.d), applies = mo > this.num(s.meses);
     const f = applies ? 1 + (this.num(s.pct) / 100) * (mo / 12) : 1;
@@ -1389,7 +1390,7 @@ class Component extends DCLogic {
       return n; }) }) } }));
   }
   expRows(items, T) {
-    const on = items.filter(i => i.on !== false), P = [], O = [];
+    const dec = items.some(i => i.on === true || i.on === false), on = dec ? items.filter(i => i.on === true) : items, P = [], O = [];
     on.forEach(it => {
       (it.parts || []).forEach(l => { const tot = this.num(l.rep); if (!(l.desc || '').trim() || !tot) return; P.push([String(this.num(l.q) || 1), l.desc.trim(), (l.espec || '').trim()]); });
       (it.ops || []).forEach(l => { const h = this.num(l.hrs); if (!(l.desc || '').trim() || !h) return; O.push([(l.tipo || '').trim(), l.desc.trim(), String(this.r2(h))]); });
@@ -1468,7 +1469,7 @@ class Component extends DCLogic {
           let ok = false;
           // 1) copia de este mismo equipo (solo existe donde se hizo el presupuesto)
           try { const loc = this.quoteStore()[this._tfOt] ? this.richest(this.quoteStore()[this._tfOt]) : (this.backupStore()[this._tfOt] || null);
-            if (loc && (loc.items || []).length) { this._clientLink = false; this.setState({ quote: { ...this.emptyQ(), ...loc }, step: loc.okP && loc.okS ? 4 : loc.okP ? 3 : 2, cargaNube: false, loading: false, parseMsg: 'Este link de la bitácora es de una versión anterior; se abrió la copia de la OT ' + this._tfOt + ' guardada en este equipo.' }); ok = true; } } catch (e) {}
+            if (loc && (loc.items || []).length) { this._clientLink = false; this.setState({ quote: { ...this.emptyQ(), ...this.migraSel(loc) }, step: loc.okP && loc.okS ? 4 : loc.okP ? 3 : 2, cargaNube: false, loading: false, parseMsg: 'Este link de la bitácora es de una versión anterior; se abrió la copia de la OT ' + this._tfOt + ' guardada en este equipo.' }); ok = true; } } catch (e) {}
           // 2) última copia en la nube
           if (!ok && this.esEquipo()) { const g = await this.fbGet(db, 'cotizador/guardados/' + key); if (g && g.json) { const nq = this.withOps(this.limpiarQuote(JSON.parse(g.json).q)); this._clientLink = false; this._nbSig = this.sigNube(nq);
             this.setState({ quote: nq, step: nq.okP && nq.okS ? 4 : nq.okP ? 3 : 2, cargaNube: false, loading: false, parseMsg: 'Este link de la bitácora es de una versión anterior; se abrió la última copia guardada de la OT ' + this._tfOt + '.' }); ok = true; } }
@@ -1653,8 +1654,8 @@ class Component extends DCLogic {
   }
   // Todo punto debe tener al menos una operación (con horas en blanco) para que el asesor solo ponga el tiempo.
   withOps(q) {
-    return { ...q, items: (q.items || []).map(it => (it.ops || []).some(o => (o.desc || '').trim() || this.num(o.hrs)) ? it
-      : { ...it, ops: [{ desc: this.verboDe(it.nota) + ' de ' + String(it.name || '').trim().replace(/^./, c => c.toLowerCase()), hrs: '' }] }) };
+    return this.migraSel({ ...q, items: (q.items || []).map(it => (it.ops || []).some(o => (o.desc || '').trim() || this.num(o.hrs)) ? it
+      : { ...it, ops: [{ desc: this.verboDe(it.nota) + ' de ' + String(it.name || '').trim().replace(/^./, c => c.toLowerCase()), hrs: '' }] }) });
   }
   // ===== Protección del trabajo del asesor: nunca pisar una cotización con más mano de obra por otra más vacía =====
   opsScore(q) { return (q.okS ? 1000 : 0) + ((q && q.items) || []).reduce((a, it) => a + (it.ops || []).filter(o => this.num(o.hrs) > 0).length, 0); }
@@ -1724,10 +1725,12 @@ class Component extends DCLogic {
   async avisarLinkCliente(q) { try { await Promise.race([this.saveFB(q), new Promise(r => setTimeout(r, 12000))]); this.borrarBorrador(); await new Promise(r => setTimeout(r, 600)); this.notifyTF(this.clientUrl()); } catch (e) {} }
   // Glifos de la fuente de iconos del PDF de ClearMechanic: paréntesis y guion salen como caracteres privados (cuadro vacío). Se convierten; los demás se quitan.
   glifos(t) { return String(t == null ? '' : t).replace(//g, '(').replace(//g, ')').replace(//g, '-').replace(/[-]/g, ''); }
+  // Presupuestos anteriores tenían todos los puntos en "Sí, realizar" por defecto: pasan a "Cotizado" (solo se conserva el "Ahora no").
+  migraSel(q) { if (!q || !q.items || q.dv === 2) return q; return { ...q, dv: 2, items: q.items.map(it => { if (it.on !== true) return it; const { on, ...r } = it; return r; }) }; }
   limpiarQuote(q) {
     if (!q || !q.items) return q;
     const g = x => this.glifos(x);
-    return { ...q, items: q.items.map(it => ({ ...it, name: g(it.name), nota: g(it.nota), parts: (it.parts || []).map(l => ({ ...l, desc: g(l.desc) })), ops: (it.ops || []).map(l => ({ ...l, desc: g(l.desc) })) })) };
+    return this.migraSel({ ...q, items: q.items.map(it => ({ ...it, name: g(it.name), nota: g(it.nota), parts: (it.parts || []).map(l => ({ ...l, desc: g(l.desc) })), ops: (it.ops || []).map(l => ({ ...l, desc: g(l.desc) })) })) });
   }
   // ===== Borrador en la nube: cotizador/borradores/{OT} (un borrador por orden; la última escritura gana) =====
   sigDraft(q) { try { return JSON.stringify([q.items, q.okP, q.okS, this.state.step, q.obs, q.obsP, q.obsF]); } catch (e) { return ''; } }
@@ -1789,7 +1792,7 @@ class Component extends DCLogic {
   // Número de orden de este presupuesto: el de TallerFLOW (?ot=) o, en un equipo del taller con un link sin ot, el OR del presupuesto si es un número de orden (solo dígitos).
   otEq() { if (this._tfOt) return this._tfOt; const o = String((this.state.quote || {}).or || '').trim(); return this.esEquipo() && /^[0-9]{3,7}$/.test(o) ? o : ''; }
   // ===== Autorizacion del cliente en la nube: cotizador/autorizaciones/{OT} (la guarda el equipo al marcar Si / Ahora no) =====
-  sigAut(q) { try { return JSON.stringify((q.items || []).map((it, i) => [it.id != null ? it.id : i, it.on !== false ? 1 : 0])); } catch (e) { return ''; } }
+  sigAut(q) { try { return JSON.stringify((q.items || []).map((it, i) => [it.id != null ? it.id : i, it.on === true ? 1 : it.on === false ? 0 : -1])); } catch (e) { return ''; } }
   vigilarAut() {
     const st = this.state; if (!this.otEq() || !(st.quote.items || []).length || !this.esEquipo()) return;
     // La autorización guardada también se carga al abrir el presupuesto desde la orden (vista de edición), una vez revisado el borrador; guardar sigue siendo solo desde la vista del cliente.
@@ -1811,7 +1814,7 @@ class Component extends DCLogic {
   }
   // Contenido de cotizador/autorizaciones/{OT}: la selección del cliente y los montos (Q con IVA). Lo usan el guardado automático y el botón "Enviar resultado".
   payloadAut(extra) {
-    const q = this.state.quote, r = this._res, r2 = n => Math.round(n * 100) / 100, sel = {}; (q.items || []).forEach((it, i) => { sel[it.id != null ? it.id : i] = it.on !== false ? 1 : 0; });
+    const q = this.state.quote, r = this._res, r2 = n => Math.round(n * 100) / 100, sel = {}; (q.items || []).forEach((it, i) => { if (it.on === true || it.on === false) sel[it.id != null ? it.id : i] = it.on ? 1 : 0; });
     return { ot: String(this.otEq()), ts: Date.now(), sel: JSON.stringify(sel), cotizado: r2(r.cotizado), cotizadoMO: r2(r.cotizadoMO), autorizado: r2(r.autorizado), autorizadoMO: r2(r.autorizadoMO), pendiente: r2(r.pendiente), urgenteCotizado: r2(r.urgenteCotizado), urgenteAutorizado: r2(r.urgenteAutorizado), sugeridoCotizado: r2(r.sugeridoCotizado), sugeridoAutorizado: r2(r.sugeridoAutorizado), puntos: r.puntos, puntosAutorizados: r.puntosAutorizados, ...(extra || {}) };
   }
   async guardarAut() {
@@ -1893,7 +1896,7 @@ class Component extends DCLogic {
         const DG = /^diagn[oó]stico computarizado con informe de aver[ií]as/i, VB = /^(desmontaje|cambio|reparaci[oó]n|revisi[oó]n)(?:\s+(?:de|del))?\s+(?=[\p{L}\d(])/iu, vm = (l.desc || '').match(VB), verbo = DG.test(l.desc || '') ? 'Diagnóstico' : vm ? ({ desmontaje: 'Desmontaje', cambio: 'Cambio', 'reparación': 'Reparación', 'reparacion': 'Reparación', 'revisión': 'Revisión', 'revision': 'Revisión' })[vm[1].toLowerCase()] : '';
         return { ...l, qv: String(l.q || 1), onQ: e => { const nq = this.num(e.target.value) > 0 ? this.num(e.target.value) : 1; this.updList(i, 'ops', j, { q: String(nq) }, 's'); }, verbo, onVerbo: e => { const v = e.target.value; if (!v) return; if (v === 'Diagnóstico') { this.updList(i, 'ops', j, { desc: 'Diagnóstico computarizado con informe de averías' }, 's'); return; } const b = ((l.desc || '').replace(DG, '').replace(VB, '').trim()) || String(it.name || '').trim(); this.updList(i, 'ops', j, { desc: v + ' de ' + b.charAt(0).toLowerCase() + b.slice(1) }, 's'); }, fijo: !!l.fijo, noFijo: !l.fijo, moFmt: this.fmt(m), onMonto: e => this.updList(i, 'ops', j, { monto: e.target.value }, 's'), onDesc: e => this.updList(i, 'ops', j, { desc: e.target.value }, 's'), onHrs: e => this.updList(i, 'ops', j, { hrs: e.target.value, fijo: false }, 's'),
           onDel: () => this.updItem(i, { ops: it.ops.filter((_, k) => k !== j) }, 's') }; });
-      const rojo = it.urg === 'rojo', on = it.on !== false;
+      const rojo = it.urg === 'rojo', e3 = it.on === true ? 'si' : it.on === false ? 'no' : 'cot';
       const sugs = st.clientOnly ? [] : this.suggest(vk, it);
       const cliOps = ops.filter(l => (l.desc || '').trim() && (l.fijo ? this.num(l.monto) : this.num(l.hrs))).map(l => ({ desc: l.desc, amt: l.moFmt }));
       const cliParts = parts.filter(l => (l.desc || '').trim() && this.num(l.rep)).map(l => ({ desc: l.desc, amt: this.fmt(this.num(l.rep)) }));
@@ -1914,8 +1917,8 @@ class Component extends DCLogic {
         srcBg: it.src && it.src.est ? '#fff2ef' : it.src && it.src.tpl ? '#FEED01' : it.src ? 'var(--color-neutral-200)' : 'var(--color-accent-100)', srcFg: it.src ? '#201e1d' : '#7c1405',
         histText: it.src && it.src.n ? 'Cotizado ' + it.src.n + ' veces · últimos: ' + (it.hist || []).map(h => this.fd(h[0]).slice(3) + ' Q' + h[1].toLocaleString('es-GT')).join(', ') : '',
         hasNota: !!(it.nota || '').trim(), hasFoto: /^https?:\/\//.test(it.foto || ''),
-        op: on ? 1 : 0.45, siBg: on ? '#000' : '#fff', siFg: on ? YEL : '#201e1d', noBg: on ? '#fff' : '#d7d3d3',
-        onSi: () => this.updItem(i, { on: true }), onNo: () => this.updItem(i, { on: false }),
+        op: e3 === 'no' ? 0.45 : 1, siBg: e3 === 'si' ? '#000' : '#fff', siFg: e3 === 'si' ? YEL : '#201e1d', noBg: e3 === 'no' ? '#d7d3d3' : '#fff', cotBg: e3 === 'cot' ? YEL : '#fff',
+        onSi: () => this.updItem(i, { on: true }), onNo: () => this.updItem(i, { on: false }), onCot: () => this.updItem(i, { on: undefined }),
         onRojo: () => this.updItem(i, { urg: 'rojo' }), onAmarillo: () => this.updItem(i, { urg: 'amarillo' }),
         onName: e => this.updItem(i, { name: e.target.value }, 'p'), onNota: e => this.updItem(i, { nota: e.target.value }, 's'), onFoto: e => this.updItem(i, { foto: e.target.value }, 's'),
         onDel: () => this.setState(s => ({ quote: { ...s.quote, items: s.quote.items.filter((_, k) => k !== i), okP: null, okS: null } })),
@@ -1937,15 +1940,16 @@ class Component extends DCLogic {
         secs, totLabel: 'Total ' + mi.name, tot: mi.totFmt, incluye: mi.incluye || [], hasIncluye: !!(mi.incluye && mi.incluye.length) };
       return modal;
     };
+    const decided = items.some(i => i.on === true || i.on === false);
     let modal = null; const mi = items.find(i => i.id === st.modal); if (mi) detail(mi);
-    const printDetails = pr0 ? items.filter(i => i.on !== false && (i.cliOps.length || i.cliParts.length)).map(i => { modal = null; return detail(i); }) : [];
+    const printDetails = pr0 ? items.filter(i => (!decided || i.on === true) && (i.cliOps.length || i.cliParts.length)).map(i => { modal = null; return detail(i); }) : [];
     modal = null; if (mi) modal = detail(mi);
-    const onItems = items.filter(i => i.on !== false);
+    const onItems = decided ? items.filter(i => i.on === true) : items;
     const sub = onItems.reduce((a, i) => a + i.tot, 0), subAll = items.reduce((a, i) => a + i.tot, 0);
     const esRojo = i => (i.urg || 'rojo') === 'rojo', suma = L => L.reduce((a, i) => a + i.tot, 0);
     const rojosOn = onItems.filter(esRojo), amarOn = onItems.filter(i => !esRojo(i)), rojosAll = items.filter(esRojo), amarAll = items.filter(i => !esRojo(i));
-    this._res = { cotizado: subAll, cotizadoMO: Math.min(subAll, Math.max(0, Math.round(items.reduce((x, i) => x + i.mo, 0) * 100) / 100)), autorizado: sub, autorizadoMO: Math.min(sub, Math.max(0, Math.round(onItems.reduce((x, i) => x + i.mo, 0) * 100) / 100)), pendiente: subAll - sub, urgenteCotizado: suma(rojosAll), urgenteAutorizado: suma(rojosOn), sugeridoCotizado: suma(amarAll), sugeridoAutorizado: suma(amarOn), puntos: items.length, puntosAutorizados: onItems.length };
-    const offItems = items.filter(i => i.on === false);
+    this._res = { cotizado: subAll, cotizadoMO: Math.min(subAll, Math.max(0, Math.round(items.reduce((x, i) => x + i.mo, 0) * 100) / 100)), autorizado: decided ? sub : 0, autorizadoMO: decided ? Math.min(sub, Math.max(0, Math.round(onItems.reduce((x, i) => x + i.mo, 0) * 100) / 100)) : 0, pendiente: subAll - (decided ? sub : 0), urgenteCotizado: suma(rojosAll), urgenteAutorizado: decided ? suma(rojosOn) : 0, sugeridoCotizado: suma(amarAll), sugeridoAutorizado: decided ? suma(amarOn) : 0, puntos: items.length, puntosAutorizados: decided ? onItems.length : 0 };
+    const offItems = decided ? items.filter(i => i.on !== true) : [];
     const sum = { hasPend: offItems.length > 0, pendFmt: this.fmt(subAll - sub), repOnFmt: this.fmt(onItems.reduce((a, i) => a + i.rep, 0)), moOnFmt: this.fmt(onItems.reduce((a, i) => a + i.mo, 0)), urgFmt: this.fmt(suma(rojosOn)), sugFmt: this.fmt(suma(amarOn)), hasUrg: rojosAll.length > 0, hasSug: amarAll.length > 0, urgAllFmt: this.fmt(suma(rojosAll)), sugAllFmt: this.fmt(suma(amarAll)), urgAllN: rojosAll.length, sugAllN: amarAll.length,
       countAll: items.length, totFmt: this.fmt(sub), totAllFmt: this.fmt(subAll),
       repAllFmt: this.fmt(items.reduce((a, i) => a + i.rep, 0)), moAllFmt: this.fmt(items.reduce((a, i) => a + i.mo, 0)) };
@@ -2006,6 +2010,7 @@ class Component extends DCLogic {
       buscarInfo: (st.buscar || '').trim() ? 'Mostrando ' + (() => { const k = this.norm(st.buscar || ''); return k ? items.filter(it => this.norm([it.name, it.nota, ...(it.parts || []).map(l => l.desc), ...(it.ops || []).map(l => l.desc)].join(' ')).includes(k)) : items; })().length + ' de ' + items.length : items.length + ' puntos',
       quote: q, items, onItems, offItems, hasModal: !!modal && !pr0, printDetails, hasPrintDetails: printDetails.length > 0, modal: modal || { secs: [], incluye: [] },
       closeModal: () => this.setState({ modal: null }), stopProp: e => e.stopPropagation(), noItems: !items.length, sum,
+      cotMode: !decided, totTitle: decided ? 'Total autorizado' : 'Total cotizado', selTitle: decided ? 'Tu selección' : 'Presupuesto cotizado',
       setObs: e => this.setQ({ obs: e.target.value }), setObsP: e => this.setQ({ obsP: e.target.value }), setObsF: e => this.setQ({ obsF: e.target.value }), setObsA: e => { this.setQ({ obsA: e.target.value }); this.guardarAcuerdos(e.target.value); }, obsList: [['Observaciones del asesor de partes', q.obsP], ['Observaciones del asesor de servicio', q.obs], ['Observaciones', q.obsF]].filter(x => (x[1] || '').trim()).map(x => ({ label: x[0], text: x[1] })),
       setLink: e => this.setQ({ link: this.normLink(e.target.value) }), selAll: e => { try { e.target.select(); } catch (x) {} }, linkHref: this.normLink(q.link), setOr: e => this.setQ({ or: e.target.value }), setCliente: e => this.setQ({ cliente: e.target.value }), setTel: e => this.setQ({ tel: e.target.value }),
       setPlaca: e => this.setQ({ placa: e.target.value }), setKm: e => this.setQ({ km: e.target.value }), setVehiculo: e => this.setQ({ vehiculo: e.target.value }),
@@ -2038,7 +2043,7 @@ class Component extends DCLogic {
         const wa = 'https://wa.me/' + (tel ? (tel.length === 8 ? '502' + tel : tel) : '') + '?text=' + encodeURIComponent(msg); if (w) w.location.href = wa; else window.open(wa, '_blank'); },
       doPrint: () => this.doPrint(),
       exp: (() => { const E = this.expRows(items, T * (1 + IVA)); const txtP = this.tsv(E.P), txtO = this.tsv(E.O);
-        return { nP: E.P.length, nO: E.O.length, noP: !E.P.length, noO: !E.O.length,  countText: onItems.length + ' de ' + items.length + ' puntos',
+        return { nP: E.P.length, nO: E.O.length, noP: !E.P.length, noO: !E.O.length,  countText: decided ? 'Solo lo marcado “Sí, realizar”: ' + onItems.length + ' de ' + items.length + ' puntos' : 'Aún sin decisión del cliente: se incluyen los ' + items.length + ' puntos cotizados',
           txtP, txtO, copyP: () => this.copy(txtP, 'expP'), copyO: () => this.copy(txtO, 'expO'),
           copyPLabel: st.copied === 'expP' ? 'Copiado ✓' : 'Copiar repuestos', copyOLabel: st.copied === 'expO' ? 'Copiado ✓' : 'Copiar mano de obra' }; })(),
       hasLink: !!(q.link || '').trim(), noLink: !(q.link || '').trim() && !st.clientOnly, hoyFmt: new Date().toLocaleDateString('es-GT')
