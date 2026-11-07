@@ -564,7 +564,7 @@
         <aside style="position: sticky; top: 16px; background: #000; color: #fff; display: flex; flex-direction: column;">
           <div style="padding: 18px 20px; border-bottom: 1px solid #333;"><span style="font-size: 12px; text-transform: uppercase; letter-spacing: 0.08em; color: #FFE500;">{{ selTitle }}</span></div>
           <sc-for list="{{ onItems }}" as="it" hint-placeholder-count="3">
-            <div style="display: flex; justify-content: space-between; gap: 12px; padding: 10px 20px; border-bottom: 1px solid #333; font-size: 14px;"><span>{{ it.name }}</span><span style="white-space: nowrap;">{{ it.totFmt }}</span></div>
+            <div style="display: flex; justify-content: space-between; gap: 12px; padding: 10px 20px; border-bottom: 1px solid #333; font-size: 14px;"><span><span style="display: inline-block; width: 10px; height: 10px; background: {{ it.urgBg }}; margin-right: 8px; -webkit-print-color-adjust: exact; print-color-adjust: exact;"></span>{{ it.name }}</span><span style="white-space: nowrap;">{{ it.totFmt }}</span></div>
           </sc-for>
           <div style="padding: 12px 20px; font-size: 13px; color: #d7d3d3;">Todos los precios incluyen IVA.</div>
           <div style="padding: 4px 20px 12px; display: flex; flex-direction: column; gap: 4px; font-size: 12px; color: #d7d3d3;">
