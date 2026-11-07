@@ -99,6 +99,7 @@
           <h1 style="margin: 0; font-size: 32px; text-transform: uppercase;">Base de datos</h1>
           <div style="display: flex; gap: 8px; flex-wrap: wrap;">
             <button class="btn btn-secondary" onClick="{{ changePin }}">Cambiar PIN</button>
+            <button class="btn btn-secondary" onClick="{{ setEditCode }}">Código de edición del equipo</button>
             <button class="btn" onClick="{{ lock }}" style="background: #000; color: #FFE500; font-weight: 800;" style-hover="background: #2d2b2b;">Bloquear Base</button>
           </div>
         </div>
@@ -1502,11 +1503,27 @@ class Component extends DCLogic {
     let serv = this.state.serv || await this.idbGet('serv'); if (!serv) { try { serv = await (await fetch('servicios.json')).json(); } catch (e) { serv = null; } }
     this.setState({ base, serv, baseSrc: 'Base propia de este navegador · procesado ' + this.fd(base.meta.built) });
   }
+  async setEditCode() {
+    const a = window.prompt('Nuevo código de edición del equipo (mínimo 4 caracteres). Reemplaza el anterior:'); if (a === null) return;
+    if (a.trim().length < 4) { window.alert('Debe tener al menos 4 caracteres.'); return; }
+    const b = window.prompt('Escríbelo otra vez para confirmar:'); if (b === null) return;
+    if (a.trim() !== b.trim()) { window.alert('No coinciden. No se cambió nada.'); return; }
+    try { const db = await this.fbDb(); if (!db) throw new Error('sin conexión con Firebase'); await db.ref('cotizador/config/editHash').set(await this.hash(a.trim())); this.setState({ msg: 'Código de edición del equipo guardado.' }); window.alert('Código de edición guardado. Compártelo solo con quien deba editar presupuestos.'); }
+    catch (e) { window.alert('No se pudo guardar: ' + e.message); }
+  }
   async editSaved() {
-    const pin = window.prompt('PIN del equipo para editar este presupuesto:'); if (pin === null) return;
-    const h = this.state.pinHash;
-    if (!h) { this.setState({ msg: 'Aún no hay PIN en este navegador: créalo en la Base de datos antes de editar.' }); return; }
-    if (await this.hash(pin) !== h) { window.alert('PIN incorrecto.'); return; }
+    if (this.state.adminDev) {
+      const pin = window.prompt('PIN del equipo para editar este presupuesto:'); if (pin === null) return;
+      const h = this.state.pinHash;
+      if (!h) { this.setState({ msg: 'Aún no hay PIN en este navegador: créalo en la Base de datos antes de editar.' }); return; }
+      if (await this.hash(pin) !== h) { window.alert('PIN incorrecto.'); return; }
+    } else {
+      const cod = window.prompt('Código de edición del equipo:'); if (cod === null) return;
+      let h = null;
+      try { const db = await this.fbDb(); if (db) h = (await db.ref('cotizador/config/editHash').once('value')).val(); } catch (e) { window.alert('No se pudo verificar el código: ' + e.message); return; }
+      if (!h) { window.alert('Aún no hay código de edición configurado. Pídele al administrador que lo cree en la Base.'); return; }
+      if (await this.hash(cod.trim()) !== h) { window.alert('Código incorrecto.'); return; }
+    }
     await this.asegurarBase();
     this._baseSnap = this.snapQ(this.state.quote);
     this.setState(s => ({ clientOnly: false, step: 2, savedFB: null, quote: { ...s.quote, okP: null, okS: null }, parseMsg: 'Editando el presupuesto de la OT ' + (this._tfOt || this.state.quote.or) + '. Al confirmar de nuevo se actualiza el mismo link del cliente.' }));
@@ -1982,7 +1999,7 @@ class Component extends DCLogic {
         abrir: () => { const { _k, _t, ...qq } = g; if (q.items.length && q.or !== _k && !window.confirm('Se abrirá ' + _k + '. El presupuesto actual (' + (q.or || 'sin OR') + ') queda guardado en la lista.')) return; if (g._nube) { this.abrirNube(g._ck, _k); return; } this.setState({ quote: this.richest(qq), step: qq.okP && qq.okS ? 4 : qq.okP ? 3 : 2, guardOpen: false, saveInfo: null, parseMsg: 'Presupuesto ' + _k + ' recuperado.', pdfName: '' }); } })) : [],
       consOpen: !!st.consOpen, toggleCons: () => this.setState(x => ({ consOpen: !x.consOpen })), consVeh: st.consVeh || '', consPieza: st.consPieza || '', setConsVeh: e => this.setState({ consVeh: e.target.value }), setConsPieza: e => this.setState({ consPieza: e.target.value }), hasConsVeh: !!(st.consVeh || '').trim(), hasConsPieza: !!(st.consPieza || '').trim(), clearConsVeh: () => this.setState({ consVeh: '' }), hasConsAlgo: !!((st.consVeh || '').trim() || (st.consPieza || '').trim()), clearConsTodo: () => this.setState({ consVeh: '', consPieza: '' }), clearConsPieza: () => this.setState({ consPieza: '' }), cons: st.consOpen ? this.consultar() : {},
       publishHist: () => this.publishHist(),
-      teamView: this.esEquipo() && st.clientOnly && !pr, showListadosCli: this.esEquipo() && st.clientOnly && !pr && !!st.showListados, listadosLabel: st.showListados ? 'Ocultar listados para TallerFLOW' : 'Listados para TallerFLOW (equipo)', enviarResultado: () => this.enviarResultado(), toggleListados: () => this.setState(x => ({ showListados: !x.showListados })), cliPdf: st.clientOnly && !pr, canEdit: st.clientOnly && !pr && !!st.adminDev, editSaved: () => this.editSaved(),
+      teamView: this.esEquipo() && st.clientOnly && !pr, showListadosCli: this.esEquipo() && st.clientOnly && !pr && !!st.showListados, listadosLabel: st.showListados ? 'Ocultar listados para TallerFLOW' : 'Listados para TallerFLOW (equipo)', enviarResultado: () => this.enviarResultado(), toggleListados: () => this.setState(x => ({ showListados: !x.showListados })), cliPdf: st.clientOnly && !pr, canEdit: st.clientOnly && !pr && (!!st.adminDev || this.esEquipo()), editSaved: () => this.editSaved(), setEditCode: () => this.setEditCode(),
       loading: st.loading || (st.cargaNube && !st.clientOnly), loadMsg: st.cargaError || (st.cargaNube ? 'Cargando presupuesto…' : 'Cargando historial…'), showChrome: !st.clientOnly && !pr && !st.cargaNube,
       headerSub: q.or ? 'OR ' + q.or + ' · ' + (q.vehiculo || '') : 'Zona 10',
       saveTxt: st.saveInfo ? st.saveInfo.txt : (q.or && (q.items || []).length && !st.clientOnly && !q.estimado ? '✔ Guardado en este equipo' : ''), hasSaveTxt: !!(st.saveInfo || (q.or && (q.items || []).length && !st.clientOnly && !q.estimado)), saveColor: st.saveInfo && !st.saveInfo.ok ? '#ff8a7a' : '#7CFC9A',
