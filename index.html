@@ -1503,7 +1503,7 @@ class Component extends DCLogic {
     let serv = this.state.serv || await this.idbGet('serv'); if (!serv) { try { serv = await (await fetch('servicios.json')).json(); } catch (e) { serv = null; } }
     this.setState({ base, serv, baseSrc: 'Base propia de este navegador · procesado ' + this.fd(base.meta.built) });
   }
-  editHashFijo() { return ''; }
+  editHashFijo() { return '4bd99703090d1895de665b99907b9d88999fc8c8544bb08d89c464d4f3e71ae0'; }
   async setEditCode() {
     const a = window.prompt('Nuevo código de edición del equipo (mínimo 4 caracteres). Reemplaza el anterior:'); if (a === null) return;
     if (a.trim().length < 4) { window.alert('Debe tener al menos 4 caracteres.'); return; }
