@@ -1503,13 +1503,14 @@ class Component extends DCLogic {
     let serv = this.state.serv || await this.idbGet('serv'); if (!serv) { try { serv = await (await fetch('servicios.json')).json(); } catch (e) { serv = null; } }
     this.setState({ base, serv, baseSrc: 'Base propia de este navegador · procesado ' + this.fd(base.meta.built) });
   }
+  editHashFijo() { return ''; }
   async setEditCode() {
     const a = window.prompt('Nuevo código de edición del equipo (mínimo 4 caracteres). Reemplaza el anterior:'); if (a === null) return;
     if (a.trim().length < 4) { window.alert('Debe tener al menos 4 caracteres.'); return; }
     const b = window.prompt('Escríbelo otra vez para confirmar:'); if (b === null) return;
     if (a.trim() !== b.trim()) { window.alert('No coinciden. No se cambió nada.'); return; }
     try { const db = await this.fbDb(); if (!db) throw new Error('sin conexión con Firebase'); await db.ref('cotizador/config/editHash').set(await this.hash(a.trim())); this.setState({ msg: 'Código de edición del equipo guardado.' }); window.alert('Código de edición guardado. Compártelo solo con quien deba editar presupuestos.'); }
-    catch (e) { window.alert('No se pudo guardar: ' + e.message); }
+    catch (e) { const hh = await this.hash(a.trim()); window.prompt('Firebase no permite guardar el código (' + e.message + '). Copia este valor (es solo la huella, no el código) y pásaselo a Claude para dejarlo en la aplicación:', hh); }
   }
   async editSaved() {
     if (this.state.adminDev) {
@@ -1519,8 +1520,8 @@ class Component extends DCLogic {
       if (await this.hash(pin) !== h) { window.alert('PIN incorrecto.'); return; }
     } else {
       const cod = window.prompt('Código de edición del equipo:'); if (cod === null) return;
-      let h = null;
-      try { const db = await this.fbDb(); if (db) h = (await db.ref('cotizador/config/editHash').once('value')).val(); } catch (e) { window.alert('No se pudo verificar el código: ' + e.message); return; }
+      let h = this.editHashFijo() || null;
+      try { const db = h ? null : await this.fbDb(); if (db) h = (await db.ref('cotizador/config/editHash').once('value')).val(); } catch (e) { window.alert('No se pudo verificar el código: ' + e.message); return; }
       if (!h) { window.alert('Aún no hay código de edición configurado. Pídele al administrador que lo cree en la Base.'); return; }
       if (await this.hash(cod.trim()) !== h) { window.alert('Código incorrecto.'); return; }
     }
