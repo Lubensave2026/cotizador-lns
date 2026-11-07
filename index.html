@@ -539,10 +539,10 @@
       <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 24px; padding-top: 24px; align-items: start;">
         <div style="grid-column: span 2; min-width: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 16px;">
           <sc-for list="{{ items }}" as="it" hint-placeholder-count="4">
-            <article style="background: #fff; display: flex; flex-direction: column; border-top: 8px solid {{ it.urgBg }}; box-shadow: var(--shadow-sm); break-inside: avoid;">
+            <article style="background: #fff; display: flex; flex-direction: column; box-shadow: var(--shadow-sm); break-inside: avoid;">
               <div style="padding: 16px 18px; display: flex; flex-direction: column; gap: 8px; flex: 1; opacity: {{ it.op }};">
-                <span style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; font-weight: 600;">{{ it.urgLabel }}</span>
-                <span style="font-size: 18px; font-weight: 800; line-height: 1.2;">{{ it.name }}</span>
+                <div style="border: 4px solid {{ it.urgBg }}; padding: 10px 12px; display: flex; flex-direction: column; gap: 6px; -webkit-print-color-adjust: exact; print-color-adjust: exact;"><span style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; font-weight: 600;">{{ it.urgLabel }}</span>
+                <span style="font-size: 18px; font-weight: 800; line-height: 1.2;">{{ it.name }}</span></div>
                 <sc-if value="{{ it.hasNota }}" hint-placeholder-val="{{ false }}"><span style="font-size: 14px; text-wrap: pretty;">{{ it.nota }}</span></sc-if>
                 <sc-if value="{{ it.hasDetalle }}" hint-placeholder-val="{{ false }}">
                   <button onClick="{{ it.onInc }}" style="align-self: flex-start; border: none; border-bottom: 2px solid #000; background: transparent; font: inherit; font-size: 13px; font-weight: 800; padding: 2px 0; cursor: pointer; text-align: left;" style-hover="background: #FFE500;">{{ it.incLabel }}</button>
@@ -554,9 +554,9 @@
                 </div>
               </div>
               <div style="display: grid; grid-template-columns: {{ btnCols }}; border-top: 2px solid #000;">
-                <button onClick="{{ it.onSi }}" style="border: none; font: inherit; font-weight: 800; font-size: 14px; padding: 12px 10px; text-align: left; cursor: pointer; background: {{ it.siBg }}; color: {{ it.siFg }};">Sí, realizar</button>
-                <button onClick="{{ it.onNo }}" style="border: none; border-left: 2px solid #000; font: inherit; font-weight: 800; font-size: 14px; padding: 12px 10px; text-align: left; cursor: pointer; background: {{ it.noBg }}; color: #201e1d;">Ahora no</button>
-                <sc-if value="{{ allowCot }}" hint-placeholder-val="{{ true }}"><button onClick="{{ it.onCot }}" style="border: none; border-left: 2px solid #000; font: inherit; font-weight: 800; font-size: 14px; padding: 12px 10px; text-align: left; cursor: pointer; background: {{ it.cotBg }}; color: #201e1d;">Cotizado</button></sc-if>
+                <button onClick="{{ it.onSi }}" style="border: none; font: inherit; font-weight: 800; font-size: 14px; padding: 12px 10px; text-align: left; cursor: pointer; -webkit-print-color-adjust: exact; print-color-adjust: exact; background: {{ it.siBg }}; color: {{ it.siFg }};">Sí, realizar</button>
+                <button onClick="{{ it.onNo }}" style="border: none; border-left: 2px solid #000; font: inherit; font-weight: 800; font-size: 14px; padding: 12px 10px; text-align: left; cursor: pointer; -webkit-print-color-adjust: exact; print-color-adjust: exact; background: {{ it.noBg }}; color: {{ it.noFg }};">Ahora no</button>
+                <sc-if value="{{ allowCot }}" hint-placeholder-val="{{ true }}"><button onClick="{{ it.onCot }}" style="border: none; border-left: 2px solid #000; font: inherit; font-weight: 800; font-size: 14px; padding: 12px 10px; text-align: left; cursor: pointer; -webkit-print-color-adjust: exact; print-color-adjust: exact; background: {{ it.cotBg }}; color: #201e1d;">Cotizado</button></sc-if>
               </div>
             </article>
           </sc-for>
@@ -1916,7 +1916,7 @@ class Component extends DCLogic {
         srcBg: it.src && it.src.est ? '#fff2ef' : it.src && it.src.tpl ? '#FEED01' : it.src ? 'var(--color-neutral-200)' : 'var(--color-accent-100)', srcFg: it.src ? '#201e1d' : '#7c1405',
         histText: it.src && it.src.n ? 'Cotizado ' + it.src.n + ' veces · últimos: ' + (it.hist || []).map(h => this.fd(h[0]).slice(3) + ' Q' + h[1].toLocaleString('es-GT')).join(', ') : '',
         hasNota: !!(it.nota || '').trim(), hasFoto: /^https?:\/\//.test(it.foto || ''),
-        op: e3 === 'no' ? 0.45 : 1, siBg: e3 === 'si' ? '#000' : '#fff', siFg: e3 === 'si' ? YEL : '#201e1d', noBg: e3 === 'no' ? '#d7d3d3' : '#fff', cotBg: e3 === 'cot' ? YEL : '#fff',
+        op: e3 === 'no' ? 0.45 : 1, siBg: e3 === 'si' ? '#1f8a3b' : '#fff', siFg: e3 === 'si' ? '#fff' : '#201e1d', noBg: e3 === 'no' ? '#d92d20' : '#fff', noFg: e3 === 'no' ? '#fff' : '#201e1d', cotBg: e3 === 'cot' ? '#F0A030' : '#fff',
         onSi: () => this.updItem(i, { on: true }), onNo: () => this.updItem(i, { on: false }), onCot: () => this.updItem(i, { on: undefined }),
         onRojo: () => this.updItem(i, { urg: 'rojo' }), onAmarillo: () => this.updItem(i, { urg: 'amarillo' }),
         onName: e => this.updItem(i, { name: e.target.value }, 'p'), onNota: e => this.updItem(i, { nota: e.target.value }, 's'), onFoto: e => this.updItem(i, { foto: e.target.value }, 's'),
