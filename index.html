@@ -678,6 +678,24 @@
           </div>
           <button onClick="{{ closeModal }}" aria-label="Cerrar" style="border: 2px solid #000; background: #fff; font: inherit; font-weight: 800; font-size: 16px; width: 36px; height: 36px; cursor: pointer; flex: none;" style-hover="background: #000; color: #FFE500;">×</button>
         </div>
+        <sc-if value="{{ modal.hasEd }}" hint-placeholder-val="{{ false }}"><div style="padding: 8px 18px; font-size: 12px; background: #fff7d6; border-bottom: 1px solid #e0d28a;">{{ modal.edInfo }}</div></sc-if>
+        <sc-if value="{{ modal.canEdit }}" hint-placeholder-val="{{ false }}"><div style="padding: 10px 14px; display: flex; justify-content: flex-end;"><button class="btn btn-secondary" onClick="{{ modal.onEditar }}" style="font-size: 12px;">Editar este punto (equipo)</button></div></sc-if>
+        <sc-if value="{{ modal.editing }}" hint-placeholder-val="{{ false }}">
+          <div style="padding: 12px 14px; display: flex; flex-direction: column; gap: 8px;">
+            <span style="font-size: 12px; font-weight: 800; text-transform: uppercase;">Repuestos · precios finales con IVA</span>
+            <div style="display: grid; grid-template-columns: minmax(0, 1fr) 56px 96px 32px; gap: 6px; font-size: 11px; font-weight: 800;"><span>Descripción</span><span style="text-align: right;">CTD</span><span style="text-align: right;">Unidad Q</span><span></span></div>
+            <sc-for list="{{ modal.eParts }}" as="r" hint-placeholder-count="2">
+              <div style="display: grid; grid-template-columns: minmax(0, 1fr) 56px 96px 32px; gap: 6px;"><input class="input" value="{{ r.desc }}" onChange="{{ r.onDesc }}" /><input class="input" value="{{ r.q }}" onChange="{{ r.onQ }}" style="text-align: right;" /><input class="input" value="{{ r.unit }}" onChange="{{ r.onUnit }}" style="text-align: right;" /><button onClick="{{ r.onDel }}" aria-label="Quitar" style="border: 1px solid #999; background: #fff; cursor: pointer;">×</button></div>
+            </sc-for>
+            <button class="btn btn-secondary" onClick="{{ modal.onAddP }}" style="font-size: 12px; align-self: flex-start;">+ Agregar repuesto</button>
+            <span style="font-size: 12px; font-weight: 800; text-transform: uppercase; margin-top: 6px;">Mano de obra · total con IVA</span>
+            <sc-for list="{{ modal.eOps }}" as="r" hint-placeholder-count="1">
+              <div style="display: grid; grid-template-columns: minmax(0, 1fr) 110px 32px; gap: 6px;"><input class="input" value="{{ r.desc }}" onChange="{{ r.onDesc }}" /><input class="input" value="{{ r.tot }}" onChange="{{ r.onTot }}" style="text-align: right;" /><button onClick="{{ r.onDel }}" aria-label="Quitar" style="border: 1px solid #999; background: #fff; cursor: pointer;">×</button></div>
+            </sc-for>
+            <button class="btn btn-secondary" onClick="{{ modal.onAddO }}" style="font-size: 12px; align-self: flex-start;">+ Agregar mano de obra</button>
+            <div style="display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-top: 8px; font-weight: 800;"><span>Total del punto: {{ modal.eTotFmt }}</span><span style="display: flex; gap: 8px;"><button class="btn btn-secondary" onClick="{{ modal.onCancelar }}">Cancelar</button><button class="btn" onClick="{{ modal.onGuardar }}" style="background: #000; color: #FFE500; font-weight: 800;">Guardar cambios</button></span></div>
+          </div>
+        </sc-if>
         <sc-for list="{{ modal.secs }}" as="sec" hint-placeholder-count="3">
           <div style="display: flex; flex-direction: column;">
             <div style="display: grid; grid-template-columns: 28px minmax(0, 1fr) 44px 84px 92px; gap: 8px; background: #000; color: #FFE500; font-size: 12px; font-weight: 800; padding: 8px 14px;">
@@ -1512,19 +1530,86 @@ class Component extends DCLogic {
     try { const db = await this.fbDb(); if (!db) throw new Error('sin conexión con Firebase'); await db.ref('cotizador/config/editHash').set(await this.hash(a.trim())); this.setState({ msg: 'Código de edición del equipo guardado.' }); window.alert('Código de edición guardado. Compártelo solo con quien deba editar presupuestos.'); }
     catch (e) { const hh = await this.hash(a.trim()); window.prompt('Firebase no permite guardar el código (' + e.message + '). Copia este valor (es solo la huella, no el código) y pásaselo a Claude para dejarlo en la aplicación:', hh); }
   }
-  async editSaved() {
-    if (this.state.adminDev) {
-      const pin = window.prompt('PIN del equipo para editar este presupuesto:'); if (pin === null) return;
-      const h = this.state.pinHash;
-      if (!h) { this.setState({ msg: 'Aún no hay PIN en este navegador: créalo en la Base de datos antes de editar.' }); return; }
-      if (await this.hash(pin) !== h) { window.alert('PIN incorrecto.'); return; }
-    } else {
-      const cod = window.prompt('Código de edición del equipo:'); if (cod === null) return;
-      let h = this.editHashFijo() || null;
-      try { const db = h ? null : await this.fbDb(); if (db) h = (await db.ref('cotizador/config/editHash').once('value')).val(); } catch (e) { window.alert('No se pudo verificar el código: ' + e.message); return; }
-      if (!h) { window.alert('Aún no hay código de edición configurado. Pídele al administrador que lo cree en la Base.'); return; }
-      if (await this.hash(cod.trim()) !== h) { window.alert('Código incorrecto.'); return; }
+  tasaOp() { const S = this.state.settings; return (this.num(S.tarifa) || 600) * (1 + this.num(S.iva) / 100); }
+  puedeEditarPunto() { const st = this.state; return !!(st.clientOnly && st.quote.dv === 2 && this._tfOt && this._k && this.esEquipo()); }
+  editorNombre() { let n = ''; try { n = localStorage.getItem('lns-editor-nombre') || ''; } catch (e) {} if (!n) { n = (window.prompt('¿Quién está editando? Escribe tu nombre (queda registrado en el punto):') || '').trim(); if (!n) return ''; try { localStorage.setItem('lns-editor-nombre', n); } catch (e) {} } return n; }
+  async abrirEdicionPunto(id) {
+    if (!this.puedeEditarPunto()) return;
+    if (!this._editOk) { if (!(await this.verificarEdicion())) return; this._editOk = true; }
+    const por = this.editorNombre(); if (!por) return;
+    const it = this.state.quote.items.find(x => x.id === id); if (!it) return; const rate = this.tasaOp(), parts = [], ops = [];
+    (it.parts || []).forEach((l, j) => { const tot = this.num(l.rep); if (!(l.desc || '').trim() || !tot) return; let desc = l.desc, qty = l.q; const m = !qty && desc.match(/\s\((\d+(?:\.\d+)?)\)$/); if (m) { qty = +m[1]; desc = desc.slice(0, m.index); } qty = this.num(qty) || 1; parts.push({ j, desc, q: String(qty), unit: String(this.r2(tot / qty)) }); });
+    (it.ops || []).forEach((l, j) => { const m = l.fijo ? this.num(l.monto) : this.num(l.hrs) * (this.num(l.tar) || rate); if (!(l.desc || '').trim() || !m) return; ops.push({ j, desc: l.desc, tot: String(this.r2(m)), tot0: this.r2(m) }); });
+    this.setState({ medit: { id, por, parts, ops, pj0: parts.map(r => r.j), oj0: ops.map(r => r.j) } });
+  }
+  meditSet(kind, idx, patch) { this.setState(s => s.medit ? { medit: { ...s.medit, [kind]: s.medit[kind].map((r, i) => i === idx ? { ...r, ...patch } : r) } } : null); }
+  meditDel(kind, idx) { this.setState(s => s.medit ? { medit: { ...s.medit, [kind]: s.medit[kind].filter((_, i) => i !== idx) } } : null); }
+  meditAdd(kind) { this.setState(s => s.medit ? { medit: { ...s.medit, [kind]: [...s.medit[kind], kind === 'parts' ? { j: null, desc: '', q: '1', unit: '' } : { j: null, desc: '', tot: '' }] } } : null); }
+  aplicarEdicionPunto(q, d) {
+    const rate = this.tasaOp();
+    return { ...q, items: (q.items || []).map(it => {
+      if (it.id !== d.id) return it;
+      const pk = new Map(d.parts.filter(r => r.j != null).map(r => [r.j, r])), ok = new Map(d.ops.filter(r => r.j != null).map(r => [r.j, r]));
+      const parts = [], ops = [];
+      (it.parts || []).forEach((l, j) => { if (!d.pj0.includes(j)) { parts.push(l); return; } const r = pk.get(j); if (!r) return; const qty = this.num(r.q) > 0 ? this.num(r.q) : 1; parts.push({ ...l, desc: String(r.desc || '').trim() || l.desc, q: String(qty), rep: String(this.r2(qty * this.num(r.unit))), adj: 0 }); });
+      d.parts.filter(r => r.j == null && String(r.desc || '').trim() && this.num(r.unit) > 0).forEach(r => { const qty = this.num(r.q) > 0 ? this.num(r.q) : 1; parts.push({ desc: r.desc.trim(), q: String(qty), rep: String(this.r2(qty * this.num(r.unit))) }); });
+      (it.ops || []).forEach((l, j) => { if (!d.oj0.includes(j)) { ops.push(l); return; } const r = ok.get(j); if (!r) return; const desc = String(r.desc || '').trim() || l.desc, t = this.r2(this.num(r.tot)); if (t !== r.tot0) ops.push({ ...l, desc, fijo: false, monto: undefined, tar: undefined, hrs: String(t / rate) }); else ops.push({ ...l, desc }); });
+      d.ops.filter(r => r.j == null && String(r.desc || '').trim() && this.num(r.tot) > 0).forEach(r => ops.push({ desc: r.desc.trim(), q: '1', hrs: String(this.r2(this.num(r.tot)) / rate) }));
+      return { ...it, parts, ops, ed: [...(it.ed || []), { ts: Date.now(), por: d.por }].slice(-5) };
+    }) };
+  }
+  async histPunto(q, id) {
+    try {
+      const it = q.items.find(x => x.id === id); if (!it || q.estimado || !this.recs || !this.recs.length) return false;
+      const F = this.F(), hoy = new Date().toISOString().slice(0, 10), or = String(q.or || '').trim(), nn = this.norm(it.name), old = this.recs.filter(x => x[0] === or && x[4] === nn);
+      if (!old.length) return false; const lines = [];
+      (it.parts || []).forEach(l => { const v = this.num(l.rep); if ((l.desc || '').trim() && v) lines.push([l.desc.trim(), this.r2(v / F), 0]); });
+      (it.ops || []).forEach(l => { const h = this.num(l.hrs); if ((l.desc || '').trim() && h) lines.push([l.desc.trim(), 0, this.r2(h * this.rateAt(hoy))]); });
+      if (!lines.length) return false;
+      const rec = [or, hoy, old[0][2], old[0][3], nn, old[0][5], it.name, lines, 'lns'];
+      const rest = this.recs.filter(x => !(x[0] === or && x[4] === nn)); await this.setRecs([...rest, rec]); this.pushDelta(or, [...rest.filter(x => x[0] === or), rec]); return true;
+    } catch (e) { console.warn('histPunto', e); return false; }
+  }
+  async guardarEdicionPunto() {
+    const d = this.state.medit; if (!d) return;
+    if (!d.parts.every(r => !String(r.desc || '').trim() || this.num(r.unit) > 0) || !d.ops.every(r => !String(r.desc || '').trim() || this.num(r.tot) > 0)) { window.alert('Todos los renglones con descripción necesitan un precio mayor a cero. Si ya no va, bórralo con la ×.'); return; }
+    const nq = this.aplicarEdicionPunto(this.state.quote, d);
+    this.setState({ quote: nq, medit: null }); this._cliZ = null;
+    await this.saveFB(nq);
+    try { const or = nq.or; ['lns-cotizaciones', 'lns-cotiz-respaldo'].forEach(kk => { const m = JSON.parse(localStorage.getItem(kk) || '{}'); if (m[or] && m[or].items) { m[or] = this.aplicarEdicionPunto(m[or], d); localStorage.setItem(kk, JSON.stringify(m)); } }); } catch (e) {}
+    try { const db = await this.fbDb(); if (db) { const key = this.fbKey(this._tfOt), r = await this.fbGet(db, 'cotizador/guardados/' + key); if (r && r.json) { const o = JSON.parse(r.json); if (o.q && o.q.items) { o.q = this.aplicarEdicionPunto(o.q, d); await db.ref('cotizador/guardados/' + key).update({ json: JSON.stringify(o), ts: Date.now() }); } } } } catch (e) { console.warn('guardados', e); }
+    const h = await this.histPunto(nq, d.id);
+    this.setState({ msg: 'Punto editado por ' + d.por + ' y guardado en el mismo link del cliente.' + (h ? ' El historial de precios quedó actualizado.' : ' El historial de precios no se pudo actualizar (no estaba cargado).') });
+  }
+  modalEdicion(mi, E) {
+    const q = this.state.quote, it = q.items.find(x => x.id === mi.id) || {}, last = (it.ed || []).slice(-1)[0];
+    const o = { canEdit: !E && this.puedeEditarPunto(), editing: !!E, onEditar: () => this.abrirEdicionPunto(mi.id), hasEd: !!last && this.esEquipo(), edInfo: last ? 'Editado por ' + last.por + ' · ' + new Date(last.ts).toLocaleString('es-GT', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) : '' };
+    if (E) {
+      o.secs = []; o.hasIncluye = false;
+      o.eParts = E.parts.map((r, i) => ({ ...r, onDesc: e => this.meditSet('parts', i, { desc: e.target.value }), onQ: e => this.meditSet('parts', i, { q: e.target.value }), onUnit: e => this.meditSet('parts', i, { unit: e.target.value }), onDel: () => this.meditDel('parts', i) }));
+      o.eOps = E.ops.map((r, i) => ({ ...r, onDesc: e => this.meditSet('ops', i, { desc: e.target.value }), onTot: e => this.meditSet('ops', i, { tot: e.target.value }), onDel: () => this.meditDel('ops', i) }));
+      const tp = E.parts.reduce((a, r) => a + (this.num(r.q) > 0 ? this.num(r.q) : 1) * this.num(r.unit), 0), to = E.ops.reduce((a, r) => a + this.num(r.tot), 0);
+      o.eTotFmt = this.fmt(tp + to); o.onGuardar = () => this.guardarEdicionPunto(); o.onCancelar = () => this.setState({ medit: null }); o.onAddP = () => this.meditAdd('parts'); o.onAddO = () => this.meditAdd('ops');
     }
+    return o;
+  }
+  async verificarEdicion() {
+    if (this.state.adminDev) {
+      const pin = window.prompt('PIN del equipo para editar este presupuesto:'); if (pin === null) return false;
+      const h = this.state.pinHash;
+      if (!h) { this.setState({ msg: 'Aún no hay PIN en este navegador: créalo en la Base de datos antes de editar.' }); return false; }
+      if (await this.hash(pin) !== h) { window.alert('PIN incorrecto.'); return false; }
+    } else {
+      const cod = window.prompt('Código de edición del equipo:'); if (cod === null) return false;
+      let h = this.editHashFijo() || null;
+      try { const db = h ? null : await this.fbDb(); if (db) h = (await db.ref('cotizador/config/editHash').once('value')).val(); } catch (e) { window.alert('No se pudo verificar el código: ' + e.message); return false; }
+      if (!h) { window.alert('Aún no hay código de edición configurado. Pídele al administrador que lo cree en la Base.'); return false; }
+      if (await this.hash(cod.trim()) !== h) { window.alert('Código incorrecto.'); return false; }
+    }
+    return true;
+  }
+  async editSaved() {
+    if (!(await this.verificarEdicion())) return; this._editOk = true;
     await this.asegurarBase();
     this._baseSnap = this.snapQ(this.state.quote);
     this.setState(s => ({ clientOnly: false, step: 2, savedFB: null, quote: { ...s.quote, okP: null, okS: null }, parseMsg: 'Editando el presupuesto de la OT ' + (this._tfOt || this.state.quote.or) + '. Al confirmar de nuevo se actualiza el mismo link del cliente.' }));
@@ -1969,7 +2054,7 @@ class Component extends DCLogic {
     const leg = st.quote.dv !== 2, isOn = i => leg ? i.on !== false : i.on === true, decided = leg || items.some(i => i.on === true || i.on === false);
     let modal = null; const mi = items.find(i => i.id === st.modal); if (mi) detail(mi);
     const printDetails = pr0 ? items.filter(i => (!decided || isOn(i)) && (i.cliOps.length || i.cliParts.length)).map(i => { modal = null; return detail(i); }) : [];
-    modal = null; if (mi) modal = detail(mi);
+    modal = null; if (mi) { modal = detail(mi); Object.assign(modal, this.modalEdicion(mi, st.medit && st.medit.id === mi.id ? st.medit : null)); }
     const onItems = decided ? items.filter(isOn) : items;
     const sub = onItems.reduce((a, i) => a + i.tot, 0), subAll = items.reduce((a, i) => a + i.tot, 0);
     const esRojo = i => (i.urg || 'rojo') === 'rojo', suma = L => L.reduce((a, i) => a + i.tot, 0);
@@ -2035,7 +2120,7 @@ class Component extends DCLogic {
       itemsVis: (() => { const k = this.norm(st.buscar || ''); return k ? items.filter(it => this.norm([it.name, it.nota, ...(it.parts || []).map(l => l.desc), ...(it.ops || []).map(l => l.desc)].join(' ')).includes(k)) : items; })(),
       buscarInfo: (st.buscar || '').trim() ? 'Mostrando ' + (() => { const k = this.norm(st.buscar || ''); return k ? items.filter(it => this.norm([it.name, it.nota, ...(it.parts || []).map(l => l.desc), ...(it.ops || []).map(l => l.desc)].join(' ')).includes(k)) : items; })().length + ' de ' + items.length : items.length + ' puntos',
       quote: q, items, onItems, offItems, hasModal: !!modal && !pr0, printDetails, hasPrintDetails: printDetails.length > 0, modal: modal || { secs: [], incluye: [] },
-      closeModal: () => this.setState({ modal: null }), stopProp: e => e.stopPropagation(), noItems: !items.length, sum,
+      closeModal: () => this.setState({ modal: null, medit: null }), stopProp: e => e.stopPropagation(), noItems: !items.length, sum,
       cotMode: !decided, allowCot: !leg, btnCols: leg ? '1fr 1fr' : '1fr 1fr 1fr', totTitle: decided ? 'Total autorizado' : 'Total cotizado', selTitle: decided ? 'Tu selección' : 'Presupuesto cotizado',
       setObs: e => this.setQ({ obs: e.target.value }), setObsP: e => this.setQ({ obsP: e.target.value }), setObsF: e => this.setQ({ obsF: e.target.value }), setObsA: e => { this.setQ({ obsA: e.target.value }); this.guardarAcuerdos(e.target.value); }, obsList: [['Observaciones del asesor de partes', q.obsP], ['Observaciones del asesor de servicio', q.obs], ['Observaciones', q.obsF]].filter(x => (x[1] || '').trim()).map(x => ({ label: x[0], text: x[1] })),
       setLink: e => this.setQ({ link: this.normLink(e.target.value) }), selAll: e => { try { e.target.select(); } catch (x) {} }, linkHref: this.normLink(q.link), setOr: e => this.setQ({ or: e.target.value }), setCliente: e => this.setQ({ cliente: e.target.value }), setTel: e => this.setQ({ tel: e.target.value }),
