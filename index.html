@@ -1397,6 +1397,15 @@ class Component extends DCLogic {
     });
     return { P, O };
   }
+  listasAut(on) {
+    const repuestosAutorizados = [], manoObraAutorizada = [];
+    on.forEach(it => {
+      const punto = String(it.name || '').trim();
+      (it.parts || []).forEach(l => { const tot = this.num(l.rep); if (!(l.desc || '').trim() || !tot) return; repuestosAutorizados.push({ punto, cantidad: this.num(l.q) || 1, descripcion: l.desc.trim(), especificacion: (l.espec || '').trim() }); });
+      (it.ops || []).forEach(l => { const h = this.num(l.hrs); if (!(l.desc || '').trim() || !h) return; manoObraAutorizada.push({ punto, tipo: (l.tipo || '').trim(), descripcion: l.desc.trim(), horas: this.r2(h) }); });
+    });
+    return { repuestosAutorizados, manoObraAutorizada };
+  }
   tsv(rows) { return rows.map(r => r.map(v => String(v ?? '').replace(/[\t\r\n]+/g, ' ').trim()).join('\t')).join('\n'); }
   expOut(kind, rows, mode) {
     const q = this.state.quote;
@@ -1814,7 +1823,7 @@ class Component extends DCLogic {
   // Contenido de cotizador/autorizaciones/{OT}: la selección del cliente y los montos (Q con IVA). Lo usan el guardado automático y el botón "Enviar resultado".
   payloadAut(extra) {
     const q = this.state.quote, r = this._res, r2 = n => Math.round(n * 100) / 100, sel = {}; (q.items || []).forEach((it, i) => { if (q.dv !== 2) sel[it.id != null ? it.id : i] = it.on !== false ? 1 : 0; else if (it.on === true || it.on === false) sel[it.id != null ? it.id : i] = it.on ? 1 : 0; });
-    return { ot: String(this.otEq()), ts: Date.now(), sel: JSON.stringify(sel), cotizado: r2(r.cotizado), cotizadoMO: r2(r.cotizadoMO), autorizado: r2(r.autorizado), autorizadoMO: r2(r.autorizadoMO), pendiente: r2(r.pendiente), urgenteCotizado: r2(r.urgenteCotizado), urgenteAutorizado: r2(r.urgenteAutorizado), sugeridoCotizado: r2(r.sugeridoCotizado), sugeridoAutorizado: r2(r.sugeridoAutorizado), puntos: r.puntos, puntosAutorizados: r.puntosAutorizados, ...(extra || {}) };
+    return { ot: String(this.otEq()), ts: Date.now(), sel: JSON.stringify(sel), cotizado: r2(r.cotizado), cotizadoMO: r2(r.cotizadoMO), autorizado: r2(r.autorizado), autorizadoMO: r2(r.autorizadoMO), pendiente: r2(r.pendiente), urgenteCotizado: r2(r.urgenteCotizado), urgenteAutorizado: r2(r.urgenteAutorizado), sugeridoCotizado: r2(r.sugeridoCotizado), sugeridoAutorizado: r2(r.sugeridoAutorizado), puntos: r.puntos, puntosAutorizados: r.puntosAutorizados, repuestosAutorizados: r.repuestosAutorizados || [], manoObraAutorizada: r.manoObraAutorizada || [], ...(extra || {}) };
   }
   async guardarAut() {
     try {
@@ -1947,7 +1956,7 @@ class Component extends DCLogic {
     const sub = onItems.reduce((a, i) => a + i.tot, 0), subAll = items.reduce((a, i) => a + i.tot, 0);
     const esRojo = i => (i.urg || 'rojo') === 'rojo', suma = L => L.reduce((a, i) => a + i.tot, 0);
     const rojosOn = onItems.filter(esRojo), amarOn = onItems.filter(i => !esRojo(i)), rojosAll = items.filter(esRojo), amarAll = items.filter(i => !esRojo(i));
-    this._res = { cotizado: subAll, cotizadoMO: Math.min(subAll, Math.max(0, Math.round(items.reduce((x, i) => x + i.mo, 0) * 100) / 100)), autorizado: decided ? sub : 0, autorizadoMO: decided ? Math.min(sub, Math.max(0, Math.round(onItems.reduce((x, i) => x + i.mo, 0) * 100) / 100)) : 0, pendiente: subAll - (decided ? sub : 0), urgenteCotizado: suma(rojosAll), urgenteAutorizado: decided ? suma(rojosOn) : 0, sugeridoCotizado: suma(amarAll), sugeridoAutorizado: decided ? suma(amarOn) : 0, puntos: items.length, puntosAutorizados: decided ? onItems.length : 0 };
+    this._res = { cotizado: subAll, cotizadoMO: Math.min(subAll, Math.max(0, Math.round(items.reduce((x, i) => x + i.mo, 0) * 100) / 100)), autorizado: decided ? sub : 0, autorizadoMO: decided ? Math.min(sub, Math.max(0, Math.round(onItems.reduce((x, i) => x + i.mo, 0) * 100) / 100)) : 0, pendiente: subAll - (decided ? sub : 0), urgenteCotizado: suma(rojosAll), urgenteAutorizado: decided ? suma(rojosOn) : 0, sugeridoCotizado: suma(amarAll), sugeridoAutorizado: decided ? suma(amarOn) : 0, puntos: items.length, puntosAutorizados: decided ? onItems.length : 0, ...(decided ? this.listasAut(onItems) : { repuestosAutorizados: [], manoObraAutorizada: [] }) };
     const offItems = decided ? items.filter(i => !isOn(i)) : [];
     const sum = { hasPend: offItems.length > 0, pendFmt: this.fmt(subAll - sub), repOnFmt: this.fmt(onItems.reduce((a, i) => a + i.rep, 0)), moOnFmt: this.fmt(onItems.reduce((a, i) => a + i.mo, 0)), urgFmt: this.fmt(suma(rojosOn)), sugFmt: this.fmt(suma(amarOn)), hasUrg: rojosAll.length > 0, hasSug: amarAll.length > 0, urgAllFmt: this.fmt(suma(rojosAll)), sugAllFmt: this.fmt(suma(amarAll)), urgAllN: rojosAll.length, sugAllN: amarAll.length,
       countAll: items.length, totFmt: this.fmt(sub), totAllFmt: this.fmt(subAll),
