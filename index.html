@@ -1532,7 +1532,7 @@ class Component extends DCLogic {
     catch (e) { const hh = await this.hash(a.trim()); window.prompt('Firebase no permite guardar el código (' + e.message + '). Copia este valor (es solo la huella, no el código) y pásaselo a Claude para dejarlo en la aplicación:', hh); }
   }
   tasaOp() { const S = this.state.settings; return (this.num(S.tarifa) || 600) * (1 + this.num(S.iva) / 100); }
-  puedeEditarPunto() { const st = this.state; return !!(st.clientOnly && (st.quote.dv === 2 || !st.resTs) && this._tfOt && this._k && this.esEquipo()); }
+  puedeEditarPunto() { const st = this.state; return !!((st.clientOnly || st.step === 4) && (st.quote.dv === 2 || !st.resTs) && !st.quote.estimado && this.esEquipo()); }
   editorNombre() { let n = ''; try { n = localStorage.getItem('lns-editor-nombre') || ''; } catch (e) {} if (!n) { n = (window.prompt('¿Quién está editando? Escribe tu nombre (queda registrado en el punto):') || '').trim(); if (!n) return ''; try { localStorage.setItem('lns-editor-nombre', n); } catch (e) {} } return n; }
   async abrirEdicionPunto(id) {
     if (!this.puedeEditarPunto()) return;
@@ -1578,7 +1578,7 @@ class Component extends DCLogic {
     this.setState({ quote: nq, medit: null }); this._cliZ = null;
     await this.saveFB(nq);
     try { const or = nq.or; ['lns-cotizaciones', 'lns-cotiz-respaldo'].forEach(kk => { const m = JSON.parse(localStorage.getItem(kk) || '{}'); if (m[or] && m[or].items) { m[or] = this.aplicarEdicionPunto(m[or], d); localStorage.setItem(kk, JSON.stringify(m)); } }); } catch (e) {}
-    try { const db = await this.fbDb(); if (db) { const key = this.fbKey(this._tfOt), r = await this.fbGet(db, 'cotizador/guardados/' + key); if (r && r.json) { const o = JSON.parse(r.json); if (o.q && o.q.items) { o.q = this.aplicarEdicionPunto(o.q, d); await db.ref('cotizador/guardados/' + key).update({ json: JSON.stringify(o), ts: Date.now() }); } } } } catch (e) { console.warn('guardados', e); }
+    try { const db = this._tfOt ? await this.fbDb() : null; if (db) { const key = this.fbKey(this._tfOt), r = await this.fbGet(db, 'cotizador/guardados/' + key); if (r && r.json) { const o = JSON.parse(r.json); if (o.q && o.q.items) { o.q = this.aplicarEdicionPunto(o.q, d); await db.ref('cotizador/guardados/' + key).update({ json: JSON.stringify(o), ts: Date.now() }); } } } } catch (e) { console.warn('guardados', e); }
     const h = await this.histPunto(nq, d.id);
     this.setState({ msg: 'Punto editado por ' + d.por + ' y guardado en el mismo link del cliente.' + (h ? ' El historial de precios quedó actualizado.' : ' El historial de precios no se pudo actualizar (no estaba cargado).') });
   }
