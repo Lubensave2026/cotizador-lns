@@ -1532,7 +1532,7 @@ class Component extends DCLogic {
     catch (e) { const hh = await this.hash(a.trim()); window.prompt('Firebase no permite guardar el código (' + e.message + '). Copia este valor (es solo la huella, no el código) y pásaselo a Claude para dejarlo en la aplicación:', hh); }
   }
   tasaOp() { const S = this.state.settings; return (this.num(S.tarifa) || 600) * (1 + this.num(S.iva) / 100); }
-  puedeEditarPunto() { const st = this.state; return !!(st.clientOnly && st.quote.dv === 2 && this._tfOt && this._k && this.esEquipo()); }
+  puedeEditarPunto() { const st = this.state; return !!(st.clientOnly && (st.quote.dv === 2 || !st.resTs) && this._tfOt && this._k && this.esEquipo()); }
   editorNombre() { let n = ''; try { n = localStorage.getItem('lns-editor-nombre') || ''; } catch (e) {} if (!n) { n = (window.prompt('¿Quién está editando? Escribe tu nombre (queda registrado en el punto):') || '').trim(); if (!n) return ''; try { localStorage.setItem('lns-editor-nombre', n); } catch (e) {} } return n; }
   async abrirEdicionPunto(id) {
     if (!this.puedeEditarPunto()) return;
@@ -1919,6 +1919,7 @@ class Component extends DCLogic {
       const db = await this.fbDb(); if (!db) return;
       const r = await this.fbGet(db, 'cotizador/autorizaciones/' + this.fbKey(this.otEq()));
       if (r && this.esEquipo() && r.acuerdos && !this.state.quote.obsA) this.setState(s => ({ quote: { ...s.quote, obsA: String(r.acuerdos) } }));
+      this.setState({ resTs: (r && r.resultadoTs) || 0 });
       if (!r || !r.sel) return;
       const sel = JSON.parse(r.sel); if (!Object.keys(sel).length) return; this._autPend = true;
       this.setState(s => ({ quote: { ...s.quote, items: s.quote.items.map((it, i) => { const v = sel[it.id != null ? it.id : i]; return v === undefined ? it : { ...it, on: v === 1 }; }) }, msg: 'Autorización del cliente cargada (guardada ' + new Date(r.ts).toLocaleString('es-GT', { dateStyle: 'short', timeStyle: 'short' }) + ').' }), () => { this._autSig = this.sigAut(this.state.quote); this._autPend = false; });
@@ -1966,7 +1967,7 @@ class Component extends DCLogic {
     const partes = [];
     if (!ventana && this._resPosted) partes.push('avisado a la ventana de TallerFLOW'); else if (ventana) partes.push('sin aviso a la ventana de TallerFLOW (' + ventana + ')');
     if (this.otEq()) partes.push(nube ? 'NO se pudo guardar en la nube (' + nube + ')' : 'guardado en la nube (cotizador/autorizaciones/' + this.fbKey(this.otEq()) + ')');
-    this._resPosted = false;
+    this._resPosted = false; this.setState({ resTs: Date.now() });
     this.setState({ msg: 'Resultado: ' + txt + '. ' + partes.join(' · ') + '. [' + modo + ']' });
   }
   copy(url, label) {
