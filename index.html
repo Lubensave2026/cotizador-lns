@@ -684,9 +684,9 @@
         <sc-if value="{{ modal.editing }}" hint-placeholder-val="{{ false }}">
           <div style="padding: 12px 14px; display: flex; flex-direction: column; gap: 8px;">
             <span style="font-size: 12px; font-weight: 800; text-transform: uppercase;">Repuestos · precios finales con IVA</span>
-            <div style="display: grid; grid-template-columns: minmax(0, 1fr) 56px 96px 32px; gap: 6px; font-size: 11px; font-weight: 800;"><span>Descripción</span><span style="text-align: right;">CTD</span><span style="text-align: right;">Unidad Q</span><span></span></div>
+            <div style="display: grid; grid-template-columns: minmax(0, 1fr) 56px 96px 96px 32px; gap: 6px; font-size: 11px; font-weight: 800;"><span>Descripción</span><span style="text-align: right;">CTD</span><span style="text-align: right;">Unidad Q</span><span style="text-align: right;">Total Q</span><span></span></div>
             <sc-for list="{{ modal.eParts }}" as="r" hint-placeholder-count="2">
-              <div style="display: grid; grid-template-columns: minmax(0, 1fr) 56px 96px 32px; gap: 6px;"><input class="input" value="{{ r.desc }}" onChange="{{ r.onDesc }}" /><input class="input" value="{{ r.q }}" onChange="{{ r.onQ }}" style="text-align: right;" /><input class="input" value="{{ r.unit }}" onChange="{{ r.onUnit }}" style="text-align: right;" /><button onClick="{{ r.onDel }}" aria-label="Quitar" style="border: 1px solid #999; background: #fff; cursor: pointer;">×</button></div>
+              <div style="display: grid; grid-template-columns: minmax(0, 1fr) 56px 96px 96px 32px; gap: 6px;"><input class="input" value="{{ r.desc }}" onChange="{{ r.onDesc }}" /><input class="input" value="{{ r.q }}" onChange="{{ r.onQ }}" style="text-align: right;" /><input class="input" value="{{ r.unit }}" onChange="{{ r.onUnit }}" style="text-align: right;" /><span style="text-align: right; align-self: center; font-weight: 800; white-space: nowrap;">{{ r.lineTot }}</span><button onClick="{{ r.onDel }}" aria-label="Quitar" style="border: 1px solid #999; background: #fff; cursor: pointer;">×</button></div>
             </sc-for>
             <button class="btn btn-secondary" onClick="{{ modal.onAddP }}" style="font-size: 12px; align-self: flex-start;">+ Agregar repuesto</button>
             <span style="font-size: 12px; font-weight: 800; text-transform: uppercase; margin-top: 6px;">Mano de obra · total con IVA</span>
@@ -1587,10 +1587,10 @@ class Component extends DCLogic {
     const o = { canEdit: !E && this.puedeEditarPunto(), editing: !!E, onEditar: () => this.abrirEdicionPunto(mi.id), hasEd: !!last && this.esEquipo(), edInfo: last ? 'Editado por ' + last.por + ' · ' + new Date(last.ts).toLocaleString('es-GT', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) : '' };
     if (E) {
       o.secs = []; o.hasIncluye = false;
-      o.eParts = E.parts.map((r, i) => ({ ...r, onDesc: e => this.meditSet('parts', i, { desc: e.target.value }), onQ: e => this.meditSet('parts', i, { q: e.target.value }), onUnit: e => this.meditSet('parts', i, { unit: e.target.value }), onDel: () => this.meditDel('parts', i) }));
+      o.eParts = E.parts.map((r, i) => ({ ...r, lineTot: this.fmt((this.num(r.q) > 0 ? this.num(r.q) : 1) * this.num(r.unit)), onDesc: e => this.meditSet('parts', i, { desc: e.target.value }), onQ: e => this.meditSet('parts', i, { q: e.target.value }), onUnit: e => this.meditSet('parts', i, { unit: e.target.value }), onDel: () => this.meditDel('parts', i) }));
       o.eOps = E.ops.map((r, i) => ({ ...r, onDesc: e => this.meditSet('ops', i, { desc: e.target.value }), onTot: e => this.meditSet('ops', i, { tot: e.target.value }), onDel: () => this.meditDel('ops', i) }));
       const tp = E.parts.reduce((a, r) => a + (this.num(r.q) > 0 ? this.num(r.q) : 1) * this.num(r.unit), 0), to = E.ops.reduce((a, r) => a + this.num(r.tot), 0);
-      o.eTotFmt = this.fmt(tp + to); o.onGuardar = () => this.guardarEdicionPunto(); o.onCancelar = () => this.setState({ medit: null }); o.onAddP = () => this.meditAdd('parts'); o.onAddO = () => this.meditAdd('ops');
+      o.eTotFmt = this.fmt(tp + to); o.tot = o.eTotFmt; o.onGuardar = () => this.guardarEdicionPunto(); o.onCancelar = () => this.setState({ medit: null }); o.onAddP = () => this.meditAdd('parts'); o.onAddO = () => this.meditAdd('ops');
     }
     return o;
   }
