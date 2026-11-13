@@ -549,8 +549,9 @@
                   <button onClick="{{ it.onInc }}" style="align-self: flex-start; border: none; border-bottom: 2px solid #000; background: transparent; font: inherit; font-size: 13px; font-weight: 800; padding: 2px 0; cursor: pointer; text-align: left;" style-hover="background: #FFE500;">{{ it.incLabel }}</button>
                 </sc-if>
                 <div style="display: grid; grid-template-columns: 1fr auto; gap: 4px 12px; font-size: 13px; border-top: 1px solid var(--color-neutral-300); padding-top: 8px; margin-top: auto;">
-                  <span>Mano de obra</span><span>{{ it.moFmt }}</span>
-                  <span>Repuestos</span><span>{{ it.repFmt }}</span>
+                  <span>Mano de obra</span><span>{{ it.moShow }}</span>
+                  <span>Repuestos</span><span>{{ it.repShow }}</span>
+                  <sc-if value="{{ it.hasDsc }}" hint-placeholder-val="{{ false }}"><div style="grid-column: 1 / -1; display: flex; justify-content: space-between; gap: 12px; color: #1f8a3b; font-weight: 800; -webkit-print-color-adjust: exact; print-color-adjust: exact;"><span>Descuento</span><span>{{ it.dscFmt }}</span></div></sc-if>
                   <span style="font-weight: 800; font-size: 15px;">Total</span><span style="font-weight: 800; font-size: 15px;">{{ it.totFmt }}</span>
                 </div>
               </div>
@@ -567,6 +568,7 @@
           <sc-for list="{{ onItemsS }}" as="it" hint-placeholder-count="3">
             <div style="display: flex; justify-content: space-between; gap: 12px; padding: 10px 20px; border-bottom: 1px solid #333; font-size: 14px;"><span><span style="display: inline-block; width: 10px; height: 10px; background: {{ it.urgBg }}; margin-right: 8px; -webkit-print-color-adjust: exact; print-color-adjust: exact;"></span>{{ it.name }}</span><span style="white-space: nowrap;">{{ it.totFmt }}</span></div>
           </sc-for>
+          <sc-if value="{{ sum.hasDscG }}" hint-placeholder-val="{{ false }}"><div style="display: flex; justify-content: space-between; gap: 12px; padding: 10px 20px; border-bottom: 1px solid #333; font-size: 14px; color: #7ee08f; -webkit-print-color-adjust: exact; print-color-adjust: exact;"><span>{{ sum.dscGLabel }}</span><span style="white-space: nowrap;">{{ sum.dscGFmt }}</span></div></sc-if>
           <div style="padding: 12px 20px; font-size: 13px; color: #d7d3d3;">Todos los precios incluyen IVA.</div>
           <div style="padding: 4px 20px 12px; display: flex; flex-direction: column; gap: 4px; font-size: 12px; color: #d7d3d3;">
             <sc-if value="{{ sum.hasUrg }}" hint-placeholder-val="{{ false }}"><div style="display: flex; justify-content: space-between; gap: 12px;"><span><span style="display: inline-block; width: 8px; height: 8px; background: #ec3013; margin-right: 6px;"></span>Puntos urgentes (rojo)</span><span style="white-space: nowrap;">{{ sum.urgFmt }}</span></div></sc-if>
@@ -616,6 +618,7 @@
                   <div style="display: flex; justify-content: space-between; gap: 12px; font-size: 12px; font-weight: 800; padding: 5px 14px; background: #f1efe9; border-bottom: 1px solid var(--color-neutral-300); -webkit-print-color-adjust: exact; print-color-adjust: exact;"><span>Subtotal {{ sec.name }}</span><span>{{ sec.sub }}</span></div>
                 </div>
               </sc-for>
+              <sc-if value="{{ d.hasDsc }}" hint-placeholder-val="{{ false }}"><div style="display: flex; justify-content: space-between; gap: 12px; padding: 6px 14px; font-size: 12px; font-weight: 800; color: #1f8a3b; background: #eaf6ee; -webkit-print-color-adjust: exact; print-color-adjust: exact;"><span>Descuento</span><span>{{ d.dscFmt }}</span></div></sc-if>
               <div style="display: flex; justify-content: space-between; gap: 12px; background: #000; color: #FFE500; padding: 10px 14px; -webkit-print-color-adjust: exact; print-color-adjust: exact;">
                 <span style="font-size: 13px; font-weight: 800; text-transform: uppercase;">{{ d.totLabel }}</span>
                 <span style="font-size: 16px; font-weight: 800;">{{ d.tot }}</span>
@@ -639,7 +642,7 @@
       </sc-if>
       <sc-for list="{{ obsList }}" as="ob" hint-placeholder-count="0"><div style="margin-top: 24px; background: #fff; border-left: 6px solid #FFE500; padding: 14px 18px; break-inside: avoid; page-break-inside: avoid; display: flex; flex-direction: column; gap: 6px;"><span style="font-size: 12px; text-transform: uppercase; letter-spacing: 0.08em; font-weight: 800;">{{ ob.label }}</span><span style="font-size: 14px; white-space: pre-wrap; text-wrap: pretty;">{{ ob.text }}</span></div></sc-for><sc-if value="{{ teamView }}" hint-placeholder-val="{{ false }}"><div class="field" style="margin: 16px 0 0; max-width: 760px;"><label>Notas del equipo tras la autorización: acuerdos con el cliente (no salen en el PDF)</label><textarea class="input" value="{{ quote.obsA }}" onChange="{{ setObsA }}" placeholder="Ej. El cliente autorizó solo frenos; el cambio de llantas lo decide el viernes." style="min-height: 72px; resize: vertical; background: #fff;"></textarea></div></sc-if>
       <p style="font-size: 12px; color: #605d5d; padding: 16px 0; margin: 0;">Precios en quetzales con IVA incluido. Mano de obra a tarifa flat rate. Presupuesto válido por 15 días; repuestos sujetos a disponibilidad.</p>
-      <sc-if value="{{ teamView }}" hint-placeholder-val="{{ false }}"><div style="display: flex; gap: 8px; flex-wrap: wrap; margin: 0 0 12px;"><button class="btn btn-secondary" onClick="{{ toggleListados }}" style="font-size: 13px;">{{ listadosLabel }}</button><button class="btn btn-secondary" onClick="{{ enviarResultado }}" style="font-size: 13px;">Enviar resultado a TallerFLOW</button></div><sc-if value="{{ hasMsg }}" hint-placeholder-val="{{ false }}"><p style="margin: 0 0 12px; font-size: 13px; padding: 8px 10px; background: #fff; border-left: 3px solid #FFE500;">{{ msg }}</p></sc-if></sc-if>
+      <sc-if value="{{ teamView }}" hint-placeholder-val="{{ false }}"><div style="display: flex; gap: 8px; flex-wrap: wrap; margin: 0 0 12px;"><button class="btn btn-secondary" onClick="{{ toggleListados }}" style="font-size: 13px;">{{ listadosLabel }}</button><sc-if value="{{ canDsc }}" hint-placeholder-val="{{ false }}"><button class="btn btn-secondary" onClick="{{ abrirDsc }}" style="font-size: 13px;">Descuentos (equipo)</button></sc-if><button class="btn btn-secondary" onClick="{{ enviarResultado }}" style="font-size: 13px;">Enviar resultado a TallerFLOW</button></div><sc-if value="{{ hasMsg }}" hint-placeholder-val="{{ false }}"><p style="margin: 0 0 12px; font-size: 13px; padding: 8px 10px; background: #fff; border-left: 3px solid #FFE500;">{{ msg }}</p></sc-if></sc-if>
       <sc-if value="{{ showListadosCli }}" hint-placeholder-val="{{ false }}">
         <p style="margin: 0 0 8px; font-size: 13px; background: #f3f2f2; padding: 8px 10px; border-left: 3px solid #FFE500;">Marca “Sí, realizar” o “Ahora no” en cada trabajo según lo que el cliente aprobó. Los listados de abajo se actualizan con esa selección.</p>
         <section style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 0; border-top: 2px solid #201e1d; border-bottom: 2px solid #201e1d; background: #fff;">
@@ -667,6 +670,46 @@
       </sc-if>
       <sc-if value="{{ cliPdf }}" hint-placeholder-val="{{ false }}"><button class="btn" onClick="{{ doPrint }}" style="margin: 0 0 12px; background: #000; color: #FFE500; font-weight: 800;">Descargar PDF</button></sc-if>
       <sc-if value="{{ canEdit }}" hint-placeholder-val="{{ false }}"><button class="btn btn-secondary" onClick="{{ editSaved }}" style="margin: 0 0 24px; font-size: 12px;">Editar presupuesto (equipo · PIN)</button></sc-if>
+    </div>
+  </sc-if>
+  <sc-if value="{{ dscOpen }}" hint-placeholder-val="{{ false }}">
+    <div style="position: fixed; inset: 0; background: rgba(0, 0, 0, 0.6); z-index: 60; display: flex; align-items: center; justify-content: center; padding: 16px;">
+      <div style="background: #fff; width: 100%; max-width: 640px; max-height: 92vh; overflow: auto; box-shadow: var(--shadow-lg); display: flex; flex-direction: column;">
+        <div style="background: #FFE500; padding: 14px 18px; position: sticky; top: 0; display: flex; flex-direction: column; gap: 2px;">
+          <span style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em;">Equipo · solo puntos autorizados</span>
+          <span style="font-size: 18px; font-weight: 800;">Descuentos</span>
+        </div>
+        <div style="padding: 12px 18px; display: flex; flex-direction: column; gap: 10px;">
+          <span style="font-size: 12px; color: #605d5d;">{{ dscp.limitTxt }} Deja vacío lo que no lleva descuento. Mínimo 1%.</span>
+          <sc-if value="{{ dscp.hasInfo }}" hint-placeholder-val="{{ false }}"><span style="font-size: 12px; background: #fff7d6; padding: 6px 8px;">{{ dscp.info }}</span></sc-if>
+          <sc-if value="{{ dscp.noAut }}" hint-placeholder-val="{{ false }}"><span style="font-size: 13px; font-weight: 800;">Todavía no hay puntos autorizados: marca “Sí, realizar” en los puntos antes de aplicar descuentos.</span></sc-if>
+          <div style="display: grid; grid-template-columns: minmax(0, 1fr) 84px 84px; gap: 8px; font-size: 11px; font-weight: 800; text-transform: uppercase;"><span>Punto</span><span style="text-align: right;">% Repuestos</span><span style="text-align: right;">% Mano de obra</span></div>
+          <sc-for list="{{ dscp.rows }}" as="r" hint-placeholder-count="2">
+            <div style="display: flex; flex-direction: column; gap: 3px; border-bottom: 1px solid var(--color-neutral-300); padding-bottom: 8px;">
+              <div style="display: grid; grid-template-columns: minmax(0, 1fr) 84px 84px; gap: 8px; align-items: center;">
+                <span style="font-size: 14px; font-weight: 800;"><span style="display: inline-block; width: 10px; height: 10px; background: {{ r.urgBg }}; margin-right: 8px;"></span>{{ r.name }}</span>
+                <input class="input" inputmode="decimal" value="{{ r.r }}" onChange="{{ r.onR }}" style="text-align: right;" />
+                <input class="input" inputmode="decimal" value="{{ r.m }}" onChange="{{ r.onM }}" style="text-align: right;" />
+              </div>
+              <span style="font-size: 12px; color: #605d5d;">Precio sin descuento: {{ r.lista }}</span>
+              <sc-if value="{{ r.hasHint }}" hint-placeholder-val="{{ false }}"><span style="font-size: 12px; font-weight: 800; color: {{ r.hintColor }};">{{ r.hint }}</span></sc-if>
+            </div>
+          </sc-for>
+          <div style="display: grid; grid-template-columns: minmax(0, 1fr) 84px; gap: 8px; align-items: center;"><span style="font-size: 14px; font-weight: 800;">Descuento general (se resta al total autorizado)</span><input class="input" inputmode="decimal" value="{{ dscp.g }}" onChange="{{ dscp.onG }}" style="text-align: right;" /></div>
+          <sc-if value="{{ dscp.hasAvisos }}" hint-placeholder-val="{{ false }}">
+            <div style="display: flex; flex-direction: column; gap: 4px; background: #fff2ef; border-left: 4px solid #ec3013; padding: 8px 10px;">
+              <span style="font-size: 12px; font-weight: 800; text-transform: uppercase;">Ojo con el margen</span>
+              <sc-for list="{{ dscp.avisos }}" as="a" hint-placeholder-count="1"><span style="font-size: 13px;">{{ a.txt }}</span></sc-for>
+            </div>
+          </sc-if>
+          <div style="display: flex; flex-direction: column; gap: 2px; background: #f1efe9; padding: 10px 12px; font-size: 13px;">
+            <div style="display: flex; justify-content: space-between;"><span>Total autorizado sin descuento</span><span>{{ dscp.listaFmt }}</span></div>
+            <sc-if value="{{ dscp.hasDescTot }}" hint-placeholder-val="{{ false }}"><div style="display: flex; justify-content: space-between; color: #1f8a3b; font-weight: 800;"><span>Descuento ({{ dscp.pctTxt }} del total)</span><span>{{ dscp.descFmt }}</span></div></sc-if>
+            <div style="display: flex; justify-content: space-between; font-weight: 800; font-size: 16px;"><span>Total con descuento</span><span>{{ dscp.finalFmt }}</span></div>
+          </div>
+          <div style="display: flex; justify-content: space-between; gap: 8px; flex-wrap: wrap;"><button class="btn btn-secondary" onClick="{{ dscp.onQuitar }}" style="font-size: 12px;">Quitar todos los descuentos</button><span style="display: flex; gap: 8px;"><button class="btn btn-secondary" onClick="{{ dscp.onCancelar }}">Cancelar</button><button class="btn" onClick="{{ dscp.onGuardar }}" style="background: #000; color: #FFE500; font-weight: 800;">Guardar descuentos</button></span></div>
+        </div>
+      </div>
     </div>
   </sc-if>
   <sc-if value="{{ hasModal }}" hint-placeholder-val="{{ false }}">
@@ -710,6 +753,7 @@
             <div style="display: flex; justify-content: space-between; gap: 12px; font-size: 13px; font-weight: 800; padding: 8px 14px; background: #f1efe9; border-bottom: 1px solid var(--color-neutral-300);"><span>Subtotal {{ sec.name }}</span><span style="white-space: nowrap;">{{ sec.sub }}</span></div>
           </div>
         </sc-for>
+        <sc-if value="{{ modal.hasDsc }}" hint-placeholder-val="{{ false }}"><div style="display: flex; justify-content: space-between; gap: 12px; padding: 8px 14px; font-size: 13px; font-weight: 800; color: #1f8a3b; background: #eaf6ee;"><span>Descuento</span><span>{{ modal.dscFmt }}</span></div></sc-if>
         <div style="display: flex; justify-content: space-between; align-items: baseline; gap: 12px; background: #000; color: #fff; padding: 14px 18px; border-top: 4px solid #FFE500;">
           <span style="font-size: 13px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.04em;">{{ modal.totLabel }}</span>
           <span style="font-size: 22px; font-weight: 800; color: #FFE500; white-space: nowrap;">{{ modal.tot }}</span>
@@ -1531,6 +1575,61 @@ class Component extends DCLogic {
     try { const db = await this.fbDb(); if (!db) throw new Error('sin conexión con Firebase'); await db.ref('cotizador/config/editHash').set(await this.hash(a.trim())); this.setState({ msg: 'Código de edición del equipo guardado.' }); window.alert('Código de edición guardado. Compártelo solo con quien deba editar presupuestos.'); }
     catch (e) { const hh = await this.hash(a.trim()); window.prompt('Firebase no permite guardar el código (' + e.message + '). Copia este valor (es solo la huella, no el código) y pásaselo a Claude para dejarlo en la aplicación:', hh); }
   }
+  dscPct(v) { const n = parseFloat(String(v == null ? '' : v).replace(',', '.')); return n > 0 ? Math.min(n, 100) : 0; }
+  dscLimite() { return this.state.adminDev ? 100 : 15; }
+  itemBase(it) { const rate = this.tasaOp(); let repL = 0, moL = 0; (it.parts || []).forEach(l => { repL += this.num(l.rep); }); (it.ops || []).forEach(l => { moL += l.fijo ? this.num(l.monto) : this.num(l.hrs) * (this.num(l.tar) || rate); }); return { repL, moL }; }
+  dscAutorizados(q) { const leg = q.dv !== 2, items = q.items || []; return items.filter(i => leg ? i.on !== false : i.on === true); }
+  async abrirDsc() {
+    if (!this.puedeEditarPunto()) return;
+    if (!this._editOk) { if (!(await this.verificarEdicion())) return; this._editOk = true; }
+    const por = this.editorNombre(); if (!por) return;
+    const q = this.state.quote, rows = {};
+    (q.items || []).forEach(it => { rows[it.id] = { r: it.dsc && it.dsc.r ? String(it.dsc.r) : '', m: it.dsc && it.dsc.m ? String(it.dsc.m) : '' }; });
+    this.setState({ dscD: { por, rows, g: q.dscG ? String(q.dscG) : '' }, dscCostos: null });
+    this.cargarCostos();
+  }
+  mapaCostos(q) { const m = {}; let any = false; ((q && q.items) || []).forEach(it => { let C = 0, R = 0; (it.parts || []).forEach(l => { const c = this.num(l.costo); if (c > 0) { C += c * (this.num(l.q) || 1); R += this.num(l.rep); } }); if (C > 0 && R > 0) { m[it.id] = { C, R }; any = true; } }); return any ? m : null; }
+  async cargarCostos() {
+    let m = null; const q = this.state.quote, or = q.or;
+    try { m = this.mapaCostos(q); if (!m) m = this.mapaCostos(this.quoteStore()[or]); if (!m) m = this.mapaCostos(this.backupStore()[or]); } catch (e) {}
+    if (!m && this._tfOt) { try { const db = await this.fbDb(); if (db) { const r = await this.fbGet(db, 'cotizador/guardados/' + this.fbKey(this._tfOt)); if (r && r.json) m = this.mapaCostos(JSON.parse(r.json).q); } } catch (e) {} }
+    this.setState(s => s.dscD ? { dscCostos: m || {} } : null);
+  }
+  dscCalc(d) {
+    const q = this.state.quote, aut = this.dscAutorizados(q), g = this.dscPct(d.g); let lista = 0, neto = 0; const filas = [];
+    aut.forEach(it => { const b = this.itemBase(it), r = d.rows[it.id] || {}, dr = this.dscPct(r.r), dm = this.dscPct(r.m); const n = b.repL * (1 - dr / 100) + b.moL * (1 - dm / 100); lista += b.repL + b.moL; neto += n; filas.push({ it, b, dr, dm, n }); });
+    const final = neto * (1 - g / 100);
+    return { aut, g, lista, neto, final, desc: lista - final, pct: lista ? (1 - final / lista) * 100 : 0, filas };
+  }
+  dscPanel(d) {
+    const st = this.state, S = st.settings, defM = this.num(S.margen || 50), C = this.dscCalc(d), costos = st.dscCostos, lim = this.dscLimite(), avisos = [];
+    const rows = C.filas.map(f => { const id = f.it.id, r = d.rows[id] || {}; let hint = '', bad = false;
+      if (costos && costos[id] && (f.dr > 0 || C.g > 0)) { const c = costos[id], ant = (1 - c.C / c.R) * 100, des = (1 - c.C / (c.R * (1 - f.dr / 100) * (1 - C.g / 100))) * 100; hint = 'Margen de repuestos: ' + Math.round(ant) + '% → ' + Math.round(des) + '%'; bad = des < 0; if (des < 0) avisos.push({ bad: true, txt: f.it.name + ': el precio de los repuestos queda POR DEBAJO DEL COSTO (' + Math.round(des) + '%).' }); else if (des < defM) avisos.push({ bad: false, txt: f.it.name + ': el margen de repuestos baja de ' + Math.round(ant) + '% a ' + Math.round(des) + '% (el estándar es ' + defM + '%).' }); }
+      return { name: f.it.name, urgBg: f.it.urg === 'amarillo' ? '#FFE500' : '#ec3013', r: r.r || '', m: r.m || '', hint, hasHint: !!hint, hintColor: bad ? '#d92d20' : '#605d5d', onR: e => this.dscSet(id, 'r', e.target.value), onM: e => this.dscSet(id, 'm', e.target.value), lista: this.fmt(f.b.repL + f.b.moL) }; });
+    if ((C.g > 0 || rows.some(r => r.r)) && !costos) avisos.push({ bad: false, txt: 'Calculando el efecto en el margen…' });
+    if (this.dscCosteoVacio(costos) && (C.g > 0 || rows.some(r => r.r))) avisos.push({ bad: false, txt: 'No hay costos de repuestos disponibles en este equipo: no se puede calcular el efecto en el margen de repuestos. La mano de obra no se evalúa.' });
+    return { rows, g: d.g || '', onG: e => this.setState(s => ({ dscD: { ...s.dscD, g: e.target.value } })), limitTxt: this.state.adminDev ? 'Administrador: sin límite (1% a 100%).' : 'Tu límite es 15% por descuento y 15% en total sobre el presupuesto. Más de eso solo el administrador.', listaFmt: this.fmt(C.lista), finalFmt: this.fmt(C.final), descFmt: '−' + this.fmt(C.desc), pctTxt: (Math.round(C.pct * 10) / 10) + '%', hasDescTot: C.desc > 0.004, avisos, hasAvisos: avisos.length > 0, por: d.por, hasInfo: !!(st.quote.dscInfo && st.quote.dscInfo.length), info: (st.quote.dscInfo || []).slice(-1).map(x => 'Último descuento aplicado por ' + x.por + ' · ' + new Date(x.ts).toLocaleString('es-GT', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }))[0] || '', onGuardar: () => this.guardarDsc(), onCancelar: () => this.setState({ dscD: null }), onQuitar: () => this.setState(s => ({ dscD: { ...s.dscD, g: '', rows: Object.fromEntries(Object.keys(s.dscD.rows).map(k => [k, { r: '', m: '' }])) } })), noAut: C.aut.length === 0 };
+  }
+  dscCosteoVacio(costos) { return !!costos && Object.keys(costos).length === 0; }
+  dscSet(id, k, v) { this.setState(s => s.dscD ? { dscD: { ...s.dscD, rows: { ...s.dscD.rows, [id]: { ...(s.dscD.rows[id] || {}), [k]: v } } } } : null); }
+  aplicarDsc(q, d) {
+    const por = d.por, g = this.dscPct(d.g) ? String(this.dscPct(d.g)) : '';
+    let n = 0; const items = (q.items || []).map(it => { const r = d.rows[it.id]; if (!r) return it; const dr = this.dscPct(r.r), dm = this.dscPct(r.m); if (dr || dm) n++; return { ...it, dsc: dr || dm ? { r: dr ? String(dr) : '', m: dm ? String(dm) : '' } : undefined }; });
+    return { ...q, items, dscG: g, dscInfo: [...(q.dscInfo || []), { ts: Date.now(), por, g, n }].slice(-5) };
+  }
+  async guardarDsc() {
+    const d = this.state.dscD; if (!d) return; const lim = this.dscLimite();
+    const vals = [d.g, ...Object.values(d.rows).flatMap(r => [r.r, r.m])].map(v => String(v == null ? '' : v).trim()).filter(v => v !== '' && v !== '0');
+    for (const v of vals) { const n = parseFloat(v.replace(',', '.')); if (!(n >= 1 && n <= lim)) { window.alert('Cada descuento debe estar entre 1% y ' + lim + '%. Para quitarlo, déjalo vacío.'); return; } }
+    const C = this.dscCalc(d);
+    if (!this.state.adminDev && C.pct > 15.0001) { window.alert('El descuento total sobre el presupuesto sería de ' + (Math.round(C.pct * 10) / 10) + '%. Tu límite es 15% en total; más de eso solo lo aplica el administrador.'); return; }
+    const nq = this.aplicarDsc(this.state.quote, d);
+    this.setState({ quote: nq, dscD: null }); this._cliZ = null;
+    await this.saveFB(nq);
+    try { const or = nq.or; ['lns-cotizaciones', 'lns-cotiz-respaldo'].forEach(kk => { const m = JSON.parse(localStorage.getItem(kk) || '{}'); if (m[or] && m[or].items) { m[or] = this.aplicarDsc(m[or], d); localStorage.setItem(kk, JSON.stringify(m)); } }); } catch (e) {}
+    try { const db = this._tfOt ? await this.fbDb() : null; if (db) { const key = this.fbKey(this._tfOt), r = await this.fbGet(db, 'cotizador/guardados/' + key); if (r && r.json) { const o = JSON.parse(r.json); if (o.q && o.q.items) { o.q = this.aplicarDsc(o.q, d); await db.ref('cotizador/guardados/' + key).update({ json: JSON.stringify(o), ts: Date.now() }); } } } } catch (e) { console.warn('guardados dsc', e); }
+    this.setState({ msg: 'Descuento aplicado por ' + d.por + (C.desc > 0.004 ? ' (−' + this.fmt(C.desc) + ', ' + (Math.round(C.pct * 10) / 10) + '% del total autorizado)' : ' (se quitaron los descuentos)') + '. Pulsa “Enviar resultado a TallerFLOW” para que reciba los montos nuevos.' });
+  }
   tasaOp() { const S = this.state.settings; return (this.num(S.tarifa) || 600) * (1 + this.num(S.iva) / 100); }
   puedeEditarPunto() { const st = this.state; return !!((st.clientOnly || st.step === 4) && (st.quote.dv === 2 || !st.resTs) && !st.quote.estimado && this.esEquipo()); }
   editorNombre() { let n = ''; try { n = localStorage.getItem('lns-editor-nombre') || ''; } catch (e) {} if (!n) { n = (window.prompt('¿Quién está editando? Escribe tu nombre (queda registrado en el punto):') || '').trim(); if (!n) return ''; try { localStorage.setItem('lns-editor-nombre', n); } catch (e) {} } return n; }
@@ -1586,7 +1685,7 @@ class Component extends DCLogic {
     const q = this.state.quote, it = q.items.find(x => x.id === mi.id) || {}, last = (it.ed || []).slice(-1)[0];
     const o = { canEdit: !E && this.puedeEditarPunto(), editing: !!E, onEditar: () => this.abrirEdicionPunto(mi.id), hasEd: !!last && this.esEquipo(), edInfo: last ? 'Editado por ' + last.por + ' · ' + new Date(last.ts).toLocaleString('es-GT', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) : '' };
     if (E) {
-      o.secs = []; o.hasIncluye = false;
+      o.secs = []; o.hasIncluye = false; o.hasDsc = false;
       o.eParts = E.parts.map((r, i) => ({ ...r, lineTot: this.fmt((this.num(r.q) > 0 ? this.num(r.q) : 1) * this.num(r.unit)), onDesc: e => this.meditSet('parts', i, { desc: e.target.value }), onQ: e => this.meditSet('parts', i, { q: e.target.value }), onUnit: e => this.meditSet('parts', i, { unit: e.target.value }), onDel: () => this.meditDel('parts', i) }));
       o.eOps = E.ops.map((r, i) => ({ ...r, onDesc: e => this.meditSet('ops', i, { desc: e.target.value }), onTot: e => this.meditSet('ops', i, { tot: e.target.value }), onDel: () => this.meditDel('ops', i) }));
       const tp = E.parts.reduce((a, r) => a + (this.num(r.q) > 0 ? this.num(r.q) : 1) * this.num(r.unit), 0), to = E.ops.reduce((a, r) => a + this.num(r.tot), 0);
@@ -2013,7 +2112,8 @@ class Component extends DCLogic {
       const sugs = st.clientOnly ? [] : this.suggest(vk, it);
       const cliOps = ops.filter(l => (l.desc || '').trim() && (l.fijo ? this.num(l.monto) : this.num(l.hrs))).map(l => ({ desc: l.desc, amt: l.moFmt }));
       const cliParts = parts.filter(l => (l.desc || '').trim() && this.num(l.rep)).map(l => ({ desc: l.desc, amt: this.fmt(this.num(l.rep)) }));
-      return { ...it, parts, ops, hasSugP: false, hasSugO: false, rep, mo, tot: rep + mo, hrsTot: Math.round(hrs * 10) / 10, repFmt: this.fmt(rep), moFmt: this.fmt(mo), totFmt: this.fmt(rep + mo),
+      const dsr = this.dscPct(it.dsc && it.dsc.r), dsm = this.dscPct(it.dsc && it.dsc.m), repL = rep, moL = mo; rep = this.r2(repL * (1 - dsr / 100)); mo = this.r2(moL * (1 - dsm / 100)); const dscAmt = this.r2(repL + moL - rep - mo);
+      return { ...it, hasDsc: dscAmt > 0, dscFmt: '−' + this.fmt(dscAmt), repShow: this.fmt(repL), moShow: this.fmt(moL), parts, ops, hasSugP: false, hasSugO: false, rep, mo, tot: rep + mo, hrsTot: Math.round(hrs * 10) / 10, repFmt: this.fmt(rep), moFmt: this.fmt(mo), totFmt: this.fmt(rep + mo),
         urgBg: rojo ? RED : YEL, urgLabel: rojo ? 'Atención inmediata' : 'Recomendado',
         rojoBg: rojo ? RED : '#fff', rojoFg: rojo ? '#fff' : '#201e1d', amaBg: rojo ? '#fff' : YEL,
         sugP: sugs.filter(s => (s.rep >= s.hrs * T * (1 + IVA) && s.rep > 0) || (!s.rep && !s.hrs)).map(s => ({ label: '+ ' + s.desc + ' · ' + (s.rep ? this.fmt(s.rep) : 'sin precio') + (s.kit ? ' · kit' : ''), onAdd: () => this.addSug(i, s) })),
@@ -2050,7 +2150,7 @@ class Component extends DCLogic {
       const opsRows = mi.ops.filter(l => (l.desc || '').trim() && this.num(l.hrs)).map((l, k) => ({ no: String(k + 1), desc: l.desc, q: String(this.num(l.q) || 1), unit: this.fmt(this.num(l.moFmt) / (this.num(l.q) || 1)), tot: l.moFmt, _t: this.num(l.moFmt) }));
       if (opsRows.length) secs.push({ name: 'Mano de obra', qLabel: 'CTD', sub: this.fmt(opsRows.reduce((a, x) => a + x._t, 0)), rows: opsRows });
       const modal = { kicker: (tplS ? 'Detalle del servicio' : 'Desglose') + ' · ' + (q.vehiculo || '') + ' ' + (q.anio || ''), title: tplS ? tplS.t : mi.name,
-        secs, totLabel: 'Total ' + mi.name, tot: mi.totFmt, incluye: mi.incluye || [], hasIncluye: !!(mi.incluye && mi.incluye.length) };
+        secs, hasDsc: !!mi.hasDsc, dscFmt: mi.dscFmt, totLabel: 'Total ' + mi.name, tot: mi.totFmt, incluye: mi.incluye || [], hasIncluye: !!(mi.incluye && mi.incluye.length) };
       return modal;
     };
     const leg = st.quote.dv !== 2, isOn = i => leg ? i.on !== false : i.on === true, decided = leg || items.some(i => i.on === true || i.on === false);
@@ -2059,13 +2159,14 @@ class Component extends DCLogic {
     modal = null; if (mi) { modal = detail(mi); Object.assign(modal, this.modalEdicion(mi, st.medit && st.medit.id === mi.id ? st.medit : null)); }
     const onItems = decided ? items.filter(isOn) : items;
     const sub = onItems.reduce((a, i) => a + i.tot, 0), subAll = items.reduce((a, i) => a + i.tot, 0);
+    const dg = decided ? this.dscPct(st.quote.dscG) : 0, dscG = this.r2(sub * dg / 100), subF = this.r2(sub - dscG), kF = sub ? subF / sub : 1;
     const esRojo = i => (i.urg || 'rojo') === 'rojo', suma = L => L.reduce((a, i) => a + i.tot, 0);
     const rojosOn = onItems.filter(esRojo), amarOn = onItems.filter(i => !esRojo(i)), rojosAll = items.filter(esRojo), amarAll = items.filter(i => !esRojo(i));
-    this._res = { cotizado: subAll, cotizadoMO: Math.min(subAll, Math.max(0, Math.round(items.reduce((x, i) => x + i.mo, 0) * 100) / 100)), autorizado: decided ? sub : 0, autorizadoMO: decided ? Math.min(sub, Math.max(0, Math.round(onItems.reduce((x, i) => x + i.mo, 0) * 100) / 100)) : 0, pendiente: subAll - (decided ? sub : 0), urgenteCotizado: suma(rojosAll), urgenteAutorizado: decided ? suma(rojosOn) : 0, sugeridoCotizado: suma(amarAll), sugeridoAutorizado: decided ? suma(amarOn) : 0, puntos: items.length, puntosAutorizados: decided ? onItems.length : 0, ...(decided ? this.listasAut(onItems) : { repuestosAutorizados: [], manoObraAutorizada: [] }), puntosNoAutorizados: decided ? items.map((i, k) => ({ i, k })).filter(x => !isOn(x.i)).map(x => ({ numero: x.k + 1, punto: String(x.i.name || '').trim(), prioridad: esRojo(x.i) ? 'urgente' : 'sugerido' })) : [] };
+    this._res = { cotizado: subAll, cotizadoMO: Math.min(subAll, Math.max(0, Math.round(items.reduce((x, i) => x + i.mo, 0) * 100) / 100)), autorizado: decided ? subF : 0, autorizadoMO: decided ? Math.min(subF, Math.max(0, Math.round(onItems.reduce((x, i) => x + i.mo, 0) * kF * 100) / 100)) : 0, pendiente: subAll - (decided ? sub : 0), urgenteCotizado: suma(rojosAll), urgenteAutorizado: decided ? suma(rojosOn) : 0, sugeridoCotizado: suma(amarAll), sugeridoAutorizado: decided ? suma(amarOn) : 0, puntos: items.length, puntosAutorizados: decided ? onItems.length : 0, ...(decided ? this.listasAut(onItems) : { repuestosAutorizados: [], manoObraAutorizada: [] }), puntosNoAutorizados: decided ? items.map((i, k) => ({ i, k })).filter(x => !isOn(x.i)).map(x => ({ numero: x.k + 1, punto: String(x.i.name || '').trim(), prioridad: esRojo(x.i) ? 'urgente' : 'sugerido' })) : [] };
     const offItems = decided ? items.filter(i => !isOn(i)) : [];
     const offRojos = offItems.filter(esRojo), offAmar = offItems.filter(i => !esRojo(i));
-    const sum = { hasUrgPend: offRojos.length > 0, hasSugPend: offAmar.length > 0, urgPendFmt: this.fmt(suma(offRojos)), sugPendFmt: this.fmt(suma(offAmar)), hasPend: offItems.length > 0, pendFmt: this.fmt(subAll - sub), repOnFmt: this.fmt(onItems.reduce((a, i) => a + i.rep, 0)), moOnFmt: this.fmt(onItems.reduce((a, i) => a + i.mo, 0)), urgFmt: this.fmt(suma(rojosOn)), sugFmt: this.fmt(suma(amarOn)), hasUrg: rojosAll.length > 0, hasSug: amarAll.length > 0, urgAllFmt: this.fmt(suma(rojosAll)), sugAllFmt: this.fmt(suma(amarAll)), urgAllN: rojosAll.length, sugAllN: amarAll.length,
-      countAll: items.length, totFmt: this.fmt(sub), totAllFmt: this.fmt(subAll),
+    const sum = { hasUrgPend: offRojos.length > 0, hasSugPend: offAmar.length > 0, urgPendFmt: this.fmt(suma(offRojos)), sugPendFmt: this.fmt(suma(offAmar)), hasPend: offItems.length > 0, pendFmt: this.fmt(subAll - sub), repOnFmt: this.fmt(onItems.reduce((a, i) => a + i.rep, 0) * kF), moOnFmt: this.fmt(onItems.reduce((a, i) => a + i.mo, 0) * kF), hasDscG: dscG > 0, dscGFmt: '−' + this.fmt(dscG), dscGLabel: 'Descuento general (' + dg + '%)', urgFmt: this.fmt(suma(rojosOn)), sugFmt: this.fmt(suma(amarOn)), hasUrg: rojosAll.length > 0, hasSug: amarAll.length > 0, urgAllFmt: this.fmt(suma(rojosAll)), sugAllFmt: this.fmt(suma(amarAll)), urgAllN: rojosAll.length, sugAllN: amarAll.length,
+      countAll: items.length, totFmt: this.fmt(subF), totAllFmt: this.fmt(subAll),
       repAllFmt: this.fmt(items.reduce((a, i) => a + i.rep, 0)), moAllFmt: this.fmt(items.reduce((a, i) => a + i.mo, 0)) };
     const step = st.clientOnly ? 4 : st.step, pr = st.printing;
     const tab = n => ({ bg: step === n ? YEL : '#000', fg: step === n ? '#000' : '#fff' });
@@ -2088,7 +2189,7 @@ class Component extends DCLogic {
         abrir: () => { const { _k, _t, ...qq } = g; if (q.items.length && q.or !== _k && !window.confirm('Se abrirá ' + _k + '. El presupuesto actual (' + (q.or || 'sin OR') + ') queda guardado en la lista.')) return; if (g._nube) { this.abrirNube(g._ck, _k); return; } this.setState({ quote: this.richest(qq), step: qq.okP && qq.okS ? 4 : qq.okP ? 3 : 2, guardOpen: false, saveInfo: null, parseMsg: 'Presupuesto ' + _k + ' recuperado.', pdfName: '' }); } })) : [],
       consOpen: !!st.consOpen, toggleCons: () => this.setState(x => ({ consOpen: !x.consOpen })), consVeh: st.consVeh || '', consPieza: st.consPieza || '', setConsVeh: e => this.setState({ consVeh: e.target.value }), setConsPieza: e => this.setState({ consPieza: e.target.value }), hasConsVeh: !!(st.consVeh || '').trim(), hasConsPieza: !!(st.consPieza || '').trim(), clearConsVeh: () => this.setState({ consVeh: '' }), hasConsAlgo: !!((st.consVeh || '').trim() || (st.consPieza || '').trim()), clearConsTodo: () => this.setState({ consVeh: '', consPieza: '' }), clearConsPieza: () => this.setState({ consPieza: '' }), cons: st.consOpen ? this.consultar() : {},
       publishHist: () => this.publishHist(),
-      teamView: this.esEquipo() && st.clientOnly && !pr, showListadosCli: this.esEquipo() && st.clientOnly && !pr && !!st.showListados, listadosLabel: st.showListados ? 'Ocultar listados para TallerFLOW' : 'Listados para TallerFLOW (equipo)', enviarResultado: () => this.enviarResultado(), toggleListados: () => this.setState(x => ({ showListados: !x.showListados })), cliPdf: st.clientOnly && !pr, canEdit: st.clientOnly && !pr && (!!st.adminDev || this.esEquipo()), editSaved: () => this.editSaved(), setEditCode: () => this.setEditCode(),
+      teamView: this.esEquipo() && st.clientOnly && !pr, showListadosCli: this.esEquipo() && st.clientOnly && !pr && !!st.showListados, listadosLabel: st.showListados ? 'Ocultar listados para TallerFLOW' : 'Listados para TallerFLOW (equipo)', enviarResultado: () => this.enviarResultado(), canDsc: this.puedeEditarPunto() && decided, abrirDsc: () => this.abrirDsc(), dscOpen: !!st.dscD && !pr, dscp: st.dscD ? this.dscPanel(st.dscD) : { rows: [], avisos: [] }, toggleListados: () => this.setState(x => ({ showListados: !x.showListados })), cliPdf: st.clientOnly && !pr, canEdit: st.clientOnly && !pr && (!!st.adminDev || this.esEquipo()), editSaved: () => this.editSaved(), setEditCode: () => this.setEditCode(),
       loading: st.loading || (st.cargaNube && !st.clientOnly), loadMsg: st.cargaError || (st.cargaNube ? 'Cargando presupuesto…' : 'Cargando historial…'), showChrome: !st.clientOnly && !pr && !st.cargaNube,
       headerSub: q.or ? 'OR ' + q.or + ' · ' + (q.vehiculo || '') : 'Zona 10',
       saveTxt: st.saveInfo ? st.saveInfo.txt : (q.or && (q.items || []).length && !st.clientOnly && !q.estimado ? '✔ Guardado en este equipo' : ''), hasSaveTxt: !!(st.saveInfo || (q.or && (q.items || []).length && !st.clientOnly && !q.estimado)), saveColor: st.saveInfo && !st.saveInfo.ok ? '#ff8a7a' : '#7CFC9A',
