@@ -539,7 +539,7 @@
 
       <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 24px; padding-top: 24px; align-items: start;">
         <div style="grid-column: span 2; min-width: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 16px;">
-          <sc-for list="{{ items }}" as="it" hint-placeholder-count="4">
+          <sc-for list="{{ itemsS }}" as="it" hint-placeholder-count="4">
             <article style="background: #fff; display: flex; flex-direction: column; box-shadow: var(--shadow-sm); break-inside: avoid;">
               <div style="padding: 16px 18px; display: flex; flex-direction: column; gap: 8px; flex: 1; opacity: {{ it.op }};">
                 <div style="border: 4px solid {{ it.urgBg }}; padding: 10px 12px; display: flex; flex-direction: column; gap: 6px; -webkit-print-color-adjust: exact; print-color-adjust: exact;"><span style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; font-weight: 600;">{{ it.urgLabel }}</span>
@@ -2122,7 +2122,7 @@ class Component extends DCLogic {
       buscar: st.buscar || '', setBuscar: e => this.setState({ buscar: e.target.value }), clearBuscar: () => this.setState({ buscar: '' }), hasBuscar: !!(st.buscar || '').trim(),
       itemsVis: (() => { const k = this.norm(st.buscar || ''); return k ? items.filter(it => this.norm([it.name, it.nota, ...(it.parts || []).map(l => l.desc), ...(it.ops || []).map(l => l.desc)].join(' ')).includes(k)) : items; })(),
       buscarInfo: (st.buscar || '').trim() ? 'Mostrando ' + (() => { const k = this.norm(st.buscar || ''); return k ? items.filter(it => this.norm([it.name, it.nota, ...(it.parts || []).map(l => l.desc), ...(it.ops || []).map(l => l.desc)].join(' ')).includes(k)) : items; })().length + ' de ' + items.length : items.length + ' puntos',
-      quote: q, items, onItems, offItems, onItemsS: [...onItems.filter(esRojo), ...onItems.filter(i => !esRojo(i))], offItemsS: [...offItems.filter(esRojo), ...offItems.filter(i => !esRojo(i))], hasModal: !!modal && !pr0, printDetails, hasPrintDetails: printDetails.length > 0, modal: modal || { secs: [], incluye: [] },
+      quote: q, items, onItems, offItems, itemsS: [...items.filter(esRojo), ...items.filter(i => !esRojo(i))], onItemsS: [...onItems.filter(esRojo), ...onItems.filter(i => !esRojo(i))], offItemsS: [...offItems.filter(esRojo), ...offItems.filter(i => !esRojo(i))], hasModal: !!modal && !pr0, printDetails, hasPrintDetails: printDetails.length > 0, modal: modal || { secs: [], incluye: [] },
       closeModal: () => this.setState({ modal: null, medit: null }), stopProp: e => e.stopPropagation(), noItems: !items.length, sum,
       cotMode: !decided, allowCot: !leg, btnCols: leg ? '1fr 1fr' : '1fr 1fr 1fr', totTitle: decided ? 'Total autorizado' : 'Total cotizado', selTitle: decided ? 'Tu selección' : 'Presupuesto cotizado',
       setObs: e => this.setQ({ obs: e.target.value }), setObsP: e => this.setQ({ obsP: e.target.value }), setObsF: e => this.setQ({ obsF: e.target.value }), setObsA: e => { this.setQ({ obsA: e.target.value }); this.guardarAcuerdos(e.target.value); }, obsList: [['Observaciones del asesor de partes', q.obsP], ['Observaciones del asesor de servicio', q.obs], ['Observaciones', q.obsF]].filter(x => (x[1] || '').trim()).map(x => ({ label: x[0], text: x[1] })),
