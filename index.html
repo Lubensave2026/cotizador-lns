@@ -786,11 +786,31 @@ class Component extends DCLogic {
   emptyQ() { return { ivaIncl: true, link: '', or: '', cliente: '', tel: '', asesor: '', placa: '', km: '', vehiculo: '', anio: '', texto: '', items: [], okP: null, okS: null, obs: '', obsP: '', obsF: '', obsA: '', dv: 2 }; }
   state = { cargaNube: (() => { try { const P = new URLSearchParams(location.search); return !!((P.get('k') || (location.hash.match(/^#\??k=([A-Za-z0-9]+)/) || [])[1] || '').trim() && (P.get('ot') || P.get('presupuesto')) && !/^#[qt]=/.test(location.hash)); } catch (e) { return false; } })(), cargaError: '', adminDev: (() => { try { return localStorage.getItem('lns-admin-dev') === '9f2a55eb9abd8d40a26bc2387de86a878781fd9af2eec049a50382f5bb15cdeb'; } catch (e) { return false; } })(), step: 2, base: null, baseSrc: '', loading: true, msg: '', parseMsg: '', pdfName: '', settings: this.defS(), quote: { ...this.emptyQ(), texto: this.sample(), link: 'https://vehi.mobi/N8XwaN', ivaIncl: true }, clientOnly: false, printing: false, copied: '', addName: '', pinField: 1, pinHash: (() => { try { return localStorage.getItem('lns-pin') || ''; } catch (e) { return ''; } })(), baseOpen: (() => { try { return sessionStorage.getItem('lns-base-open') === '1' && !!localStorage.getItem('lns-pin'); } catch (e) { return false; } })(), pinChanging: false, pin1: '', pin2: '', pinMsg: '', open: {}, serv: null, servSrc: '' };
 
-  componentWillUnmount() { window.removeEventListener('keydown', this._pinKey); }
+  componentWillUnmount() { window.removeEventListener('keydown', this._pinKey); window.removeEventListener('keydown', this._gridKey); }
   async componentDidMount() {
     this._pinKey = e => { const st = this.state; if (st.baseOpen || st.step !== 1 || st.clientOnly) return;
       if (/^\d$/.test(e.key)) { e.preventDefault(); this.pinPress(e.key); } else if (e.key === 'Backspace') { e.preventDefault(); this.pinPress('Borrar'); } else if (e.key === 'Enter') { e.preventDefault(); this.unlock(); } else if (e.key === 'Tab') { e.preventDefault(); this.setState(s => ({ pinField: s.pinField === 2 ? 1 : 2 })); } };
     window.addEventListener('keydown', this._pinKey);
+    // Flechas del teclado para moverse entre casillas de Repuestos / Mano de obra (arriba, abajo, izquierda, derecha).
+    this._gridKey = e => { try {
+      const k = e.key; if (!(k === 'ArrowUp' || k === 'ArrowDown' || k === 'ArrowLeft' || k === 'ArrowRight') || e.altKey || e.ctrlKey || e.metaKey || e.shiftKey || e.defaultPrevented) return;
+      const t = e.target; if (!t || !t.closest) return; const tag = t.tagName; if (tag === 'SELECT' || tag === 'TEXTAREA' || (tag === 'BUTTON' && t.classList.contains('btn'))) return;
+      if (tag === 'INPUT' && t.getAttribute('list')) return;
+      const row = t.closest('div[style*="display: grid"]'); if (!row || !row.parentElement) return;
+      const FOC = 'input,select,button:not(.btn)', isOk = el => el && !el.disabled && el.offsetParent !== null;
+      const gridsAll = () => Array.from(document.querySelectorAll('div[style*="display: grid"]'));
+      const go = (cell) => { const gi = gridsAll().indexOf(cell.row), col = cell.col, pos = cell.pos; try { t.blur(); } catch (x) {}
+        setTimeout(() => { const g = gridsAll()[gi]; if (!g) return; const c = col != null ? g.children[col] : null; const el = pos != null ? Array.from(g.querySelectorAll(FOC)).filter(isOk)[pos] : (c && Array.from(c.querySelectorAll(FOC)).filter(isOk)[0] || (c && c.matches && c.matches(FOC) ? c : null)); if (el) { el.focus(); if (el.select && el.tagName === 'INPUT') { try { el.select(); } catch (x) {} } } }, 30); };
+      if (k === 'ArrowLeft' || k === 'ArrowRight') {
+        if (tag === 'INPUT') { const n = (t.value || '').length, a = t.selectionStart, b = t.selectionEnd, all = a === 0 && b === n && n > 0; if (!(all || (a === b && (k === 'ArrowLeft' ? a === 0 : a === n)))) return; }
+        const list = Array.from(row.querySelectorAll(FOC)).filter(isOk), i = list.indexOf(t); if (i < 0) return; const j = i + (k === 'ArrowLeft' ? -1 : 1); if (j < 0 || j >= list.length) return;
+        e.preventDefault(); go({ row, pos: j }); return;
+      }
+      const col = Array.from(row.children).findIndex(c => c === t || c.contains(t)); if (col < 0) return;
+      const sibs = Array.from(row.parentElement.children).filter(c => c.matches && c.matches('div[style*="display: grid"]')); let i = sibs.indexOf(row); const d = k === 'ArrowUp' ? -1 : 1;
+      for (i += d; i >= 0 && i < sibs.length; i += d) { const c = sibs[i].children[col]; if (c && Array.from(c.querySelectorAll(FOC)).filter(isOk).length || (c && c.matches && c.matches(FOC) && isOk(c))) { e.preventDefault(); go({ row: sibs[i], col }); return; } }
+    } catch (x) {} };
+    window.addEventListener('keydown', this._gridKey);
     // Un link #q=/#t= pegado en una pestaña ya abierta no recarga la página: forzar recarga para que se aplique.
     window.addEventListener('hashchange', () => { if (/^#[qt]=/.test(location.hash)) location.reload(); });
     this.lib = await import(new URL('./lns-base.js', location.href).href);
