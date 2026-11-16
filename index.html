@@ -160,6 +160,32 @@
           <span>Cargar plantilla actualizada (.xlsx)</span>
           <input type="file" accept=".xlsx" onChange="{{ onServFile }}" style="display: none;">
         </label>
+        <div style="display: flex; flex-direction: column; gap: 10px; border: 2px solid #201e1d; padding: 14px 16px;">
+          <span style="font-size: 15px; font-weight: 800; text-transform: uppercase;">Editar un servicio (sin cargar el Excel)</span>
+          <span style="font-size: 13px; color: #605d5d; max-width: 80ch;">Elige la plantilla, cambia precios, cantidades o nombres, agrega o quita renglones y guarda. Luego “Descargar servicios.json” y pásaselo a quien publica para que lo vean todos los equipos.</span>
+          <select class="input" value="{{ svcSel }}" onChange="{{ onSvcSel }}" style="max-width: 560px;"><option value="">Elegir plantilla…</option><sc-for list="{{ svcOpts }}" as="o" hint-placeholder-count="2"><option value="{{ o.v }}">{{ o.label }}</option></sc-for></select>
+          <sc-if value="{{ hasSvcEd }}" hint-placeholder-val="{{ false }}">
+            <div style="display: flex; flex-direction: column;">
+              <div style="display: grid; grid-template-columns: minmax(110px, 170px) minmax(0, 1fr) 60px 100px 100px 36px; gap: 8px; font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; padding: 4px 0; border-bottom: 1px solid var(--color-divider);"><span>Categoría</span><span>Descripción</span><span>Cant.</span><span>Precio unit.</span><span>Total</span><span></span></div>
+              <sc-for list="{{ svcRows }}" as="r" hint-placeholder-count="2">
+                <div style="display: grid; grid-template-columns: minmax(110px, 170px) minmax(0, 1fr) 60px 100px 100px 36px; gap: 8px; align-items: center; padding: 5px 0; border-bottom: 1px solid var(--color-neutral-300);">
+                  <input class="input" value="{{ r.c }}" onChange="{{ r.onC }}">
+                  <input class="input" value="{{ r.d }}" onChange="{{ r.onD }}" placeholder="Descripción">
+                  <input class="input" inputmode="decimal" value="{{ r.q }}" onChange="{{ r.onQ }}" style="padding-left: 6px; padding-right: 6px;">
+                  <input class="input" inputmode="decimal" value="{{ r.u }}" onChange="{{ r.onU }}">
+                  <span style="font-size: 14px; font-weight: 800;">{{ r.totFmt }}</span>
+                  <button class="btn btn-ghost btn-icon" onClick="{{ r.onDel }}" aria-label="Quitar" style="color: #605d5d;">×</button>
+                </div>
+              </sc-for>
+              <div style="display: flex; justify-content: space-between; align-items: center; padding-top: 8px; gap: 12px; flex-wrap: wrap;">
+                <button class="btn btn-ghost" onClick="{{ onSvcAdd }}" style="color: #201e1d;">+ Renglón</button>
+                <span style="font-size: 15px;">Total del servicio <strong>{{ svcTotFmt }}</strong></span>
+              </div>
+              <div style="display: flex; gap: 8px; padding-top: 10px;"><button class="btn" onClick="{{ onSvcGuardar }}" style="background: #000; color: #FFE500; font-weight: 800;">Guardar cambios</button><button class="btn btn-secondary" onClick="{{ onSvcCancel }}">Cancelar</button></div>
+            </div>
+          </sc-if>
+          <div style="display: flex; gap: 8px; flex-wrap: wrap;"><button class="btn btn-secondary" onClick="{{ onSvcDescargar }}" style="font-size: 13px;">Descargar servicios.json</button><button class="btn btn-ghost" onClick="{{ onSvcRestaurar }}" style="font-size: 13px;">Volver a la plantilla publicada</button></div>
+        </div>
       </section>
       <section style="display: flex; flex-direction: column; gap: 10px;">
         <h2 style="margin: 0; font-size: 18px; text-transform: uppercase; border-bottom: 2px solid #201e1d; padding-bottom: 8px;">Kits de complementos</h2>
@@ -979,6 +1005,26 @@ class Component extends DCLogic {
     if (pool.length >= 5) { const q1 = pool[Math.floor(pool.length * 0.25)].tot, q3 = pool[Math.floor(pool.length * 0.75)].tot, iqr = q3 - q1; pool = pool.filter(c => c.tot >= q1 - 1.5 * iqr && c.tot <= q3 + 1.5 * iqr); }
     const med = pool[Math.floor((pool.length - 1) / 2)];
     return { P: med.P, model: b.m[med.k].d, n: pool.length, min: pool[0].tot, max: pool[pool.length - 1].tot, sameBrand: !!same.length };
+  }
+  svcOpen(v) { const s = v === '' ? null : this.state.serv.servicios[+v]; this.setState({ svcEd: s ? { idx: +v, rows: s.items.map(r => ({ c: String(r[0] == null ? '' : r[0]), d: String(r[1] == null ? '' : r[1]), q: String(r[2]), u: String(r[3]) })) } : null }); }
+  svcSet(i, patch) { this.setState(s => s.svcEd ? { svcEd: { ...s.svcEd, rows: s.svcEd.rows.map((r, j) => j === i ? { ...r, ...patch } : r) } } : null); }
+  svcDel(i) { this.setState(s => s.svcEd ? { svcEd: { ...s.svcEd, rows: s.svcEd.rows.filter((_, j) => j !== i) } } : null); }
+  svcAdd() { this.setState(s => { if (!s.svcEd) return null; const rows = s.svcEd.rows, last = rows.length ? rows[rows.length - 1].c : 'Repuestos'; return { svcEd: { ...s.svcEd, rows: [...rows, { c: last, d: '', q: '1', u: '' }] } }; }); }
+  svcTot(rows) { return rows.reduce((a, r) => a + this.num(r.q) * this.num(r.u), 0); }
+  async svcGuardar() {
+    const d = this.state.svcEd; if (!d) return;
+    const rows = d.rows.filter(r => String(r.d).trim());
+    if (!rows.length) { window.alert('El servicio no puede quedar sin renglones.'); return; }
+    if (!rows.every(r => this.num(r.q) > 0 && this.num(r.u) >= 0)) { window.alert('Cada renglón necesita cantidad mayor a cero y un precio válido.'); return; }
+    const items = rows.map(r => [String(r.c).trim() || 'Repuestos', String(r.d).trim(), this.num(r.q), this.num(r.u)]);
+    const S = this.state.serv, servicios = S.servicios.map((s, i) => i === d.idx ? { ...s, items, total: this.r2(this.svcTot(rows)) } : s), serv = { ...S, servicios };
+    await this.idbSet(serv, 'serv'); this._known = null;
+    this.setState({ serv, servSrc: 'Plantilla editada en este navegador (sin publicar)', svcEd: null, msg: 'Servicio actualizado: ' + S.servicios[d.idx].t + '. Los presupuestos nuevos ya usan estos precios. Para que lo vean los demás equipos, usa “Descargar servicios.json” y pásalo para publicar.' });
+  }
+  svcDescargar() { const blob = new Blob([JSON.stringify(this.state.serv)], { type: 'application/json' }); const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'servicios.json'; document.body.appendChild(a); a.click(); a.remove(); }
+  async svcRestaurar() {
+    if (!window.confirm('Se descartan los cambios hechos en este navegador y se vuelve a la plantilla publicada. ¿Continuar?')) return;
+    try { const serv = await (await fetch('servicios.json?v=' + Date.now())).json(); const db = await this.idb(); await new Promise(res => { const t = db.transaction('kv', 'readwrite'); t.objectStore('kv').delete('serv'); t.oncomplete = () => res(); }); this._known = null; this.setState({ serv, servSrc: 'ESTIMADO SERVICIOS.xlsx (incluida)', svcEd: null, msg: 'Plantilla publicada restaurada.' }); } catch (e) { this.setState({ msg: 'No se pudo restaurar: ' + e.message }); }
   }
   async onServFile(e) {
     const f = e.target.files && e.target.files[0]; if (!f) return;
@@ -2236,7 +2282,7 @@ class Component extends DCLogic {
       lock: () => { try { sessionStorage.removeItem('lns-base-open'); } catch (e) {} this.setState({ baseOpen: false, step: 2 }); },
       changePin: () => this.setState({ baseOpen: false, pinChanging: true, pin1: '', pin2: '' }), setMargen: e => this.setS('margen', e.target.value), setIva: e => this.setS('iva', e.target.value), setPct: e => this.setS('pct', e.target.value), setMeses: e => this.setS('meses', e.target.value),
       setR1: e => this.setS('r1', e.target.value), setR2: e => this.setS('r2', e.target.value), setR3: e => this.setS('r3', e.target.value),
-      onPdf: e => this.onPdf(e), tarifaIvaFmt: this.fmt(T * (1 + IVA)), onServFile: e => this.onServFile(e), servSrc: st.servSrc || '—', servCount: st.serv ? st.serv.servicios.length : 0,
+      onPdf: e => this.onPdf(e), tarifaIvaFmt: this.fmt(T * (1 + IVA)), onServFile: e => this.onServFile(e), svcOpts: st.serv ? st.serv.servicios.map((s, i) => ({ v: String(i), label: (s.hoja || '').trim() + ' · ' + s.t + ' · ' + (s.tipo || '') })).sort((a, b) => a.label.localeCompare(b.label)) : [], svcSel: st.svcEd ? String(st.svcEd.idx) : '', onSvcSel: e => this.svcOpen(e.target.value), hasSvcEd: !!st.svcEd, svcRows: st.svcEd ? st.svcEd.rows.map((r, i) => ({ ...r, totFmt: this.fmt(this.num(r.q) * this.num(r.u)), onC: e => this.svcSet(i, { c: e.target.value }), onD: e => this.svcSet(i, { d: e.target.value }), onQ: e => this.svcSet(i, { q: e.target.value }), onU: e => this.svcSet(i, { u: e.target.value }), onDel: () => this.svcDel(i) })) : [], svcTotFmt: st.svcEd ? this.fmt(this.svcTot(st.svcEd.rows)) : '', onSvcAdd: () => this.svcAdd(), onSvcGuardar: () => this.svcGuardar(), onSvcCancel: () => this.setState({ svcEd: null }), onSvcDescargar: () => this.svcDescargar(), onSvcRestaurar: () => this.svcRestaurar(), servSrc: st.servSrc || '—', servCount: st.serv ? st.serv.servicios.length : 0,
       tablaText: st.serv ? Object.entries(st.serv.tabla).map(([k, v]) => this.cap(k) + ' ' + v.l.length).join(', ') : '—', demoPdf: e => { e.preventDefault(); e.stopPropagation(); this.loadDemoPdf(); }, setUsarPdf: e => this.setS('usarPdf', e.target.checked), setCortoNube: e => this.setS('cortoNube', e.target.checked), probarNube: () => this.probarNube(), setKits: e => this.setS('kits', e.target.value), setEquiv: e => this.setS('equiv', e.target.value), setPaquetes: e => this.setS('paquetes', e.target.value), setAsesor: e => this.setQ({ asesor: e.target.value }),
       hasAsesor: !!(q.asesor || '').trim(), pdfLabel: st.pdfName ? 'Cambiar PDF (' + st.pdfName + ')' : 'Elegir PDF', armar: () => this.armar(),
       parseMsg: st.parseMsg, hasParseMsg: !!st.parseMsg,
