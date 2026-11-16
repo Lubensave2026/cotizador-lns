@@ -188,6 +188,21 @@
         </div>
       </section>
       <section style="display: flex; flex-direction: column; gap: 10px;">
+        <h2 style="margin: 0; font-size: 18px; text-transform: uppercase; border-bottom: 2px solid #201e1d; padding-bottom: 8px;">Aceites de motor</h2>
+        <p style="margin: 0; font-size: 14px; max-width: 80ch; text-wrap: pretty;">Lista de aceites con su <strong>precio por litro (con IVA)</strong>. En un servicio de la plantilla aparece el desplegable “Aceite del servicio” para escoger uno: el renglón “Aceite de motor” toma ese nombre y el precio × la cantidad de litros. Si marcas <strong>Predeterminado</strong>, se pone solo en los servicios de esa viscosidad. Los cambios de precio se guardan al escribir; usa “Descargar aceites.json” para publicarlos a todos los equipos.</p>
+        <div style="display: grid; grid-template-columns: minmax(0, 1fr) 110px 110px 110px 36px; gap: 8px; font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; padding: 4px 0; border-bottom: 1px solid var(--color-divider);"><span>Aceite</span><span>Viscosidad</span><span>Precio por litro</span><span>Predeterminado</span><span></span></div>
+        <sc-for list="{{ aceRows }}" as="r" hint-placeholder-count="2">
+          <div style="display: grid; grid-template-columns: minmax(0, 1fr) 110px 110px 110px 36px; gap: 8px; align-items: center; padding: 5px 0; border-bottom: 1px solid var(--color-neutral-300);">
+            <input class="input" value="{{ r.n }}" onChange="{{ r.onN }}" placeholder="Ej. Gulf 5W30 sintético">
+            <input class="input" value="{{ r.v }}" onChange="{{ r.onV }}" placeholder="5W30">
+            <input class="input" inputmode="decimal" value="{{ r.p }}" onChange="{{ r.onP }}" placeholder="Q por litro">
+            <label style="display: flex; align-items: center; gap: 6px; font-size: 13px; cursor: pointer;"><input type="checkbox" checked="{{ r.d }}" onChange="{{ r.onD }}" style="width: 18px; height: 18px;"> Sí</label>
+            <button class="btn btn-ghost btn-icon" onClick="{{ r.onDel }}" aria-label="Quitar" style="color: #605d5d;">×</button>
+          </div>
+        </sc-for>
+        <div style="display: flex; gap: 8px; flex-wrap: wrap; padding-top: 4px;"><button class="btn btn-secondary" onClick="{{ onAceAdd }}" style="font-size: 13px;">+ Aceite</button><button class="btn btn-secondary" onClick="{{ onAceDescargar }}" style="font-size: 13px;">Descargar aceites.json</button><button class="btn btn-ghost" onClick="{{ onAceRestaurar }}" style="font-size: 13px;">Volver a la lista publicada</button></div>
+      </section>
+      <section style="display: flex; flex-direction: column; gap: 10px;">
         <h2 style="margin: 0; font-size: 18px; text-transform: uppercase; border-bottom: 2px solid #201e1d; padding-bottom: 8px;">Kits de complementos</h2>
         <p style="margin: 0; font-size: 14px; max-width: 80ch; text-wrap: pretty;">Una regla por línea: <strong>PUNTO = complemento; complemento</strong>. Cuando el punto del reporte contiene esas palabras, los complementos aparecen como botones para agregar con un clic, con su precio más reciente. Además, el historial sugiere lo que normalmente se cotiza junto a cada punto.</p>
         <textarea class="input" style="min-height: 160px; font-size: 14px; font-family: var(--font-body);" value="{{ settings.kits }}" onChange="{{ setKits }}"></textarea>
@@ -369,6 +384,12 @@
                 </sc-if>
               </div>
               <sc-if value="{{ it.hasNota }}" hint-placeholder-val="{{ false }}"><p style="margin: 0; font-size: 13px; padding: 8px 10px; background: #f3f2f2; border-left: 3px solid #FFE500; text-wrap: pretty;"><strong>Observación del técnico:</strong> {{ it.nota }}</p></sc-if>
+              <sc-if value="{{ it.hasAceite }}" hint-placeholder-val="{{ false }}">
+                <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap; background: #fff7d6; padding: 8px 10px; border-left: 3px solid #FFE500;">
+                  <span style="font-size: 12px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.06em;">Aceite del servicio</span>
+                  <select class="input" value="{{ it.aceiteSel }}" onChange="{{ it.onAceite }}" style="width: auto; min-width: 280px; min-height: 32px; font-size: 13px; padding: 4px 8px;"><sc-for list="{{ it.aceiteOpts }}" as="o" hint-placeholder-count="2"><option value="{{ o.v }}">{{ o.label }}</option></sc-for></select>
+                </div>
+              </sc-if>
               <div style="display: flex; flex-direction: column; gap: 0;">
                 <div style="display: grid; grid-template-columns: minmax(150px, 1fr) 60px 104px 92px 104px 110px 36px; gap: 8px; font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; padding: 4px 0; border-bottom: 1px solid var(--color-divider);">
                   <span>Repuesto</span><span>Cant.</span><span>Costo unit. (interno)</span><span>Margen</span><span>Precio unit.</span><span>Total</span><span></span>
@@ -877,7 +898,8 @@ class Component extends DCLogic {
     this.recs = recs; const base = this.lib.buildFromRecords(recs);
     let serv = await this.idbGet('serv'), servSrc = 'Plantilla cargada en este navegador';
     if (!serv) { try { serv = await (await fetch('servicios.json')).json(); servSrc = 'ESTIMADO SERVICIOS.xlsx (incluida)'; } catch (e) { serv = null; } }
-    this.setState({ base, serv, servSrc, baseSrc: src + ' · procesado ' + this.fd(base.meta.built), loading: false }, () => {
+    let aceites = await this.idbGet('aceites'); if (!aceites) { try { aceites = (await (await fetch('aceites.json')).json()).aceites || []; } catch (e) { aceites = []; } }
+    this.setState({ base, serv, servSrc, aceites, baseSrc: src + ' · procesado ' + this.fd(base.meta.built), loading: false }, () => {
       if (serv) { const vk = this.vehKeyOf(this.state.quote.vehiculo); let ch = false;
         const items = (this.state.quote.items || []).map(it => { const tipo = this.svcTipo(it.name); if (!tipo || (it.src && it.src.tpl)) return it;
           const c = this.tplCands(vk, tipo); if (!c.length) return it; ch = true; return this.itemFromTpl(c, 0, it.urg, it.nota, it.id); });
@@ -1005,6 +1027,27 @@ class Component extends DCLogic {
     if (pool.length >= 5) { const q1 = pool[Math.floor(pool.length * 0.25)].tot, q3 = pool[Math.floor(pool.length * 0.75)].tot, iqr = q3 - q1; pool = pool.filter(c => c.tot >= q1 - 1.5 * iqr && c.tot <= q3 + 1.5 * iqr); }
     const med = pool[Math.floor((pool.length - 1) / 2)];
     return { P: med.P, model: b.m[med.k].d, n: pool.length, min: pool[0].tot, max: pool[pool.length - 1].tot, sameBrand: !!same.length };
+  }
+  visc(s) { const m = String(s || '').toUpperCase().match(/(\d{1,2})\s*W\s*-?\s*(\d{2})/); return m ? m[1] + 'W' + m[2] : ''; }
+  aceitesLista() { return (this.state.aceites || []).filter(a => String(a.n || '').trim() && this.num(a.p) > 0); }
+  aceiteIdx(it) { const ps = it.parts || []; if (it.aceiteJ != null && ps[it.aceiteJ]) return it.aceiteJ; return ps.findIndex(l => /^aceite de motor/i.test(String(l.desc || '').trim())); }
+  aceiteOrden(vis) { const L = this.aceitesLista(), v = this.visc(vis); return [...L.filter(a => v && this.visc(a.v || a.n) === v), ...L.filter(a => !(v && this.visc(a.v || a.n) === v))]; }
+  aceiteDefault(vis) { const v = this.visc(vis); return v ? this.aceitesLista().find(a => a.d && this.visc(a.v || a.n) === v) || null : null; }
+  aplicarAceite(i, nombre) {
+    const q = this.state.quote, it = q.items[i], S = this.state.serv; if (!it) return; const j = this.aceiteIdx(it); if (j < 0) return;
+    let desc, rep, qq = this.num(it.parts[j].q) || 1;
+    if (nombre) { const a = this.aceitesLista().find(x => x.n === nombre); if (!a) return; desc = a.n; rep = this.r2(qq * this.num(a.p)); }
+    else { const s = it.tpl && S ? S.servicios[it.tpl.cands[it.tpl.k]] : null, t = s ? s.items.find(x => !/MANO DE OBRA/i.test(x[0]) && /aceite de motor/i.test(x[1])) : null; if (!t) return; desc = this.cap(t[1]); qq = t[2]; rep = this.r2(t[2] * t[3]); }
+    this.setState(s => ({ quote: { ...s.quote, okP: null, okS: null, items: s.quote.items.map((x, n) => n !== i ? x : { ...x, aceite: nombre || '', aceiteJ: j, parts: x.parts.map((l, m) => m === j ? { ...l, desc, q: qq, rep: String(rep), adj: 0, costo: undefined } : l) }) } }));
+  }
+  aceSave(list) { this.setState({ aceites: list }); this.idbSet(list, 'aceites'); }
+  aceSet(i, patch) { this.aceSave((this.state.aceites || []).map((a, j) => j === i ? { ...a, ...patch } : a)); }
+  aceDel(i) { this.aceSave((this.state.aceites || []).filter((_, j) => j !== i)); }
+  aceAdd() { this.aceSave([...(this.state.aceites || []), { n: '', v: '', p: '', d: false }]); }
+  aceDescargar() { const blob = new Blob([JSON.stringify({ aceites: (this.state.aceites || []).filter(a => String(a.n || '').trim()) })], { type: 'application/json' }); const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'aceites.json'; document.body.appendChild(a); a.click(); a.remove(); }
+  async aceRestaurar() {
+    if (!window.confirm('Se descartan los cambios hechos en este navegador y se vuelve a la lista de aceites publicada. ¿Continuar?')) return;
+    try { const aceites = (await (await fetch('aceites.json?v=' + Date.now())).json()).aceites || []; const db = await this.idb(); await new Promise(res => { const t = db.transaction('kv', 'readwrite'); t.objectStore('kv').delete('aceites'); t.oncomplete = () => res(); }); this.setState({ aceites, msg: 'Lista de aceites publicada restaurada.' }); } catch (e) { this.setState({ msg: 'No se pudo restaurar: ' + e.message }); }
   }
   svcOpen(v) { const s = v === '' ? null : this.state.serv.servicios[+v]; this.setState({ svcEd: s ? { idx: +v, rows: s.items.map(r => ({ c: String(r[0] == null ? '' : r[0]), d: String(r[1] == null ? '' : r[1]), q: String(r[2]), u: String(r[3]) })) } : null }); }
   svcSet(i, patch) { this.setState(s => s.svcEd ? { svcEd: { ...s.svcEd, rows: s.svcEd.rows.map((r, j) => j === i ? { ...r, ...patch } : r) } } : null); }
@@ -1410,7 +1453,9 @@ class Component extends DCLogic {
     s.items.forEach(([sec, name, q, u]) => { const tot = Math.round(q * u * 100) / 100; if (!tot) return;
       if (/MANO DE OBRA/i.test(sec)) ops.push({ desc: this.cap(name), hrs: String(Math.round(tot / (this.num(this.state.settings.tarifa) || 600) * 10000) / 10000) });
       else parts.push({ desc: this.cap(name.replace(/^wippe$/i, 'Wipe')), sec: this.cap(sec || 'Repuestos'), q, rep: String(this.r2(tot)) }); });
-    const R = { id: id || Math.random().toString(36).slice(2), name: this.cap(s.tipo), pk: s.tipo, urg, nota: nota || '',
+    const ac = this.aceiteDefault(s.oil || s.t), aj = ac ? parts.findIndex(l => /^aceite de motor/i.test(l.desc)) : -1;
+    if (ac && aj >= 0) parts[aj] = { ...parts[aj], desc: ac.n, rep: String(this.r2((this.num(parts[aj].q) || 1) * this.num(ac.p))) };
+    const R = { id: id || Math.random().toString(36).slice(2), name: this.cap(s.tipo), pk: s.tipo, urg, nota: nota || '', ...(ac && aj >= 0 ? { aceite: ac.n, aceiteJ: aj } : {}),
       src: { tpl: true, t: s.t, ...(cands.alt ? { alt: cands.alt } : {}) }, tpl: { cands, k }, hist: [], parts, ops,
       incluye: tb ? tb.l.map(x => this.cap(x)) : [], mat: s.items.filter(i => !/MANO DE OBRA/i.test(i[0]) && i[3] > 0).map(i => this.cap(i[1].replace(/^wippe$/i, 'Wipe'))) };
     if (cands.alt) R.e0 = this.lineKeys(R);
@@ -2188,6 +2233,8 @@ class Component extends DCLogic {
         hasIncluye: !!(it.incluye && it.incluye.length), hasDetalle: cliOps.length + cliParts.length > 0 || !!(it.incluye && it.incluye.length),
         incOpen: false, incLabel: 'Ver desglose ▾',
         onInc: () => this.setState({ modal: it.id }),
+        hasAceite: !!(it.tpl && it.src && it.src.tpl && this.aceitesLista().length && this.aceiteIdx(it) >= 0), aceiteSel: it.aceite || '', onAceite: e => this.aplicarAceite(i, e.target.value),
+        aceiteOpts: it.tpl && st.serv ? [{ v: '', label: 'Según plantilla' }, ...this.aceiteOrden(st.serv.servicios[it.tpl.cands[it.tpl.k]] && (st.serv.servicios[it.tpl.cands[it.tpl.k]].oil || st.serv.servicios[it.tpl.cands[it.tpl.k]].t)).map(a => ({ v: a.n, label: a.n + (a.v ? ' · ' + a.v : '') + ' · ' + this.fmt(this.num(a.p)) + ' por litro' }))] : [],
         hasTplOpts: !!(st.serv && (it.tpl ? it.src && it.src.tpl : this.svcTipo(it.name))), tplK: it.tpl && st.serv ? String(it.tpl.cands[it.tpl.k]) : '',
         tplOpts: st.serv ? [...(it.tpl ? [] : [{ v: '', label: 'Elegir plantilla…' }]), ...this.tplSugs(it, it.tplAll).map(c => ({ v: String(c), label: (st.serv.servicios[c].hoja || '').trim() + ' · ' + st.serv.servicios[c].t })), ...(it.tplAll ? [] : [{ v: 'ALL', label: 'Ver todas las plantillas…' }])] : [],
         onTpl: e => this.elegirTpl(i, e.target.value),
@@ -2282,7 +2329,7 @@ class Component extends DCLogic {
       lock: () => { try { sessionStorage.removeItem('lns-base-open'); } catch (e) {} this.setState({ baseOpen: false, step: 2 }); },
       changePin: () => this.setState({ baseOpen: false, pinChanging: true, pin1: '', pin2: '' }), setMargen: e => this.setS('margen', e.target.value), setIva: e => this.setS('iva', e.target.value), setPct: e => this.setS('pct', e.target.value), setMeses: e => this.setS('meses', e.target.value),
       setR1: e => this.setS('r1', e.target.value), setR2: e => this.setS('r2', e.target.value), setR3: e => this.setS('r3', e.target.value),
-      onPdf: e => this.onPdf(e), tarifaIvaFmt: this.fmt(T * (1 + IVA)), onServFile: e => this.onServFile(e), svcOpts: st.serv ? st.serv.servicios.map((s, i) => ({ v: String(i), label: (s.hoja || '').trim() + ' · ' + s.t + ' · ' + (s.tipo || '') })).sort((a, b) => a.label.localeCompare(b.label)) : [], svcSel: st.svcEd ? String(st.svcEd.idx) : '', onSvcSel: e => this.svcOpen(e.target.value), hasSvcEd: !!st.svcEd, svcRows: st.svcEd ? st.svcEd.rows.map((r, i) => ({ ...r, totFmt: this.fmt(this.num(r.q) * this.num(r.u)), onC: e => this.svcSet(i, { c: e.target.value }), onD: e => this.svcSet(i, { d: e.target.value }), onQ: e => this.svcSet(i, { q: e.target.value }), onU: e => this.svcSet(i, { u: e.target.value }), onDel: () => this.svcDel(i) })) : [], svcTotFmt: st.svcEd ? this.fmt(this.svcTot(st.svcEd.rows)) : '', onSvcAdd: () => this.svcAdd(), onSvcGuardar: () => this.svcGuardar(), onSvcCancel: () => this.setState({ svcEd: null }), onSvcDescargar: () => this.svcDescargar(), onSvcRestaurar: () => this.svcRestaurar(), servSrc: st.servSrc || '—', servCount: st.serv ? st.serv.servicios.length : 0,
+      onPdf: e => this.onPdf(e), tarifaIvaFmt: this.fmt(T * (1 + IVA)), onServFile: e => this.onServFile(e), aceRows: (st.aceites || []).map((a, i) => ({ n: a.n || '', v: a.v || '', p: a.p == null ? '' : String(a.p), d: !!a.d, onN: e => this.aceSet(i, { n: e.target.value }), onV: e => this.aceSet(i, { v: e.target.value }), onP: e => this.aceSet(i, { p: e.target.value }), onD: e => this.aceSet(i, { d: e.target.checked }), onDel: () => this.aceDel(i) })), onAceAdd: () => this.aceAdd(), onAceDescargar: () => this.aceDescargar(), onAceRestaurar: () => this.aceRestaurar(), svcOpts: st.serv ? st.serv.servicios.map((s, i) => ({ v: String(i), label: (s.hoja || '').trim() + ' · ' + s.t + ' · ' + (s.tipo || '') })).sort((a, b) => a.label.localeCompare(b.label)) : [], svcSel: st.svcEd ? String(st.svcEd.idx) : '', onSvcSel: e => this.svcOpen(e.target.value), hasSvcEd: !!st.svcEd, svcRows: st.svcEd ? st.svcEd.rows.map((r, i) => ({ ...r, totFmt: this.fmt(this.num(r.q) * this.num(r.u)), onC: e => this.svcSet(i, { c: e.target.value }), onD: e => this.svcSet(i, { d: e.target.value }), onQ: e => this.svcSet(i, { q: e.target.value }), onU: e => this.svcSet(i, { u: e.target.value }), onDel: () => this.svcDel(i) })) : [], svcTotFmt: st.svcEd ? this.fmt(this.svcTot(st.svcEd.rows)) : '', onSvcAdd: () => this.svcAdd(), onSvcGuardar: () => this.svcGuardar(), onSvcCancel: () => this.setState({ svcEd: null }), onSvcDescargar: () => this.svcDescargar(), onSvcRestaurar: () => this.svcRestaurar(), servSrc: st.servSrc || '—', servCount: st.serv ? st.serv.servicios.length : 0,
       tablaText: st.serv ? Object.entries(st.serv.tabla).map(([k, v]) => this.cap(k) + ' ' + v.l.length).join(', ') : '—', demoPdf: e => { e.preventDefault(); e.stopPropagation(); this.loadDemoPdf(); }, setUsarPdf: e => this.setS('usarPdf', e.target.checked), setCortoNube: e => this.setS('cortoNube', e.target.checked), probarNube: () => this.probarNube(), setKits: e => this.setS('kits', e.target.value), setEquiv: e => this.setS('equiv', e.target.value), setPaquetes: e => this.setS('paquetes', e.target.value), setAsesor: e => this.setQ({ asesor: e.target.value }),
       hasAsesor: !!(q.asesor || '').trim(), pdfLabel: st.pdfName ? 'Cambiar PDF (' + st.pdfName + ')' : 'Elegir PDF', armar: () => this.armar(),
       parseMsg: st.parseMsg, hasParseMsg: !!st.parseMsg,
