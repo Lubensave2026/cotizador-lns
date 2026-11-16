@@ -310,7 +310,8 @@
       <sc-if value="{{ quote.estimado }}" hint-placeholder-val="{{ false }}">
         <div style="background: #000; color: #fff; padding: 14px 16px; display: flex; flex-direction: column; gap: 4px; border-left: 0; border-top: 4px solid #FFE500;">
           <span style="font-size: 15px; font-weight: 800; color: #FFE500;">Modo estimado rápido</span>
-          <span style="font-size: 14px; text-wrap: pretty;">Escribe cualquier vehículo y agrega los trabajos abajo. Si ese modelo no tiene historial, el precio sale de vehículos similares (misma marca primero) con su rango. Confirma luego con precios reales de proveedor. No se guarda en el historial.</span>
+          <span style="font-size: 14px; text-wrap: pretty;">Escribe cualquier vehículo y agrega los trabajos abajo. Si ese modelo no tiene historial, el precio sale de vehículos similares (misma marca primero) con su rango. Confirma luego con precios reales de proveedor. No se guarda solo: si quieres conservarlo en “Presupuestos guardados” (por ejemplo una cotización por llamada), usa el botón de abajo.</span>
+          <button class="btn btn-secondary" onClick="{{ guardarEst }}" style="width: fit-content; margin-top: 4px;">Guardar este estimado en Presupuestos guardados</button>
         </div>
       </sc-if>
 
@@ -988,7 +989,7 @@ class Component extends DCLogic {
   openBase(h) { try { sessionStorage.setItem('lns-base-open', '1'); } catch (e) {} this.setState({ pinHash: h, baseOpen: true, pinChanging: false, pin1: '', pin2: '', pinMsg: '' }); }
   async setRecs(recs) { this.recs = recs; await this.idbSet(recs, 'recs'); this.setState({ base: this.lib.buildFromRecords(recs) }); }
   async saveToHist(q) {
-    if (q.estimado || !this.recs || !q.items.length) return;
+    if (q.estimado || q.estRef || !this.recs || !q.items.length) return;
     const F = this.F(), hoy = new Date().toISOString().slice(0, 10), or = String(q.or || ('LNS-' + Date.now())).trim();
     const vk = this.vehKeyOf(q.vehiculo) || (() => { const t = this.norm(q.vehiculo).split(' '); return t[0] + '|' + t.slice(1).join(' '); })();
     const vd = this.state.base.m[vk] ? this.state.base.m[vk].d : (q.vehiculo || '').trim();
@@ -1465,7 +1466,7 @@ class Component extends DCLogic {
     const tipo = this.svcTipo(raw);
     if (tipo) { const c = this.tplCands(vk, tipo); if (c.length) return this.itemFromTpl(c, 0, urg, nota); }
     let P = this.match(vk, raw, 0.6), est = null; const s = this.state.settings;
-    if (!P && this.state.base && ((this.state.quote.estimado && !this._real) || this._estFallback)) { est = this.estimateP(vk, raw); if (est) P = est.P; }
+    if (!P && this.state.base && (((this.state.quote.estimado || this.state.quote.estRef) && !this._real) || this._estFallback)) { est = this.estimateP(vk, raw); if (est) P = est.P; }
     const it = { id: Math.random().toString(36).slice(2), name: this.cap(P ? P.name : raw), pk: P ? this.norm(P.name) : '', urg, nota: nota || '', foto: '', src: null, hist: [], parts: [], ops: [] };
     if (!P) { it.parts = [{ desc: '', rep: '' }]; it.ops = [{ desc: '', hrs: '' }]; return it; }
     const L = P.last, mo = this.monthsAgo(L.d), applies = mo > this.num(s.meses);
@@ -2349,6 +2350,12 @@ class Component extends DCLogic {
       vehMsg: !q.vehiculo ? '' : !M && q.estimado ? 'Sin historial propio para ' + q.vehiculo + ': se estimará con vehículos similares.' : M ? 'Historial: ' + Object.keys(M.p).length + ' puntos cotizados para ' + M.d + '.' : 'Sin historial con ese nombre. Elige una opción de la lista y presiona “Armar presupuesto” otra vez.',
       vehMsgColor: q.vehiculo && !M ? '#ae1800' : '#605d5d',
       nuevo: () => { if (q.items.length && !window.confirm('¿Descartar el presupuesto actual (' + (q.or || 'sin OR') + ')?')) return; this.setState({ quote: this.emptyQ(), parseMsg: '', pdfName: '', saveInfo: null }); if (this._tfOt) this.borrarBorrador(); },
+      guardarEst: () => {
+        if (!q.items.length) { this.setState({ msg: 'Primero agrega al menos un trabajo al estimado.' }); return; }
+        const cli = window.prompt('Nombre del cliente o teléfono (opcional, para encontrarlo después):', q.cliente || ''); if (cli === null) return;
+        const or = this.nextCorr(); this.setQ({ estimado: false, estRef: true, or, cliente: cli.trim() || q.cliente || '' });
+        this.setState({ msg: 'Estimado guardado como ' + or + '. Lo encuentras en “Presupuestos guardados”.' });
+      },
       nuevoEst: () => q.items.length && !window.confirm('¿Descartar el presupuesto actual (' + (q.or || 'sin OR') + ') para hacer un estimado?') ? null : this.setState({ quote: { ...this.emptyQ(), estimado: true, or: 'EST-' + new Date().toISOString().slice(2, 10).replace(/-/g, '') }, parseMsg: '', pdfName: '', step: 2 }),
       docLabel: q.estimado ? 'Estimado de referencia' : 'Presupuesto · OR ' + (q.or || ''),
       setAnos: e => this.setS('anos', e.target.value), setCopias: e => this.setS('copias', e.target.value), exportHist: () => this.exportHist(), importHist: e => this.importHist(e),
