@@ -1619,22 +1619,23 @@ class Component extends DCLogic {
   saveFB(q) { return (this._savingFB = this.saveFB0(q)); }
   async saveFB0(q) {
     try {
-      if (!this._tfOt || q.estimado || !(q.items || []).length) return;
+      const ot = this.otDe(q); if (!ot || !(q.items || []).length) return;
       const db = await this.fbDb(); if (!db) { this.setState({ msg: 'No se pudo guardar en la nube (sin conexión con Firebase). El link del cliente sigue funcionando.' }); this.saveFail('sin conexión'); return; }
-      const key = this.fbKey(this._tfOt);
+      const key = this.fbKey(ot);
       // Un solo k por orden: si ya hay uno vigente en autorizaciones/{OT}/k se reutiliza, así los links ya enviados siguen mostrando la última versión.
       if (!this._k) { try { const a = await this.fbGet(db, 'cotizador/autorizaciones/' + key); if (a && /^[A-Za-z0-9]{4,20}$/.test(a.k || '')) this._k = a.k; } catch (e) {} this._k = this._k || this.newCode(); }
-      await db.ref('cotizador/presupuestos/' + key + '-' + this._k).set({ ot: String(this._tfOt), cliente: q.cliente || '', vehiculo: q.vehiculo || '', placa: q.placa || '', ts: Date.now(), estado: 'completo', json: JSON.stringify(this.clientPayload(q)) });
+      await db.ref('cotizador/presupuestos/' + key + '-' + this._k).set({ ot: String(ot), cliente: q.cliente || '', vehiculo: q.vehiculo || '', placa: q.placa || '', ts: Date.now(), estado: 'completo', json: JSON.stringify(this.clientPayload(q)) });
       await db.ref('cotizador/indice/' + key).set({ ts: Date.now(), estado: 'completo' });
-      await this.publicarK(db, key);
+      await this.publicarK(db, key, ot);
       this._cloudSig = this.sigItems(q); this._cloudKey = key + '-' + this._k;
-      this.setState({ msg: 'Presupuesto de la OT ' + this._tfOt + ' guardado en la nube.' }); this.saveOk('en la nube');
+      this.setState({ msg: (q.estimado ? 'Estimado ' : 'Presupuesto de la OT ') + ot + ' guardado en la nube.' }); this.saveOk('en la nube');
     } catch (e) { console.warn(e); this.setState({ msg: 'No se pudo guardar en la nube: ' + e.message }); this.saveFail(e.message); }
   }
   // k vigente de la OT en cotizador/autorizaciones/{OT}/k (solo cuando el presupuesto quedó confirmado o enviado): TallerFLOW lo lee para que sus botones apunten al último.
-  async publicarK(db, key) {
+  otDe(q) { return this._tfOt || (q && q.estimado && q.or ? String(q.or) : ''); }
+  async publicarK(db, key, ot) { ot = ot || this._tfOt;
     try { const ref = db.ref('cotizador/autorizaciones/' + key), r = await this.fbGet(db, 'cotizador/autorizaciones/' + key);
-      if (r) await ref.update({ k: this._k }); else await ref.set({ ot: String(this._tfOt), ts: Date.now(), sel: '{}', k: this._k });
+      if (r) await ref.update({ k: this._k }); else await ref.set({ ot: String(ot), ts: Date.now(), sel: '{}', k: this._k });
     } catch (e) { console.warn('publicarK', e); }
   }
   async fbOpen() {
@@ -2187,12 +2188,12 @@ class Component extends DCLogic {
   }
   // Link para el cliente: si el presupuesto reabierto no coincide con la copia de la nube, se guarda antes para poder dar el link corto (?presupuesto=…&k=…) y no el largo (#q=…).
   async linkCliente() {
-    try { const q = this.state.quote; if (this.state.settings.cortoNube && this._tfOt && !q.estimado && (q.items || []).length && !(this._k && this._cloudSig && this._cloudSig === this.sigItems(q))) await Promise.race([this.saveFB(q), new Promise(r => setTimeout(r, 8000))]); } catch (e) {}
+    try { const q = this.state.quote; if (this.state.settings.cortoNube && this.otDe(q) && (q.items || []).length && !(this._k && this._cloudSig && this._cloudSig === this.sigItems(q))) await Promise.race([this.saveFB(q), new Promise(r => setTimeout(r, 8000))]); } catch (e) {}
     return this.clientUrl();
   }
   // Dirección actual sin # y sin los parámetros de equipo (modo, admin): los links para el cliente nunca deben registrar su equipo como del taller.
   baseLimpia() { try { const u = new URL(location.href); u.hash = ''; ['modo', 'admin'].forEach(k => u.searchParams.delete(k)); return u.toString(); } catch (e) { return location.origin + location.pathname; } }
-  clientUrl() { const q = this.state.quote; if (this.state.settings.cortoNube && this._tfOt && this._k && this._cloudSig && this._cloudSig === this.sigItems(q)) return location.origin + location.pathname + '?presupuesto=' + encodeURIComponent(this._tfOt) + (q.vehiculo ? '&vehiculo=' + encodeURIComponent(String(q.vehiculo).trim().replace(/\s+/g, '-')) : '') + (q.placa ? '&placas=' + encodeURIComponent(String(q.placa).trim().replace(/\s+/g, '-')) : '') + '&k=' + this._k; const base = this._tfOt && this._k ? location.origin + location.pathname + '?ot=' + encodeURIComponent(this._tfOt) + '&k=' + this._k : this.baseLimpia(); const z = this._cliZ && this._cliZ.q === q ? this._cliZ.z : this.enc(this.clientPayload(q)); return base + '#q=' + z; }
+  clientUrl() { const q = this.state.quote, ot = this.otDe(q); if (this.state.settings.cortoNube && ot && this._k && this._cloudSig && this._cloudSig === this.sigItems(q)) return location.origin + location.pathname + '?presupuesto=' + encodeURIComponent(ot) + (q.vehiculo ? '&vehiculo=' + encodeURIComponent(String(q.vehiculo).trim().replace(/\s+/g, '-')) : '') + (q.placa ? '&placas=' + encodeURIComponent(String(q.placa).trim().replace(/\s+/g, '-')) : '') + '&k=' + this._k; const base = ot && this._k ? location.origin + location.pathname + '?ot=' + encodeURIComponent(ot) + '&k=' + this._k : this.baseLimpia(); const z = this._cliZ && this._cliZ.q === q ? this._cliZ.z : this.enc(this.clientPayload(q)); return base + '#q=' + z; }
   doPrint() {
     this.setState({ printing: true }, () => setTimeout(() => {
       const done = () => { this.setState({ printing: false }); window.removeEventListener('afterprint', done); };
@@ -2356,7 +2357,7 @@ class Component extends DCLogic {
         const or = this.nextCorr(); this.setQ({ estimado: false, estRef: true, or, cliente: cli.trim() || q.cliente || '' });
         this.setState({ msg: 'Estimado guardado como ' + or + '. Lo encuentras en “Presupuestos guardados”.' });
       },
-      nuevoEst: () => q.items.length && !window.confirm('¿Descartar el presupuesto actual (' + (q.or || 'sin OR') + ') para hacer un estimado?') ? null : this.setState({ quote: { ...this.emptyQ(), estimado: true, or: 'EST-' + new Date().toISOString().slice(2, 10).replace(/-/g, '') }, parseMsg: '', pdfName: '', step: 2 }),
+      nuevoEst: () => q.items.length && !window.confirm('¿Descartar el presupuesto actual (' + (q.or || 'sin OR') + ') para hacer un estimado?') ? null : (this._k = null, this._cloudSig = null, this.setState({ quote: { ...this.emptyQ(), estimado: true, or: 'EST-' + new Date().toISOString().slice(2, 10).replace(/-/g, '') + '-' + Math.random().toString(36).slice(2, 5) }, parseMsg: '', pdfName: '', step: 2 })),
       docLabel: q.estimado ? 'Estimado de referencia' : 'Presupuesto · OR ' + (q.or || ''),
       setAnos: e => this.setS('anos', e.target.value), setCopias: e => this.setS('copias', e.target.value), exportHist: () => this.exportHist(), importHist: e => this.importHist(e),
       histInfo: base ? (meta.recs || 0).toLocaleString('es-GT') + ' casos guardados, ' + (meta.own || 0).toLocaleString('es-GT') + ' creados en esta herramienta. Cada presupuesto confirmado por partes y servicio se agrega solo.' : '',
