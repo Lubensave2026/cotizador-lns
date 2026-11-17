@@ -539,6 +539,7 @@
       <div style="display: flex; gap: 8px; flex-wrap: wrap; align-items: center;">
         <span style="font-size: 12px; text-transform: uppercase; letter-spacing: 0.08em; flex: 1; min-width: 200px;">Paso 3 de 3 · Vista previa de lo que verá el cliente</span>
         <button class="btn btn-secondary" onClick="{{ copyLink }}" disabled="{{ locked }}">{{ copyLabel }}</button>
+        <button class="btn btn-secondary" onClick="{{ copyLinkPdf }}" disabled="{{ locked }}">{{ copyPdfLabel }}</button>
         <button class="btn btn-secondary" onClick="{{ sendWa }}" disabled="{{ locked }}">Enviar por WhatsApp</button>
         <button class="btn" onClick="{{ doPrint }}" disabled="{{ locked }}" style="background: #000; color: #FFE500; font-weight: 800;" style-hover="background: #2d2b2b;">Descargar PDF</button>
       </div>
@@ -955,6 +956,7 @@ class Component extends DCLogic {
   listaGuardados() { const m = this.quoteStore(); return Object.keys(m).map(k => ({ ...m[k], _k: k })).sort((a, b) => (b._t || 0) - (a._t || 0)); }
   quoteStore() { try { return JSON.parse(localStorage.getItem('lns-cotizaciones') || '{}'); } catch (e) { return {}; } }
   componentDidUpdate() {
+    { const st0 = this.state; if (!this._pdfDone && st0.clientOnly && !st0.loading && !st0.cargaNube && (st0.quote.items || []).length) { let w = false; try { w = new URLSearchParams(location.search).get('pdf') === '1'; } catch (e) {} this._pdfDone = true; if (w) setTimeout(() => this.doPrint(), 1200); } }
     this.precomprimirCliente(); this.actualizarTitulo(); this.programarBorrador(); this.vigilarAut(); this.programarNube();
     if (this.state.clientOnly || this.state.loading) return;
     { const q0 = this.state.quote; if (!q0.or && q0.items && q0.items.length && !q0.estimado && !this._tfOt) this.setState(st => st.quote.or ? null : { quote: { ...st.quote, or: this.nextCorr() } }); }
@@ -2373,7 +2375,8 @@ class Component extends DCLogic {
       confirmServLabel: q.okS ? 'Ir a enviar al cliente →' : 'Confirmar mano de obra ✓',
       confirmServ: () => { if (q.okS) this.setState({ step: 4 }); else { this.setQ({ okS: this.stamp() }); this.notifyMod(q); if (q.okP) { this.saveToHist(q); this.avisarLinkCliente(q); } } },
       locked, lockMsg: !q.okP ? 'Falta que el asesor de partes confirme los repuestos.' : 'Falta que el asesor de servicio confirme la mano de obra.',
-      copyLabel: st.copied === 'cli' ? 'Link copiado ✓' : 'Copiar link para cliente',
+      copyLabel: st.copied === 'cli' ? 'Link copiado ✓' : 'Copiar link para cliente', copyPdfLabel: st.copied === 'pdf' ? 'Link PDF copiado ✓' : 'Copiar link que abre el PDF',
+      copyLinkPdf: async () => { if (S.cortoNube && this._savingFB) await Promise.race([this._savingFB, new Promise(r => setTimeout(r, 4000))]); const u = await this.linkCliente(), h = u.indexOf('#'), b = h < 0 ? u : u.slice(0, h), z = h < 0 ? '' : u.slice(h); this.copy(b + (b.includes('?') ? '&' : '?') + 'pdf=1' + z, 'pdf'); this.notifyEnviada(u); },
       copyLink: async () => { if (S.cortoNube && this._savingFB) await Promise.race([this._savingFB, new Promise(r => setTimeout(r, 4000))]); const u = await this.linkCliente(); this.copy(u, 'cli'); this.notifyEnviada(u); },
       sendWa: async () => { const w = window.open('about:blank', '_blank'); const tel = (q.tel || '').replace(/\D/g, ''); const msg = 'Lube N Save Zona 10' + String.fromCharCode(10) + 'Presupuesto No. ' + q.or + ' · ' + q.vehiculo + (q.placa ? ' · ' + q.placa : '') + String.fromCharCode(10) + 'Elija qué trabajos realizar aquí: ' + (this._cu = await this.linkCliente()); this.notifyTF(this._cu);
         const wa = 'https://wa.me/' + (tel ? (tel.length === 8 ? '502' + tel : tel) : '') + '?text=' + encodeURIComponent(msg); if (w) w.location.href = wa; else window.open(wa, '_blank'); },
