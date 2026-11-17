@@ -2264,7 +2264,7 @@ class Component extends DCLogic {
       const secs = order.map(g => ({ name: g, qLabel: 'CTD', sub: this.fmt(groups[g].reduce((a, x) => a + x._t, 0)), rows: groups[g].map((x, k) => ({ ...x, no: String(k + 1) })) }));
       const opsRows = mi.ops.filter(l => (l.desc || '').trim() && this.num(l.hrs)).map((l, k) => ({ no: String(k + 1), desc: l.desc, q: String(this.num(l.q) || 1), unit: this.fmt(this.num(l.moFmt) / (this.num(l.q) || 1)), tot: l.moFmt, _t: this.num(l.moFmt) }));
       if (opsRows.length) secs.push({ name: 'Mano de obra', qLabel: 'CTD', sub: this.fmt(opsRows.reduce((a, x) => a + x._t, 0)), rows: opsRows });
-      const modal = { kicker: (tplS ? 'Detalle del servicio' : 'Desglose') + ' · ' + (q.vehiculo || '') + ' ' + (q.anio || ''), title: tplS ? tplS.t : mi.name,
+      const modal = { kicker: (tplS ? 'Detalle del servicio' : 'Desglose') + ' · ' + (q.vehiculo || '') + ' ' + (q.anio || ''), title: tplS ? (mi.src.alt && String(q.vehiculo || '').trim() ? (String(q.vehiculo).trim() + ' ' + (q.anio || '')).trim().toUpperCase() : tplS.t) : mi.name,
         secs, hasDsc: !!mi.hasDsc, dscFmt: mi.dscFmt, totLabel: 'Total ' + mi.name, tot: mi.totFmt, incluye: mi.incluye || [], hasIncluye: !!(mi.incluye && mi.incluye.length) };
       return modal;
     };
