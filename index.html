@@ -8,6 +8,9 @@
 <link rel="manifest" href="manifest.webmanifest">
 <meta name="theme-color" content="#121212">
 <title>Cotizador LNS</title>
+<meta property="og:site_name" content="Lube N Save Zona 10">
+<meta property="og:title" content="Presupuesto · Lube N Save Zona 10">
+<meta property="og:description" content="Presupuesto de su vehículo. Ábralo para ver el detalle y elegir los trabajos.">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Cotizador">
 <script src="./support.js"></script>
@@ -1634,6 +1637,7 @@ class Component extends DCLogic {
     } catch (e) { console.warn(e); this.setState({ msg: 'No se pudo guardar en la nube: ' + e.message }); this.saveFail(e.message); }
   }
   // k vigente de la OT en cotizador/autorizaciones/{OT}/k (solo cuando el presupuesto quedó confirmado o enviado): TallerFLOW lo lee para que sus botones apunten al último.
+  tituloEnvio(q) { const v = String(q.vehiculo || '').trim().replace(/\s+/g, ' ').toUpperCase(), o = String(q.or || '').trim(); return ('PRESUPUESTO' + (v ? ' ' + v : '') + (/^EST-/i.test(o) ? '' : /^P-\d+$/i.test(o) ? ' No. ' + o : o ? ' ORDEN ' + o : '')).trim(); }
   otDe(q) { return this._tfOt || (q && q.estimado && q.or ? String(q.or) : ''); }
   async publicarK(db, key, ot) { ot = ot || this._tfOt;
     try { const ref = db.ref('cotizador/autorizaciones/' + key), r = await this.fbGet(db, 'cotizador/autorizaciones/' + key);
@@ -2376,9 +2380,9 @@ class Component extends DCLogic {
       confirmServ: () => { if (q.okS) this.setState({ step: 4 }); else { this.setQ({ okS: this.stamp() }); this.notifyMod(q); if (q.okP) { this.saveToHist(q); this.avisarLinkCliente(q); } } },
       locked, lockMsg: !q.okP ? 'Falta que el asesor de partes confirme los repuestos.' : 'Falta que el asesor de servicio confirme la mano de obra.',
       copyLabel: st.copied === 'cli' ? 'Link copiado ✓' : 'Copiar link para cliente', copyPdfLabel: st.copied === 'pdf' ? 'Link PDF copiado ✓' : 'Copiar link que abre el PDF',
-      copyLinkPdf: async () => { if (S.cortoNube && this._savingFB) await Promise.race([this._savingFB, new Promise(r => setTimeout(r, 4000))]); const u = await this.linkCliente(), h = u.indexOf('#'), b = h < 0 ? u : u.slice(0, h), z = h < 0 ? '' : u.slice(h); this.copy(b + (b.includes('?') ? '&' : '?') + 'pdf=1' + z, 'pdf'); this.notifyEnviada(u); },
-      copyLink: async () => { if (S.cortoNube && this._savingFB) await Promise.race([this._savingFB, new Promise(r => setTimeout(r, 4000))]); const u = await this.linkCliente(); this.copy(u, 'cli'); this.notifyEnviada(u); },
-      sendWa: async () => { const w = window.open('about:blank', '_blank'); const tel = (q.tel || '').replace(/\D/g, ''); const msg = 'Lube N Save Zona 10' + String.fromCharCode(10) + 'Presupuesto No. ' + q.or + ' · ' + q.vehiculo + (q.placa ? ' · ' + q.placa : '') + String.fromCharCode(10) + 'Elija qué trabajos realizar aquí: ' + (this._cu = await this.linkCliente()); this.notifyTF(this._cu);
+      copyLinkPdf: async () => { if (S.cortoNube && this._savingFB) await Promise.race([this._savingFB, new Promise(r => setTimeout(r, 4000))]); const u = await this.linkCliente(), h = u.indexOf('#'), b = h < 0 ? u : u.slice(0, h), z = h < 0 ? '' : u.slice(h); this.copy(this.tituloEnvio(q) + ' (PDF)' + String.fromCharCode(10) + 'Lube N Save Zona 10' + String.fromCharCode(10) + 'Abre y descarga el PDF aquí: ' + b + (b.includes('?') ? '&' : '?') + 'pdf=1' + z, 'pdf'); this.notifyEnviada(u); },
+      copyLink: async () => { if (S.cortoNube && this._savingFB) await Promise.race([this._savingFB, new Promise(r => setTimeout(r, 4000))]); const u = await this.linkCliente(); this.copy(this.tituloEnvio(q) + String.fromCharCode(10) + 'Lube N Save Zona 10' + String.fromCharCode(10) + 'Elija qué trabajos realizar aquí: ' + u, 'cli'); this.notifyEnviada(u); },
+      sendWa: async () => { const w = window.open('about:blank', '_blank'); const tel = (q.tel || '').replace(/\D/g, ''); const msg = this.tituloEnvio(q) + (q.placa ? ' · ' + q.placa : '') + String.fromCharCode(10) + 'Lube N Save Zona 10' + String.fromCharCode(10) + 'Elija qué trabajos realizar aquí: ' + (this._cu = await this.linkCliente()); this.notifyTF(this._cu);
         const wa = 'https://wa.me/' + (tel ? (tel.length === 8 ? '502' + tel : tel) : '') + '?text=' + encodeURIComponent(msg); if (w) w.location.href = wa; else window.open(wa, '_blank'); },
       doPrint: () => this.doPrint(),
       exp: (() => { const E = this.expRows(items, T * (1 + IVA)); const txtP = this.tsv(E.P), txtO = this.tsv(E.O);
