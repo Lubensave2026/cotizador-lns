@@ -539,11 +539,14 @@
       <sc-if value="{{ locked }}" hint-placeholder-val="{{ false }}">
         <div style="background: #fff2ef; color: #7c1405; padding: 12px 16px; font-size: 14px; border-left: 0; border-top: 2px solid #ec3013;">{{ lockMsg }}</div>
       </sc-if>
+      <sc-if value="{{ soloMario }}" hint-placeholder-val="{{ false }}">
+        <div style="background: #fff8cc; color: #4a3d00; padding: 10px 16px; font-size: 13px; border-top: 2px solid #FFE500;">Este equipo está configurado como <strong>repuestos (Mario)</strong>: el envío del link al cliente lo hace Ricardo o el administrador.</div>
+      </sc-if>
       <div style="display: flex; gap: 8px; flex-wrap: wrap; align-items: center;">
         <span style="font-size: 12px; text-transform: uppercase; letter-spacing: 0.08em; flex: 1; min-width: 200px;">Paso 3 de 3 · Vista previa de lo que verá el cliente</span>
-        <button class="btn btn-secondary" onClick="{{ copyLink }}" disabled="{{ locked }}">{{ copyLabel }}</button>
-        <button class="btn btn-secondary" onClick="{{ copyLinkPdf }}" disabled="{{ locked }}">{{ copyPdfLabel }}</button>
-        <button class="btn btn-secondary" onClick="{{ sendWa }}" disabled="{{ locked }}">Enviar por WhatsApp</button>
+        <button class="btn btn-secondary" onClick="{{ copyLink }}" disabled="{{ envLocked }}">{{ copyLabel }}</button>
+        <button class="btn btn-secondary" onClick="{{ copyLinkPdf }}" disabled="{{ envLocked }}">{{ copyPdfLabel }}</button>
+        <button class="btn btn-secondary" onClick="{{ sendWa }}" disabled="{{ envLocked }}">Enviar por WhatsApp</button>
         <button class="btn" onClick="{{ doPrint }}" disabled="{{ locked }}" style="background: #000; color: #FFE500; font-weight: 800;" style-hover="background: #2d2b2b;">Descargar PDF</button>
       </div>
       <div class="field" style="max-width: 760px;"><label>Observaciones finales (las ve el cliente; escríbelas antes de enviar)</label><textarea class="input" value="{{ quote.obsF }}" onChange="{{ setObsF }}" placeholder="Ej. Lo hablado con el cliente: se puede reprogramar la cita, el repuesto llega en 2 días." style="min-height: 72px; resize: vertical; background: #fff;"></textarea></div>
@@ -885,6 +888,7 @@ class Component extends DCLogic {
     try {
       const P = new URLSearchParams(location.search), keys = ['or', 'link', 'placa', 'vehiculo', 'anio', 'cliente', 'tel', 'km', 'asesor'];
       const pre = {}; keys.forEach(k => { const v = (P.get(k) || '').trim(); if (v) pre[k] = v; });
+      if (P.has('rol')) { const rv = (P.get('rol') || '').toLowerCase().trim(); try { if (rv === 'mario' || rv === 'ricardo') localStorage.setItem('lns-rol', rv); else localStorage.removeItem('lns-rol'); } catch (e) {} try { const u = new URL(location.href); u.searchParams.delete('rol'); history.replaceState(null, '', u.toString()); } catch (e) {} }
       let adm = (P.get('admin') || '').trim(); if (P.has('admin') && (!adm || adm === '1')) adm = (window.prompt('Código de administrador:') || '').trim();
       if (adm) { if (await this.hash(adm) === this.adminHash()) { try { localStorage.setItem('lns-admin-dev', this.adminHash()); } catch (e) {} this.setState({ adminDev: true, msg: 'Este equipo quedó autorizado como administrador: ya puedes abrir la pestaña Base.' }); }
         try { const u = new URL(location.href); u.searchParams.delete('admin'); history.replaceState(null, '', u.toString()); } catch (e) {} }
@@ -2117,7 +2121,7 @@ class Component extends DCLogic {
   // Devuelve a TallerFLOW (la pestaña que abrió el cotizador) el link del cliente para guardarlo en el historial de la orden.
   notifyTF(url, tipo) {
     try { const kN = (tipo || 'cli') + '|' + url; if (this._lastNotif === kN) return; /* mismo link ya avisado: no repetir en la bitácora de TallerFLOW */
-      if (this._tfOt && !this.state.quote.estimado && window.opener && !window.opener.closed) { this._lastNotif = kN; window.opener.postMessage({ tipo: tipo === 'partes' ? 'lns-cotizacion-partes' : 'lns-cotizacion', ot: this._tfOt, url, total: this._tot || '', manoObraCompleta: tipo !== 'partes' && !!this.state.quote.okS, ts: Date.now() }, 'https://lubensave2026.github.io'); this.setState({ msg: (tipo === 'partes' ? 'Cotización de repuestos enviada a TallerFLOW' : 'Link enviado a TallerFLOW') + ' (OT ' + this._tfOt + ').' }); } } catch (e) {}
+      if (this._tfOt && !this.state.quote.estimado && window.opener && !window.opener.closed) { this._lastNotif = kN; window.opener.postMessage({ tipo: tipo === 'partes' ? 'lns-cotizacion-partes' : 'lns-cotizacion', ot: this._tfOt, url, total: this._tot || '', manoObraCompleta: tipo !== 'partes' && !!this.state.quote.okS, por: this.rolEq() || 'sin-rol', ts: Date.now() }, 'https://lubensave2026.github.io'); this.setState({ msg: (tipo === 'partes' ? 'Cotización de repuestos enviada a TallerFLOW' : 'Link enviado a TallerFLOW') + ' (OT ' + this._tfOt + ').' }); } } catch (e) {}
   }
   // Número de orden de este presupuesto: el de TallerFLOW (?ot=) o, en un equipo del taller con un link sin ot, el OR del presupuesto si es un número de orden (solo dígitos).
   otEq() { if (this._tfOt) return this._tfOt; const o = String((this.state.quote || {}).or || '').trim(); return this.esEquipo() && /^[0-9]{3,7}$/.test(o) ? o : ''; }
@@ -2163,10 +2167,13 @@ class Component extends DCLogic {
       this.setState({ msg: 'Notas del equipo guardadas en la nube (OT ' + this.otEq() + ').' });
     } catch (e) { console.warn('guardarAcuerdos', e); this.setState({ msg: 'No se pudieron guardar las notas: ' + e.message }); }
   }
+  // Rol de este equipo: administrador (equipo autorizado), o 'mario' (repuestos, no envía links) / 'ricardo' (asesor), fijado una vez con ?rol=mario|ricardo|ninguno.
+  rolEq() { if (this.state.adminDev) return 'admin'; let r = ''; try { r = localStorage.getItem('lns-rol') || ''; } catch (e) {} return r === 'mario' || r === 'ricardo' ? r : ''; }
   // Aviso de que el presupuesto salio al cliente: solo al copiar el link, una vez por link.
   notifyEnviada(url) {
     try { const kN = 'env|' + url; if (this._lastEnv === kN) return;
-      if (this._tfOt && !this.state.quote.estimado && window.opener && !window.opener.closed) { this._lastEnv = kN; window.opener.postMessage({ tipo: 'lns-cotizacion-enviada', ot: this._tfOt, url, manoObraCompleta: !!this.state.quote.okS, ts: Date.now() }, 'https://lubensave2026.github.io'); this.setState({ msg: 'Aviso de envío al cliente registrado en TallerFLOW (OT ' + this._tfOt + ').' }); } } catch (e) {}
+      const rol = this.rolEq(); if (rol === 'mario') return; if (rol === 'admin') { this.setState({ msg: 'Link copiado como administrador: NO se avisó a TallerFLOW (la fase avanza cuando lo envía Ricardo).' }); return; }
+      if (this._tfOt && !this.state.quote.estimado && window.opener && !window.opener.closed) { this._lastEnv = kN; window.opener.postMessage({ tipo: 'lns-cotizacion-enviada', ot: this._tfOt, url, manoObraCompleta: !!this.state.quote.okS, por: rol || 'ricardo', ts: Date.now() }, 'https://lubensave2026.github.io'); this.setState({ msg: 'Aviso de envío al cliente registrado en TallerFLOW (OT ' + this._tfOt + ').' }); } } catch (e) {}
   }
   // Resultado de la autorizacion del cliente (boton manual del equipo): cotizado, autorizado y pendiente.
   // Resultado de la autorizacion (boton manual del equipo): se guarda SIEMPRE en cotizador/autorizaciones/{OT} (campo resultadoTs) y, si hay ventana de TallerFLOW conectada, se avisa también con postMessage.
@@ -2378,7 +2385,7 @@ class Component extends DCLogic {
       okServText: q.okS ? 'confirmado ' + q.okS : 'pendiente de confirmar',
       confirmServLabel: q.okS ? 'Ir a enviar al cliente →' : 'Confirmar mano de obra ✓',
       confirmServ: () => { if (q.okS) this.setState({ step: 4 }); else { this.setQ({ okS: this.stamp() }); this.notifyMod(q); if (q.okP) { this.saveToHist(q); this.avisarLinkCliente(q); } } },
-      locked, lockMsg: !q.okP ? 'Falta que el asesor de partes confirme los repuestos.' : 'Falta que el asesor de servicio confirme la mano de obra.',
+      envLocked: locked || this.rolEq() === 'mario', soloMario: this.rolEq() === 'mario' && !st.clientOnly, locked, lockMsg: !q.okP ? 'Falta que el asesor de partes confirme los repuestos.' : 'Falta que el asesor de servicio confirme la mano de obra.',
       copyLabel: st.copied === 'cli' ? 'Link copiado ✓' : 'Copiar link para cliente', copyPdfLabel: st.copied === 'pdf' ? 'Link PDF copiado ✓' : 'Copiar link que abre el PDF',
       copyLinkPdf: async () => { if (S.cortoNube && this._savingFB) await Promise.race([this._savingFB, new Promise(r => setTimeout(r, 4000))]); const u = await this.linkCliente(), h = u.indexOf('#'), b = h < 0 ? u : u.slice(0, h), z = h < 0 ? '' : u.slice(h); this.copy(this.tituloEnvio(q) + ' (PDF)' + String.fromCharCode(10) + 'Lube N Save Zona 10' + String.fromCharCode(10) + 'Abre y descarga el PDF aquí: ' + b + (b.includes('?') ? '&' : '?') + 'pdf=1' + z, 'pdf'); this.notifyEnviada(u); },
       copyLink: async () => { if (S.cortoNube && this._savingFB) await Promise.race([this._savingFB, new Promise(r => setTimeout(r, 4000))]); const u = await this.linkCliente(); this.copy(this.tituloEnvio(q) + String.fromCharCode(10) + 'Lube N Save Zona 10' + String.fromCharCode(10) + 'Elija qué trabajos realizar aquí: ' + u, 'cli'); this.notifyEnviada(u); },
