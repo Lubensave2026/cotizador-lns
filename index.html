@@ -1460,7 +1460,7 @@ class Component extends DCLogic {
     const S = this.state.serv, s = S.servicios[cands[k]];
     const tb = S.tabla[s.tipo.replace('SERVICIO ', '').replace(' COMPLETO', '')];
     const parts = [], ops = [];
-    s.items.forEach(([sec, name, q, u]) => { const tot = Math.round(q * u * 100) / 100; if (!tot) return;
+    s.items.forEach(([sec, name, q, u]) => { const tot = Math.round(q * u * 100) / 100; if (!tot && !(q > 0 && /^aceite de motor/i.test(String(name).trim()))) return; /* el aceite de motor se conserva aunque la plantilla lo traiga en 0: así se puede aplicar el aceite predeterminado o elegir uno */
       if (/MANO DE OBRA/i.test(sec)) ops.push({ desc: this.cap(name), hrs: String(Math.round(tot / (this.num(this.state.settings.tarifa) || 600) * 10000) / 10000) });
       else parts.push({ desc: this.cap(name.replace(/^wippe$/i, 'Wipe')), sec: this.cap(sec || 'Repuestos'), q, rep: String(this.r2(tot)) }); });
     const ac = this.aceiteDefault(s.oil || s.t), aj = ac ? parts.findIndex(l => /^aceite de motor/i.test(l.desc)) : -1;
