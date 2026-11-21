@@ -843,6 +843,7 @@ class Component extends DCLogic {
 
   componentWillUnmount() { window.removeEventListener('keydown', this._pinKey); window.removeEventListener('keydown', this._gridKey); }
   async componentDidMount() {
+    this.limpiarCopiasOr();
     this._pinKey = e => { const st = this.state; if (st.baseOpen || st.step !== 1 || st.clientOnly) return;
       if (/^\d$/.test(e.key)) { e.preventDefault(); this.pinPress(e.key); } else if (e.key === 'Backspace') { e.preventDefault(); this.pinPress('Borrar'); } else if (e.key === 'Enter') { e.preventDefault(); this.unlock(); } else if (e.key === 'Tab') { e.preventDefault(); this.setState(s => ({ pinField: s.pinField === 2 ? 1 : 2 })); } };
     window.addEventListener('keydown', this._pinKey);
@@ -961,6 +962,11 @@ class Component extends DCLogic {
   // Presupuestos hechos fuera de TallerFLOW (sin OR): número correlativo propio de este equipo, P-001, P-002…
   nextCorr() { const m = this.quoteStore(); let n = 0; try { n = parseInt(localStorage.getItem('lns-corr') || '0', 10) || 0; } catch (e) {} do { n++; } while (m['P-' + String(n).padStart(3, '0')]); try { localStorage.setItem('lns-corr', String(n)); } catch (e) {} return 'P-' + String(n).padStart(3, '0'); }
   listaGuardados() { const m = this.quoteStore(); return Object.keys(m).map(k => ({ ...m[k], _k: k })).sort((a, b) => (b._t || 0) - (a._t || 0)); }
+  // Limpia copias que dejó el número de orden al teclearlo letra por letra (5, 55, 550, 5501…): misma lista de puntos y el número es el inicio de otro guardado hecho en menos de 30 min.
+  limpiarCopiasOr() { try { const m = this.quoteStore(), ks = Object.keys(m); let n = 0;
+    ks.forEach(k => { const x = m[k]; if (!x || !x.items) return; const jx = JSON.stringify(x.items), kl = String(k).toLowerCase();
+      if (ks.some(k2 => k2 !== k && m[k2] && m[k2].items && String(k2).toLowerCase().startsWith(kl) && k2.length > k.length && Math.abs((m[k2]._t || 0) - (x._t || 0)) < 1800000 && JSON.stringify(m[k2].items) === jx) || ks.some(k2 => k2 !== k && m[k2] && m[k2].items && String(m[k2].placa || '').trim().toLowerCase() === kl && Math.abs((m[k2]._t || 0) - (x._t || 0)) < 1800000 && JSON.stringify(m[k2].items) === jx)) { delete m[k]; n++; } });
+    if (n) localStorage.setItem('lns-cotizaciones', JSON.stringify(m)); } catch (e) {} }
   quoteStore() { try { return JSON.parse(localStorage.getItem('lns-cotizaciones') || '{}'); } catch (e) { return {}; } }
   componentDidUpdate() {
     { const st0 = this.state; if (!this._pdfDone && st0.clientOnly && !st0.loading && !st0.cargaNube && (st0.quote.items || []).length) { let w = false; try { w = new URLSearchParams(location.search).get('pdf') === '1'; } catch (e) {} this._pdfDone = true; if (w) setTimeout(() => this.doPrint(), 1200); } }
@@ -968,8 +974,10 @@ class Component extends DCLogic {
     if (this.state.clientOnly || this.state.loading) return;
     { const q0 = this.state.quote; if (!q0.or && q0.items && q0.items.length && !q0.estimado && !this._tfOt) this.setState(st => st.quote.or ? null : { quote: { ...st.quote, or: this.nextCorr() } }); }
     if (this._lq !== this.state.quote || this._ls !== this.state.settings)
-      try { this._lq = this.state.quote; this._ls = this.state.settings;
-        const q = this.state.quote; if (q.or && q.items && q.items.length && !q.estimado) { const m = this.quoteStore(); const old = m[q.or]; if (old && this.opsScore(old) > this.opsScore(q)) { try { const b = this.backupStore(); b[q.or] = { ...old, _t: Date.now() }; Object.keys(b).sort((x, y) => (b[y]._t || 0) - (b[x]._t || 0)).slice(40).forEach(k => delete b[k]); localStorage.setItem('lns-cotiz-respaldo', JSON.stringify(b)); } catch (e) {} } m[q.or] = { ...q, _t: Date.now() };
+      try { const pq = this._lq; this._lq = this.state.quote; this._ls = this.state.settings;
+        const q = this.state.quote; if (q.or && q.items && q.items.length && !q.estimado) { const m = this.quoteStore(); const old = m[q.or];
+          /* Si solo se cambió el número (OR) del mismo presupuesto, se renombra: no se deja una copia por cada letra que se teclea. */
+          if (pq && pq !== q && pq.or && String(pq.or) !== String(q.or) && pq.items === q.items && m[pq.or]) delete m[pq.or]; if (old && this.opsScore(old) > this.opsScore(q)) { try { const b = this.backupStore(); b[q.or] = { ...old, _t: Date.now() }; Object.keys(b).sort((x, y) => (b[y]._t || 0) - (b[x]._t || 0)).slice(40).forEach(k => delete b[k]); localStorage.setItem('lns-cotiz-respaldo', JSON.stringify(b)); } catch (e) {} } m[q.or] = { ...q, _t: Date.now() };
           const ks = Object.keys(m).sort((a, b) => (m[b]._t || 0) - (m[a]._t || 0)); ks.slice(400).forEach(k => delete m[k]); localStorage.setItem('lns-cotizaciones', JSON.stringify(m)); } localStorage.setItem('lns-cotizador-v2', JSON.stringify({ quote: this.state.quote, settings: this.state.settings })); if (this.state.baseOpen) { if (this._lsRef === undefined) this._lsRef = this.state.settings; else if (this._lsRef !== this.state.settings) { this._lsRef = this.state.settings; this.pushSettings(); } } else this._lsRef = undefined; } catch (e) {}
   }
   enc(o) { const b = new TextEncoder().encode(JSON.stringify(o)); let s = ''; b.forEach(x => s += String.fromCharCode(x)); return btoa(s).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, ''); }
