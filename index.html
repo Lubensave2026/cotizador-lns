@@ -908,7 +908,7 @@ class Component extends DCLogic {
     this.recs = recs; const base = this.lib.buildFromRecords(recs);
     let serv = await this.idbGet('serv'), servSrc = 'Plantilla cargada en este navegador';
     if (!serv) { try { serv = await (await fetch('servicios.json')).json(); servSrc = 'ESTIMADO SERVICIOS.xlsx (incluida)'; } catch (e) { serv = null; } }
-    let aceites = await this.idbGet('aceites'); if (!aceites) { try { aceites = (await (await fetch('aceites.json')).json()).aceites || []; } catch (e) { aceites = []; } }
+    let aceites = await this.idbGet('aceites'); { /* Si se publicó una lista nueva (cambia "ver"), reemplaza la copia vieja guardada en este navegador. */ try { const pub = await (await fetch('aceites.json?v=' + Date.now())).json(), vv = await this.idbGet('aceitesVer'); if (pub && pub.aceites && pub.aceites.length && (!aceites || (pub.ver && pub.ver !== vv))) { aceites = pub.aceites; await this.idbSet(aceites, 'aceites'); if (pub.ver) await this.idbSet(pub.ver, 'aceitesVer'); } } catch (e) { if (!aceites) aceites = []; } }
     this.setState({ base, serv, servSrc, aceites, baseSrc: src + ' · procesado ' + this.fd(base.meta.built), loading: false }, () => {
       if (serv) { const vk = this.vehKeyOf(this.state.quote.vehiculo); let ch = false;
         const items = (this.state.quote.items || []).map(it => { const tipo = this.svcTipo(it.name); if (!tipo || (it.src && it.src.tpl)) return it;
@@ -1078,7 +1078,7 @@ class Component extends DCLogic {
   aceDescargar() { const blob = new Blob([JSON.stringify({ aceites: (this.state.aceites || []).filter(a => String(a.n || '').trim()) })], { type: 'application/json' }); const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'aceites.json'; document.body.appendChild(a); a.click(); a.remove(); }
   async aceRestaurar() {
     if (!window.confirm('Se descartan los cambios hechos en este navegador y se vuelve a la lista de aceites publicada. ¿Continuar?')) return;
-    try { const aceites = (await (await fetch('aceites.json?v=' + Date.now())).json()).aceites || []; const db = await this.idb(); await new Promise(res => { const t = db.transaction('kv', 'readwrite'); t.objectStore('kv').delete('aceites'); t.oncomplete = () => res(); }); this.setState({ aceites, msg: 'Lista de aceites publicada restaurada.' }); } catch (e) { this.setState({ msg: 'No se pudo restaurar: ' + e.message }); }
+    try { const pubA = await (await fetch('aceites.json?v=' + Date.now())).json(), aceites = pubA.aceites || []; if (pubA.ver) await this.idbSet(pubA.ver, 'aceitesVer'); const db = await this.idb(); await new Promise(res => { const t = db.transaction('kv', 'readwrite'); t.objectStore('kv').delete('aceites'); t.oncomplete = () => res(); }); this.setState({ aceites, msg: 'Lista de aceites publicada restaurada.' }); } catch (e) { this.setState({ msg: 'No se pudo restaurar: ' + e.message }); }
   }
   svcOpen(v) { const s = v === '' ? null : this.state.serv.servicios[+v]; this.setState({ svcEd: s ? { idx: +v, rows: s.items.map(r => ({ c: String(r[0] == null ? '' : r[0]), d: String(r[1] == null ? '' : r[1]), q: String(r[2]), u: String(r[3]) })) } : null }); }
   svcSet(i, patch) { this.setState(s => s.svcEd ? { svcEd: { ...s.svcEd, rows: s.svcEd.rows.map((r, j) => j === i ? { ...r, ...patch } : r) } } : null); }
