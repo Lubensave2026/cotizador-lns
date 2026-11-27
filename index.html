@@ -1277,7 +1277,7 @@ class Component extends DCLogic {
     const arreglar = d => this.cap(d).replace(/\buv\b/gi, 'UV').replace(/\ba\/c\b/gi, 'A/C').replace(/\bgas\b(?!\s*fre)/i, ctxAC ? 'gas freón' : 'gas');
     const piezas = [];
     const agregar = (txt, verbo, qdef) => {
-      let t = String(txt || '').trim().replace(/^(?:de|del|la|el|los|las)\s+/i, '').replace(/\s+(?:por|que|ya|para|porque|debido|pues|y\s+se)\b.*$/i, '').replace(/[()"]/g, '').trim();
+      let t = String(txt || '').trim().replace(/^(?:de|del|la|el|los|las)\s+/i, '').replace(/\s+(?:hay\s+que|(?:se\s+)?tiene\s+que|se\s+debe|por|que|ya|para|porque|debido|pues|y\s+se)\b.*$/i, '').replace(/[()"]/g, '').trim();
       const mv = t.match(RXV); if (mv) { verbo = tipoV(mv[1]) || verbo; t = t.slice(mv[0].length).replace(/^(?:de|del)\s+/i, ''); }
       t = t.replace(/^(?:esta|este|esa|ese|estas|estos|esas|esos|dicha|dicho)\s+/i, '');
       t = t.replace(/\s+(?:primero|antes|despu[eé]s|luego|tambi[eé]n|urgente|pronto|ahora)$/i, '');
@@ -1297,7 +1297,11 @@ class Component extends DCLogic {
       agregar(name.trim(), 'cambio', /\b(ambos|ambas|par|pares)\b/i.test(name) || /^(amortiguador|muleta|r[oó]tula|terminal|cabezal|buje|base|resorte|brazo|rodamiento|maza|balero|llanta|foco|mangueta)\w*s\b/i.test(name.trim()) ? 2 : 1);
     const nNom = piezas.length;
     // 2) del comentario del técnico, por frases
+    const desm = [], DESM = /\b(?:desmontar|desmontaje\s+de|desarmar|remover|quitar)\s+(?:(?:el|la|los|las|del)\s+)?([^,.;\n]+?)(?=\s+(?:para|porque|ya|pues|que|por)\b|[,.;\n]|$)/gi;
     String(com || '').split(/[.;\n]+|,\s*(?=\S)/).map(x => x.trim()).filter(Boolean).forEach(cl => {
+      // Desmontajes ("hay que desmontar el bumper y desmontar el silvin") son mano de obra, no repuestos.
+      cl = cl.replace(DESM, (_, o) => { o.split(/\s+(?:y|e)\s+(?:(?:desmontar|quitar|remover|desarmar)\s+)?(?:(?:el|la|los|las|del)\s+)?/i).forEach(x => { x = x.trim(); if (x.length >= 3 && x.length <= 50) { const n = arreglar(x); desm.push({ desc: 'Desmontaje de ' + n.charAt(0).toLowerCase() + n.slice(1) }); } }); return ' '; }).replace(/\s+(?:y|e)\s*$/i, '').trim();
+      if (!cl) return;
       const m = cl.match(RXV1);
       if (m) { let obj = cl.slice(m.index), verbo = '';
         const m1 = obj.match(RXV); if (m1) { verbo = tipoV(m1[1]); obj = obj.slice(m1[0].length); }
@@ -1314,7 +1318,8 @@ class Component extends DCLogic {
     // 4) A/C con gas: lleva aceite para compresor
     if (ctxAC && out.some(p => /\bgas\b/i.test(p.noun)) && !out.some(p => /compresor/i.test(p.noun))) out.push({ desc: 'Aceite para compresor', noun: 'Aceite para compresor', q: 1, key: ['aceite', 'compresor'], verbo: '' });
     const lc = x => x.charAt(0).toLowerCase() + x.slice(1);
-    return { delComentario: piezas.length - nNom, parts: out.filter(p => p.verbo !== 'rectificado').map(({ desc, noun, q }) => ({ desc, noun, q })),
+    const dsmU = desm.filter((d, i) => desm.findIndex(e => e.desc.toLowerCase() === d.desc.toLowerCase()) === i);
+    return { delComentario: piezas.length - nNom, desm: dsmU, parts: out.filter(p => p.verbo !== 'rectificado').map(({ desc, noun, q }) => ({ desc, noun, q })),
       ops: out.map(p => ({ desc: (p.verbo === 'rectificado' ? 'Rectificado de ' : p.verbo === 'carga' ? 'Carga de ' : 'Cambio de ') + lc(p.noun) })) };
   }
   // Completa un punto con los renglones que se deducen del nombre y del comentario del técnico (con precio y horas del historial cuando existen).
@@ -1322,7 +1327,7 @@ class Component extends DCLogic {
   enriquecer(vk, it, p, tipo) {
     try {
       const gen = this.lineasDeTexto(p.name, p.com, true);
-      if (!gen.parts.length && !gen.ops.length) return it;
+      if (!gen.parts.length && !gen.ops.length && !(gen.desm || []).length) return it;
       const cubre = (L, d) => { const k = this.toks(d).join(' '); return k && (L || []).some(l => { const h = this.toks(l.desc).join(' '); return h && (h.includes(k) || k.includes(h)); }); };
       const linea = g => { let pr = this.priceFor(vk, g.desc, null); if (!pr.rep && g.noun && g.noun !== g.desc) pr = this.priceFor(vk, g.noun, null); const u = pr.rep || 0; if (u && !pr.own) (it.e0 = it.e0 || []).push('p|' + g.desc.trim() + '|' + this.r2(u * g.q)); return { desc: g.desc, rep: u ? String(this.r2(u * g.q)) : '', q: String(g.q), ...(u ? { base: u * g.q, adj: 0 } : {}) }; };
       const blank = (it.parts || []).every(l => !(l.desc || '').trim() && !l.rep);
@@ -1331,7 +1336,8 @@ class Component extends DCLogic {
       else it.parts = [...it.parts, ...gen.parts.filter(g => !cubre(it.parts, g.desc)).map(linea)];
       const conH = (it.ops || []).filter(o => (o.desc || '').trim() || this.num(o.hrs));
       const extra = (conH.some(o => this.num(o.hrs)) ? [] : gen.ops).filter(o => !cubre(conH, o.desc)).map(o => { const pr = this.priceFor(vk, o.desc, null), h = pr.hrs, d = this.cap(o.desc).replace(/\buv\b/gi, 'UV').replace(/\ba\/c\b/gi, 'A/C'); if (h && !pr.own) (it.e0 = it.e0 || []).push('o|' + d.trim() + '|' + h); return { desc: d, hrs: h ? String(h) : '' }; });
-      const nuevas = [...conH, ...extra]; if (nuevas.length) it.ops = nuevas;
+      const dsm = (gen.desm || []).filter(o => !cubre([...conH, ...extra], o.desc)).map(o => { const pr = this.priceFor(vk, o.desc, null), h = pr.hrs; if (h && !pr.own) (it.e0 = it.e0 || []).push('o|' + o.desc.trim() + '|' + h); return { desc: o.desc, hrs: h ? String(h) : '' }; });
+      const nuevas = [...conH, ...extra, ...dsm]; if (nuevas.length) it.ops = nuevas;
     } catch (e) { console.warn('enriquecer', e); }
     return it;
   }
